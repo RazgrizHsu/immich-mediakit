@@ -17,6 +17,9 @@ import os
 from uuid import uuid4
 
 import conf
+from util import log
+
+lg = log.get(__name__)
 
 os.makedirs(conf.pathCache, exist_ok=True)
 
@@ -31,4 +34,7 @@ bgCallbackManager = dskMgr(
 
 def getTriggerId():
     ctx = dash.callback_context
+
+    #lg.info( f"[getTriggerId] tid[{ctx.triggered_id}] propid[{ctx.triggered[0]['prop_id']}] len[{len(ctx.triggered)}]" )
+
     return ctx.triggered[0]['prop_id'].split('.')[0]
