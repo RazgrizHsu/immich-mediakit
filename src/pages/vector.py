@@ -200,7 +200,6 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     disBtnClr = isTskin or now.cntVec <= 0
 
     if tsk.id:
-        nfy.error(f"task already running, id[{tsk.id}] name[{tsk.name}] keyFn[{tsk.keyFn}] trgId[{trgId}]")
         txtBtn = "Task in progress.."
 
     return txtBtn, disBtnRun, disBtnClr, nfy.toStore()
@@ -264,53 +263,6 @@ def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_t
 
     return mdl.toStore(), nfy.toStore(), now.toStore()
 
-
-#------------------------------------------------------------------------
-#------------------------------------------------------------------------
-@callback(
-    [
-        out(Ks.store.mdl, "data", allow_duplicate=True),
-        out(Ks.store.tsk, "data", allow_duplicate=True),
-        out(Ks.store.nfy, "data", allow_duplicate=True),
-    ],
-    [
-        inp(Ks.store.mdl, "data"),
-        inp(K.selectQ, "value"),
-    ],
-    [
-        ste(Ks.store.now, "data"),
-        ste(Ks.store.nfy, "data"),
-    ],
-    prevent_initial_call=True
-)
-def photoVec_RunActs(dta_mdl, photoQuality, dta_now, dta_nfy):
-    mdl = models.Mdl.fromStore(dta_mdl)
-    now = models.Now.fromStore(dta_now)
-    nfy = models.Nfy.fromStore(dta_nfy)
-    tsk = models.Tsk()
-
-    if mdl.id == 'photovec' and mdl.ok:
-        if mdl.cmd == 'process':
-            tsk.id = 'photovec'
-            tsk.name = 'Photo Vector Processing'
-            tsk.keyFn = 'photoVec_ToVec'
-
-            tsk.args = {
-                "photoQuality": photoQuality
-            }
-
-            mdl.reset()
-            nfy.info("Starting task: Photo Vector Processing")
-
-        elif mdl.cmd == 'clear':
-            tsk.id = 'photoVec_Clear'
-            tsk.name = 'Clear Vectors'
-            tsk.keyFn = 'photoVec_Clear'
-
-            mdl.reset()
-            nfy.info("Starting task: Clear Vectors")
-
-    return mdl.toStore(), tsk.toStore(), nfy.toStore()
 
 
 #========================================================================
