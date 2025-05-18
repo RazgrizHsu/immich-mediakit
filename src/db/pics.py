@@ -1,0 +1,329 @@
+import json
+import sqlite3
+from typing import Optional, List
+from conf import Ks, envs
+from util import log, models
+
+lg = log.get(__name__)
+conn: Optional[sqlite3.dbapi2.Connection] = None
+
+def mkconn():
+    global conn
+    if conn is None: conn = sqlite3.connect(envs.mkitData + 'pics.db', check_same_thread=False)
+    return conn
+
+
+def close():
+    global conn
+    try:
+        if conn is not None: conn.close()
+        conn = None
+        return True
+    except Exception as e:
+        lg.error(f"Failed to close database connection: {str(e)}")
+        return False
+
+
+def init():
+    global conn
+    try:
+        if conn is not None:
+            conn.close()
+            conn = None
+
+        conn = mkconn()
+        c = conn.cursor()
+
+        c.execute('''
+				   Create Table If Not Exists assets (
+					   autoId           INTEGER Primary Key AUTOINCREMENT,
+					   id               TEXT Unique,
+					   ownerId          TEXT,
+					   deviceId         TEXT,
+					   type             TEXT,
+					   originalFileName TEXT,
+					   fileCreatedAt    TEXT,
+					   fileModifiedAt   TEXT,
+					   isFavorite       INTEGER,
+					   isVisible        INTEGER,
+					   isArchived       INTEGER,
+					   libraryId        TEXT,
+					   localDateTime    TEXT,
+					   thumbnail_path   TEXT,
+					   preview_path     TEXT,
+					   fullsize_path    TEXT,
+					   jsonExif        TEXT,
+					   isVectored       INTEGER Default 0
+				   )
+                   ''')
+
+        c.execute('''
+				   Create Table If Not Exists users (
+					   id     TEXT Primary Key,
+					   name   TEXT,
+					   email  TEXT,
+					   apiKey TEXT
+				   )
+                   ''')
+
+        conn.commit()
+        return True
+    except Exception as e:
+        lg.error(f"Failed to initialize duplicate photo database: {str(e)}")
+        return False
+
+def clear():
+    try:
+        if conn is not None:
+            c = conn.cursor()
+
+            c.execute("Drop Table If Exists assets")
+            c.execute("Drop Table If Exists users")
+
+            conn.commit()
+
+        return init()
+    except Exception as e:
+        lg.error(f"Failed to clear database: {str(e)}")
+        return False
+
+
+def hasData(): return count() > 0
+
+def saveBy(asset):
+    try:
+        if conn is None: raise RuntimeError( 'the db is not init' )
+
+        c = conn.cursor()
+
+        assetId = asset.get('id')
+        if not assetId: return False
+
+        exifInfo = asset.get('exifInfo', {})
+        jsonExif = None
+        if exifInfo:
+            try:
+                # Ensure all fields are saved, including fields with null values
+                # Use json.dumps to convert Python object to JSON string, ensuring null values are preserved
+                jsonExif = json.dumps(exifInfo, ensure_ascii=False)
+
+                if 'make' in exifInfo or 'model' in exifInfo:
+                    # This might be an asset from API
+                    lg.info(f"Saving API exifInfo: {jsonExif[:100]}...")
+                else:
+                    # This might be a PostgreSQL asset
+                    lg.info(f"Saving PSQL exifInfo: {jsonExif[:100]}...")
+            except Exception as e:
+                print(f"Error converting EXIF to JSON: {str(e)}")
+
+        c.execute("Select autoId, id From assets Where id = ?", (assetId,))
+        row = c.fetchone()
+
+        if row is None:
+            c.execute('''
+					   Insert Into assets (id, ownerId, deviceId, type, originalFileName,
+						   fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
+						   libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path,
+						   jsonExif)
+					   Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       ''', (
+                assetId,
+                asset.get('ownerId'),
+                asset.get('deviceId'),
+                asset.get('type'),
+                asset.get('originalFileName'),
+                asset.get('fileCreatedAt'),
+                asset.get('fileModifiedAt'),
+                1 if asset.get('isFavorite') else 0,
+                1 if asset.get('isVisible') else 0,
+                1 if asset.get('isArchived') else 0,
+                asset.get('libraryId'),
+                asset.get('localDateTime'),
+                asset.get('thumbnail_path'),
+                asset.get('preview_path'),
+                asset.get('fullsize_path', asset.get('originalPath')),
+                jsonExif
+            ))
+
+        elif asset.get('thumbnail_path') or asset.get('preview_path') or asset.get('fullsize_path') or jsonExif:
+            updFields = []
+            updValues = []
+
+            # Check existing path information
+            c.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", (assetId,))
+            paths = c.fetchone()
+
+            # If thumbnail path is provided and existing path is empty
+            if asset.get('thumbnail_path') and (not paths or not paths[0]):
+                updFields.append("thumbnail_path = ?")
+                updValues.append(asset.get('thumbnail_path'))
+
+            # If preview path is provided and existing path is empty
+            if asset.get('preview_path') and (not paths or not paths[1]):
+                updFields.append("preview_path = ?")
+                updValues.append(asset.get('preview_path'))
+
+            # If original path is provided and existing path is empty
+            fullsize = asset.get('fullsize_path', asset.get('originalPath'))
+            if fullsize and (not paths or not paths[2]):
+                updFields.append("fullsize_path = ?")
+                updValues.append(fullsize)
+
+            # Check EXIF updates
+            if jsonExif:
+                c.execute("Select jsonExif From assets Where id = ?", (assetId,))
+                existing_exif = c.fetchone()
+                if not existing_exif or not existing_exif[0]:
+                    updFields.append("jsonExif = ?")
+                    updValues.append(jsonExif)
+
+            if updFields:
+                update_query = f"UPDATE assets SET {', '.join(updFields)} WHERE id = ?"
+                updValues.append(assetId)
+                c.execute(update_query, updValues)
+
+        conn.commit()
+        return True
+    except Exception as e:
+        lg.error(f"Failed to save asset information: {str(e)}")
+        return False
+
+
+def getAssetInfo(assetId) -> Optional[models.Asset]:
+    try:
+        if conn is None: raise RuntimeError( 'the db is not init' )
+
+        c = conn.cursor()
+        c.execute("Select * From assets Where id = ?", (assetId,))
+
+        row = c.fetchone()
+        if row is None: return None
+
+        # 直接使用 fromDB 方法轉換
+        return models.Asset.fromDB(c, row)
+    except Exception as e:
+        lg.error(f"Failed to get asset information: {str(e)}")
+        return None
+
+
+def getAll() -> list[models.Asset]:
+    try:
+        if conn is None: raise RuntimeError( 'the db is not init' )
+
+        c = conn.cursor()
+        c.execute("Select * From assets")
+
+        rows = c.fetchall()
+        if not rows: return []
+
+        assets = [models.Asset.fromDB(c, row) for row in rows]
+        return assets
+    except Exception as e:
+        lg.error(f"Failed to get all asset information: {str(e)}")
+        return []
+
+
+def get_paginated_assets(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
+    try:
+        if conn is None: raise RuntimeError( 'the db is not init' )
+
+        c = conn.cursor()
+
+        if usrId:
+            c.execute("Select Count(*) From assets Where ownerId = ?", (usrId,))
+        else:
+            c.execute("Select Count(*) From assets")
+
+        cnt = c.fetchone()[0]
+
+        offset = (page - 1) * per_page
+
+        if usrId:
+            c.execute('''
+					   Select *
+					   From assets
+					   Where ownerId = ?
+					   Order By autoId Desc
+					   Limit ? Offset ?
+                       ''', (usrId, per_page, offset))
+        else:
+            c.execute('''
+					   Select *
+					   From assets
+					   Order By autoId Desc
+					   Limit ? Offset ?
+                       ''', (per_page, offset))
+
+        rows = c.fetchall()
+        if not rows: return [], cnt
+
+        assets = [models.Asset.fromDB(c, row) for row in rows]
+        return assets, cnt
+    except Exception as e:
+        lg.error(f"Failed to get paginated asset information: {str(e)}")
+        return [], 0
+
+
+def count():
+    try:
+        if conn is None: raise RuntimeError( 'the db is not init' )
+
+        c = conn.cursor()
+        c.execute("Select Count(*) From assets")
+        cnt = c.fetchone()[0]
+        return cnt
+    except Exception as e:
+        lg.error(f"Failed to get asset count: {str(e)}")
+        return 0
+
+
+def getAssetImagePathBy(assetId, photoQ):
+    try:
+        if conn is None: raise RuntimeError( 'the db is not init' )
+
+        c = conn.cursor()
+        c.execute('''
+				   Select thumbnail_path, preview_path, fullsize_path
+				   From assets
+				   Where id = ?
+                   ''', (assetId,))
+
+        row = c.fetchone()
+        if not row:
+            print(f'[db] assetId[{assetId}] img paths not found in db')
+            return None
+
+        if photoQ == Ks.db.thumbnail and row[0]:
+            return row[0]
+        elif photoQ == Ks.db.preview and row[1]:
+            return row[1]
+        elif row[2]:
+            return row[2]
+
+        return None
+    except Exception as e:
+        lg.error(f"Failed to get asset file path: {str(e)}")
+        return None
+
+
+def deleteUsrAssets(usrId):
+    import db.vecs as vecs
+    try:
+        if conn is None: raise RuntimeError( 'the db is not init' )
+
+        c = conn.cursor()
+
+        c.execute("Select id From assets Where ownerId = ?", (usrId,))
+        assetIds = [row[0] for row in c.fetchall()]
+
+        c.execute("Delete From assets Where ownerId = ?", (usrId,))
+
+        conn.commit()
+
+        for assId in assetIds:
+            vecs.delete_photo_vector(assId)
+
+        return True
+    except Exception as e:
+        lg.error(f"Failed to delete user assets: {str(e)}")
+        return False
