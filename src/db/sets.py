@@ -39,6 +39,7 @@ def init():
 ''')
 
     conn.commit()
+    lg.info( "Sqlite connected: sets.db" )
 
 def get(key, defaultValue=None):
     try:

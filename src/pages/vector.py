@@ -276,11 +276,11 @@ def photoVec_ToVec(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
     try:
         photoQuality = tsk.args.get("photoQuality", "thumbnail")
 
-        onUpdate([5, "5%", "Initializing database connections"])
+        onUpdate(1, "1%", "Initializing database connections")
 
         useType = now.useType
 
-        onUpdate([10, "10%", "Getting asset data"])
+        onUpdate(5, "5%", "Getting asset data")
         assets = db.pics.getAll()
 
         if not assets or len(assets) == 0:
@@ -288,8 +288,8 @@ def photoVec_ToVec(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
             nfy.error(msg)
             return nfy, now, msg
 
-        total_count = len(assets)
-        onUpdate([15, "15%", f"Found {total_count} photos, starting processing"])
+        cntAll = len(assets)
+        onUpdate(8, "", f"Found {cntAll} photos, starting processing")
 
         result = imgs.processPhotoToVectors(assets, photoQuality, onUpdate=onUpdate)
 
@@ -310,26 +310,26 @@ def photoVec_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
     msg = "[PhotoVec] Clearing successful"
 
     try:
-        onUpdate([10, "10%", "Preparing to clear all Vectors"])
+        onUpdate(10, "10%", "Preparing to clear all Vectors")
 
         if now.cntVec <= 0:
             msg = "No vector data to clear"
             nfy.warn(msg)
             return nfy, now, msg
 
-        onUpdate([30, "30%", "Clearing Vectors..."])
+        onUpdate(30, "30%", "Clearing Vectors...")
 
         count = db.vecs.count()
         db.vecs.clear()
 
-        onUpdate([90, "90%", f"Cleared {count} vector records"])
+        onUpdate(90, "90%", f"Cleared {count} vector records")
 
         now.cntVec = 0
 
         msg = f"Successfully cleared all photo vector data ({count} records)"
         nfy.success(msg)
 
-        onUpdate([100, "100%", "Clearing complete"])
+        onUpdate(100, "100%", "Clearing complete")
         return nfy, now, msg
 
     except Exception as e:

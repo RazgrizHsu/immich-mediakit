@@ -4,6 +4,9 @@ from datetime import datetime
 
 from util.baseModel import BaseDictModel, Json
 
+from util import log
+
+lg = log.get(__name__)
 
 
 @dataclass
@@ -52,19 +55,19 @@ class Nfy(BaseDictModel):
 		if nid in self.msgs: del self.msgs[nid]
 
 	def info(self, message, timeout=5000):
-		"""Display blue information notification"""
+		lg.info( message )
 		self._add(message, "info", timeout)
 
 	def success(self, message, timeout=5000):
-		"""Display green success notification"""
+		lg.info( message )
 		self._add(message, "success", timeout)
 
 	def warn(self, message, timeout=8000):
-		"""Display yellow warning notification"""
+		lg.warn( message )
 		self._add(message, "warning", timeout)
 
 	def error(self, message, timeout=0):
-		"""Display red error notification"""
+		lg.error( message )
 		self._add(message, "danger", timeout)
 
 	def _add(self, message, kind, timeout):
@@ -83,7 +86,7 @@ class Tsk(BaseDictModel):
 	keyFn: Optional[str] = None
 	args: Dict[str, Any] = field(default_factory=dict)
 
-	def reset(self):
+	def reset(self, withDone=True):
 		self.id = self.name = self.keyFn = None
 		self.args = {}
 
