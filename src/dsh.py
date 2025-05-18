@@ -13,11 +13,20 @@ from dash.exceptions import PreventUpdate as preventUpdate
 
 import diskcache
 from dash import DiskcacheManager as dskMgr
+import os
+from uuid import uuid4
 
 import conf
 
-cache = diskcache.Cache( conf.pathCache )
-bgCallbackManager = dskMgr(cache)
+os.makedirs(conf.pathCache, exist_ok=True)
+
+launch_uid = uuid4()
+cache = diskcache.Cache(conf.pathCache)
+bgCallbackManager = dskMgr(
+    cache,
+    cache_by=[lambda: launch_uid],
+    expire=3600
+)
 
 
 def getTriggerId():

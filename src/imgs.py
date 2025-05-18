@@ -16,6 +16,8 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
 # noinspection PyUnresolvedReferences
 import api, db, conf
 from util import log, models
+from util.task import IFnProg
+
 
 lg = log.get(__name__)
 
@@ -74,26 +76,24 @@ def extractFeatures(image):
 def saveVectorBy(assetId, img):
     try:
         if img is None:
-            lg.info(f'assetId[{assetId}] image is None')
-            return 'skipped'
+            lg.warn(f'assetId[{assetId}] image is None')
+            return None
 
         try:
             features = extractFeatures(img)
 
             if not isinstance(features, np.ndarray) or features.size != 2048:
-                raise ValueError(f"Photo {assetId} vector format is incorrect: size={features.size if isinstance(features, np.ndarray) else 'unknown'}")
+                raise ValueError(f"assetId[{assetId}] vector incorrect: size={features.size if isinstance(features, np.ndarray) else 'unknown'}")
 
-            vector_saved = db.vecs.save(assetId, features)
+            saved = db.vecs.save(assetId, features)
         except ValueError as ve:
             return f"Photo {assetId} vector processing error: {str(ve)}"
 
-        if vector_saved: return 'processed'
+        if saved: return True
 
-        return 'skipped'
+        return False
     except Exception as e:
-        error_msg = f"Error processing asset {assetId}: {str(e)}"
-        lg.error(error_msg)
-        return error_msg
+        raise f"Error processing asset {assetId}: {str(e)}"
 
 def getImage(path) -> Optional[Image.Image]:
     if path:
@@ -115,7 +115,7 @@ def getImage(path) -> Optional[Image.Image]:
 
 def getImageFromLocal(assetId, photoQ):
     path = db.pics.getAssetImagePathBy(assetId, photoQ)
-    # lg.info(f"[getImgLocal] id[{assetId}], photoQ[{photoQ}] path[{path}]")
+    lg.info(f"[getImgLocal] id[{assetId}], photoQ[{photoQ}] path[{path}]")
     return getImage(path)
 
 
@@ -136,16 +136,15 @@ def testDirectAccess():
 
     return f"access failed"
 
-def processPhotoToVectors(assets: List[models.Asset], photoQ, onUpdate=None):
-    cntAll = len(assets)
-
-    cntOk = 0
-    cntSkip = 0
-    cntErr = 0
+def processPhotoToVectors(assets: List[models.Asset], photoQ, onUpdate:IFnProg=None) -> models.ProcessInfo:
     tS = time.time()
+    pi = models.ProcessInfo(total=len(assets), done=0, skip=0, error=0)
+
+    # 初始進度為15%
+    inPct = 15
 
     if onUpdate:
-        onUpdate([0, "0%", f"Starting to process {cntAll} photos, photo quality: {photoQ}"])
+        onUpdate(inPct, f"{inPct}%", f"準備處理 {pi.total} 張照片, 品質: {photoQ}")
 
     for idx, asset in enumerate(assets):
         assetId = asset.id
@@ -154,40 +153,36 @@ def processPhotoToVectors(assets: List[models.Asset], photoQ, onUpdate=None):
         img = getImageFromLocal(assetId, photoQ)
 
         if not img:
-            lg.error(f"Cannot get photo: assetId[{assetId}], photoQ[{photoQ}]")
-            cntErr += 1
+            lg.error(f"無法取得照片: assetId[{assetId}], photoQ[{photoQ}]")
+            pi.error += 1
             continue
 
-        result = saveVectorBy(assetId, img)
+        try:
+            result = saveVectorBy(assetId, img)
 
-        if isinstance(result, tuple) and result[0] == 'error':
-            error_msg = result[1]
-            lg.error(error_msg)
-            cntErr += 1
-        elif result == 'processed':
-            cntOk += 1
-        elif result == 'skipped':
-            cntSkip += 1
+            if result is True:
+                pi.done += 1
+            elif result is False or result is None:
+                pi.skip += 1
+        except Exception as e:
+            lg.error(f"處理失敗: {assetId} - {str(e)}")
+            pi.error += 1
 
         if idx > 0:
             tElapsed = time.time() - tS
             tPerItem = tElapsed / (idx + 1)
-            remainCnt = cntAll - (idx + 1)
+            remainCnt = pi.total - (idx + 1)
             remainTime = tPerItem * remainCnt
             remainMins = int(remainTime / 60)
         else:
-            remainMins = "calculating"
+            remainMins = "計算中"
 
-        if onUpdate and (idx % 10 == 0 or idx == cntAll - 1):
-            percent = int((idx + 1) / cntAll * 100)
-            onUpdate([percent, f"{percent}%", f"Processing photo {idx + 1}/{cntAll} - (Processed: {cntOk}, Skipped: {cntSkip}, Errors: {cntErr}). Estimated time remaining: {remainMins} minutes"])
+        if onUpdate and (idx % 10 == 0 or idx == pi.total - 1):
+            # 將剩餘的85%進度分配給實際處理過程
+            percent = inPct + int((idx + 1) / pi.total * (100 - inPct))
+            onUpdate(percent, f"{percent}%", f"處理照片 {idx + 1}/{pi.total} - (完成: {pi.done}, 跳過: {pi.skip}, 錯誤: {pi.error}). 預估剩餘時間: {remainMins} 分鐘")
 
     if onUpdate:
-        onUpdate([100, "100%", f"Processing complete! Processed: {cntOk}, Skipped: {cntSkip}, Errors: {cntErr}"])
+        onUpdate(100, "100%", f"處理完成! 完成: {pi.done}, 跳過: {pi.skip}, 錯誤: {pi.error}")
 
-    return {
-        "processed": cntOk,
-        "skipped": cntSkip,
-        "errors": cntErr,
-        "total": cntAll
-    }
+    return pi

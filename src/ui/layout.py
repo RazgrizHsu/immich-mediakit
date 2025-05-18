@@ -163,6 +163,28 @@ def regBy(app):
 
         return disPhotoVec, disSearchDups, disViewGrid
 
+    #------------------------------------------------------------------------
+    @app.callback(
+        out(K.div.sideState, "children"),
+        [
+            inp(Ks.store.now, "data")
+        ]
+    )
+    def update_side_state(dta_now):
+        now = models.Now.fromStore(dta_now)
+
+        return htm.Div([
+
+            dbc.Row([
+                dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=5),
+                dbc.Col(dbc.Alert(f"{now.cntPic}", color="info", className="py-0 px-2 mb-2")),
+            ]),
+            dbc.Row([
+                dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=5),
+                dbc.Col(dbc.Alert(f"{now.cntVec}", color="info", className="py-0 px-2 mb-2")),
+            ]),
+        ])
+
 
     #------------------------------------------------------------------------
     @app.callback(
@@ -188,28 +210,6 @@ def regBy(app):
 
         return info
 
-
-    #------------------------------------------------------------------------
-    @app.callback(
-        out(K.div.sideState, "children"),
-        [
-            inp(Ks.store.now, "data")
-        ]
-    )
-    def update_side_state(dta_now):
-        now = models.Now.fromStore(dta_now)
-
-        return htm.Div([
-
-            dbc.Row([
-                dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=5),
-                dbc.Col(dbc.Alert(f"{now.cntPic}", color="info", className="py-0 px-2 mb-2")),
-            ]),
-            dbc.Row([
-                dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=5),
-                dbc.Col(dbc.Alert(f"{now.cntVec}", color="info", className="py-0 px-2 mb-2")),
-            ]),
-        ])
 
 #------------------------------------------------------------------------
 # @app.callback(

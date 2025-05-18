@@ -45,6 +45,8 @@ def render():
     if usrId: now.switchUsr(usrId)
 
     now.useType = dto.useType
+    if not now.photoQ:
+        now.photoQ = dto.photoQ = Ks.db.thumbnail
 
     now.cntPic = pics.count()
     now.cntVec = vecs.count()

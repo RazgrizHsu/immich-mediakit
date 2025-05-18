@@ -123,13 +123,9 @@ def assets_Init(dta_now, opts):
             for usr in usrs:
                 opts.append({"label": usr.name, "value": usr.id})
 
-    lg.info( f"[fetch:init] opts: {opts}" )
-
-    lg.info( f"[fetch:init] now.usr: {now.usr} type({type(now.usr)})" )
+    # lg.info( f"[fetch:init] now.usr: {now.usr} type({type(now.usr)}) opts: {opts}" )
 
     usrId = now.usr.id if now and now.usr else ""
-
-    lg.info(f"[assets] Initialization result srId[{usrId}]({len(opts)})")
 
     return opts, usrId
 

@@ -1,3 +1,5 @@
+from time import sleep
+
 import numpy as np
 from typing import Optional
 from qdrant_client import QdrantClient
@@ -17,18 +19,7 @@ def init():
     try:
         conn = QdrantClient(envs.qdrantUrl)
 
-        collections = conn.get_collections().collections
-        collection_names = [c.name for c in collections]
-
-        if keyColl not in collection_names:
-            conn.create_collection(
-                collection_name=keyColl,
-                vectors_config=models.VectorParams(
-                    size=2048,
-                    distance=models.Distance.COSINE
-                )
-            )
-        lg.info( f"Qdrant connection successfully, collection: {keyColl}" )
+        create()
     except Exception as e:
         lg.error(f"Failed to initialize Qdrant: {str(e)}")
 
@@ -43,38 +34,13 @@ def close():
         lg.error(f"Failed to close database connection: {str(e)}")
         return False
 
-def clear():
-    global conn
+def create():
     try:
-        if conn is not None:
-            try:
-                collections = conn.get_collections().collections
-                collection_names = [c.name for c in collections]
+        cols = conn.get_collections().collections
+        names = [c.name for c in cols]
 
-                if keyColl in collection_names:
-                    lg.info( f"start clear collection: {keyColl}" )
-                    conn.delete(
-                        collection_name=keyColl,
-                        points_selector=models.FilterSelector(filter=models.Filter())
-                    )
-            except Exception as e:
-                lg.error(f"Failed to clear vector database: {str(e)}")
-    except Exception as e:
-        lg.error(f"Failed to close Qdrant connection: {str(e)}")
-
-def reinitVec(url_qdrant):
-    global conn
-    try:
-        if conn is not None: conn = None
-
-        if isInDocker() and not url_qdrant: url_qdrant = 'http://qdrant:6333'
-
-        conn = QdrantClient(url_qdrant or ":memory:")
-
-        collections = conn.get_collections().collections
-        collection_names = [c.name for c in collections]
-
-        if keyColl not in collection_names:
+        if keyColl not in names:
+            lg.info( f"[qdrant] creating coll[{keyColl}]..." )
             conn.create_collection(
                 collection_name=keyColl,
                 vectors_config=models.VectorParams(
@@ -82,11 +48,33 @@ def reinitVec(url_qdrant):
                     distance=models.Distance.COSINE
                 )
             )
-        return True
-    except Exception as e:
-        lg.error(f"Failed to reinitialize Qdrant: {str(e)}")
-        return False
+            lg.info( f"[qdrant] create successfully, coll[{keyColl}]" )
 
+    except Exception as e:
+        lg.error(f"Failed to initialize Qdrant: {str(e)}")
+
+def clear():
+
+    try:
+        if conn is None: raise RuntimeError( "[qdrant] not connectioned" )
+
+        collections = conn.get_collections().collections
+        collection_names = [c.name for c in collections]
+
+        if keyColl in collection_names:
+            lg.info( f"[qdrant] Start Clear coll[{keyColl}].." )
+            conn.recreate_collection(
+                collection_name=keyColl,
+                vectors_config=models.VectorParams(
+                    size=2048,
+                    distance=models.Distance.COSINE
+                ),
+                timeout=60
+            )
+            lg.info( f"[qdrant] Success, coll[{keyColl}] deleted successfully" )
+
+    except Exception as e:
+        lg.error(f"[qdrant] Failed to clear vector database: {str(e)}")
 
 def count():
     try:
