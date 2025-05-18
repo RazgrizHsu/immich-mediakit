@@ -2,7 +2,7 @@ import os
 import time
 import torch
 
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from torchvision.models import resnet152, ResNet152_Weights
@@ -71,27 +71,6 @@ def extractFeatures(image):
 
     return np_features
 
-def getImageFromLocal(assetId, photoQ):
-    file_path = db.pics.getAssetImagePathBy(assetId, photoQ)
-    lg.info(f"[getImgLocal] id[{assetId}], photoQ[{photoQ}] path[{file_path}]")
-
-    if file_path:
-        full_path = os.path.join(conf.envs.immichPath, file_path.lstrip('/'))
-
-        try:
-            if os.path.exists(full_path):
-                size = os.path.getsize(full_path)
-                lg.info(f"[getImgLocal] image[{os.path.basename(full_path)}] size[{size / 1024 / 1024:.2f} MB]")
-                image = Image.open(full_path)
-                image.load()
-                return image
-            else:
-                lg.error(f"File not found: {full_path}")
-        except Exception as e:
-            lg.error(f"Error opening image from local path: {str(e)}")
-
-    return None
-
 def saveVectorBy(assetId, img):
     try:
         if img is None:
@@ -115,6 +94,47 @@ def saveVectorBy(assetId, img):
         error_msg = f"Error processing asset {assetId}: {str(e)}"
         lg.error(error_msg)
         return error_msg
+
+def getImage(path) -> Optional[Image.Image]:
+    if path:
+        path = os.path.join(conf.envs.immichPath, path.lstrip('/'))
+
+        try:
+            if os.path.exists(path):
+                size = os.path.getsize(path)
+                # lg.info(f"[getImgLocal] image[{os.path.basename(path)}] size[{size / 1024 / 1024:.2f} MB]")
+                image = Image.open(path)
+                image.load()
+                return image
+            else:
+                lg.error(f"File not found: {path}")
+        except Exception as e:
+            lg.error(f"Error opening image from local path: {str(e)}")
+
+    return None
+
+def getImageFromLocal(assetId, photoQ):
+    path = db.pics.getAssetImagePathBy(assetId, photoQ)
+    # lg.info(f"[getImgLocal] id[{assetId}], photoQ[{photoQ}] path[{path}]")
+    return getImage(path)
+
+
+def testDirectAccess():
+    import db.pics as pics
+    assets = pics.getAll(1)
+    asset = assets[0] if assets else None
+
+    if not asset: return "No Assets"
+
+    path = asset.getImagePath(conf.Ks.db.preview)
+
+
+    if os.path.exists(path):
+        return "OK! path exists!"
+    else:
+        lg.warn( f"[imgs] image path not exist: {path}" )
+
+    return f"access failed"
 
 def processPhotoToVectors(assets: List[models.Asset], photoQ, onUpdate=None):
     cntAll = len(assets)

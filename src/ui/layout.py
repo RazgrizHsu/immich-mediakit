@@ -61,7 +61,7 @@ def renderHeader():
             htm.A(
                 dbc.Row(
                     [
-                        dbc.Col(htm.Img(src="assets/logo.svg", height="38px"), width="auto", className="px-2"),
+                        dbc.Col(htm.Img(src="assets/logo.png", height="38px"), width="auto", className="px-2"),
                         dbc.Col(dbc.NavbarBrand(f"{Ks.title}", className="ms-2")),
                     ],
                     align="center",
@@ -115,7 +115,7 @@ def renderSideBar():
             htm.Hr(),
 
             htm.Div([
-                htm.Div(htm.Small("Cache Count:"), className="mb-2"),
+                htm.Div(htm.Small("Cache Count:"), className="mb-2 text-muted"),
                 htm.Div(id=K.div.sideState)
             ],
                 className="mb-4"
@@ -132,7 +132,7 @@ def renderSideBar():
 
             htm.Div(
                 [
-                    htm.H6("Connection Information", className="mb-3"),
+                    htm.Div(htm.Small("Connection Information"), className="mb-2 text-muted"),
                     htm.Div([htm.Div("---")], id=K.div.connInfo)
                 ],
                 className="mb-4"

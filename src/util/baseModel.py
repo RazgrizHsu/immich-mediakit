@@ -3,7 +3,7 @@ import json
 import sqlite3
 from dataclasses import dataclass, asdict
 from datetime import datetime
-from typing import Dict, Any, Optional, Type, TypeVar, get_type_hints, get_origin, get_args
+from typing import Dict, Any, Optional, Type, TypeVar, Union, get_type_hints, get_origin, get_args
 
 from util import log
 
@@ -71,8 +71,25 @@ class BaseDictModel:
                 else:
                     data[key] = val
 
-            elif origin is dict: data[key] = val
+            elif origin is dict: 
+                data[key] = val
 
+            # 處理 Union/Optional 型別 (Optional 實際上是 Union[T, None])
+            elif origin is Union:
+                type_args = get_args(hint_type)
+                # 找出不是 None 的型別
+                real_types = [t for t in type_args if t is not type(None)]
+                
+                if len(real_types) == 1:
+                    real_type = real_types[0]
+                    if inspect.isclass(real_type) and issubclass(real_type, BaseDictModel) and isinstance(val, dict):
+                        data[key] = real_type.fromStore(val)
+                    else:
+                        data[key] = val
+                else:
+                    # 複雜的 Union 型別，無法處理，直接賦值
+                    data[key] = val
+                    
             elif inspect.isclass(hint_type) and issubclass(hint_type, BaseDictModel) and isinstance(val, dict):
                 data[key] = hint_type.fromStore(val)
 

@@ -65,7 +65,7 @@ def init():
 					   apiKey TEXT
 				   )
                    ''')
-        lg.info( "Sqlite connected: pics.db" )
+        lg.info("Sqlite connected: pics.db")
 
         conn.commit()
         return True
@@ -93,7 +93,7 @@ def hasData(): return count() > 0
 
 def saveBy(asset):
     try:
-        if conn is None: raise RuntimeError( 'the db is not init' )
+        if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
 
@@ -183,7 +183,7 @@ def saveBy(asset):
 
 def getAssetInfo(assetId) -> Optional[models.Asset]:
     try:
-        if conn is None: raise RuntimeError( 'the db is not init' )
+        if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
         c.execute("Select * From assets Where id = ?", (assetId,))
@@ -198,12 +198,15 @@ def getAssetInfo(assetId) -> Optional[models.Asset]:
         return None
 
 
-def getAll() -> list[models.Asset]:
+def getAll(count=0) -> list[models.Asset]:
     try:
-        if conn is None: raise RuntimeError( 'the db is not init' )
+        if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
-        c.execute("Select * From assets")
+
+        sql = "Select * From assets"
+
+        c.execute(sql)
 
         rows = c.fetchall()
         if not rows: return []
@@ -217,7 +220,7 @@ def getAll() -> list[models.Asset]:
 
 def get_paginated_assets(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
     try:
-        if conn is None: raise RuntimeError( 'the db is not init' )
+        if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
 
@@ -258,7 +261,7 @@ def get_paginated_assets(page=1, per_page=20, usrId=None) -> tuple[List[models.A
 
 def count():
     try:
-        if conn is None: raise RuntimeError( 'the db is not init' )
+        if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
         c.execute("Select Count(*) From assets")
@@ -271,7 +274,7 @@ def count():
 
 def getAssetImagePathBy(assetId, photoQ):
     try:
-        if conn is None: raise RuntimeError( 'the db is not init' )
+        if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
         c.execute('''
@@ -301,7 +304,7 @@ def getAssetImagePathBy(assetId, photoQ):
 def deleteUsrAssets(usrId):
     import db.vecs as vecs
     try:
-        if conn is None: raise RuntimeError( 'the db is not init' )
+        if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
 
