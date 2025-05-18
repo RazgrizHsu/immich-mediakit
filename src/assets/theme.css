@@ -178,22 +178,30 @@ body {
 	color:#e0e0e0;
 }
 .modal-content {
-	border-radius:8px;
-	box-shadow:0 5px 15px rgba(0, 0, 0, 0.3);
+	border-radius:20px;
+	box-shadow:0 0 12px 5px rgba(255, 255, 255, 0.3);
 	background-color:#3a3a3a;
-	border:1px solid #444444;
+	border:1px solid #5DB1FF99;
 }
 .modal-header {
 	border-bottom:1px solid #333333;
 	background-color:#212121;
 	color:#e0e0e0;
+	border-top-left-radius:20px;
+	border-top-right-radius:20px;
+	font-size: 15px;
 }
 .modal-body {
 	color:#e0e0e0;
+	margin: 10px 20px 20px 20px;
+	text-align: center;
+	font-size: 17px
 }
 .modal-footer {
 	border-top:1px solid #333333;
 	background-color:#212121;
+	border-bottom-left-radius:20px;
+	border-bottom-right-radius:20px;
 }
 .tab-content {
 	background-color:#3a3a3a;

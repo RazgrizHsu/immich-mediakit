@@ -180,14 +180,17 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
         txtBtn = "Please select user"
 
     elif usrId == "":
-        txtBtn = "Fetch: All Users"
+        cnt = db.psql.count()
+        txtBtn = f"Fetch: All ({cnt})"
     else:
         if not now.usrs:
             disBtnRun = True
             txtBtn = "--No users--"
 
         else:
-            if now.usr: txtBtn = f"Fetch: {now.usr.name}"
+            if now.usr:
+                cnt = db.psql.count(now.usr.id)
+                txtBtn = f"Fetch: {now.usr.name} ({cnt})"
 
     return txtBtn, disBtnRun, disBtnClr, now.toStore(), nfy.toStore()
 
@@ -235,9 +238,11 @@ def assets_BtnRunModals(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk
         mdl.id = 'assets'
         mdl.cmd = 'fetch'
         if now.usr:
-            mdl.msg = f"Start getting assets for user [{now.usr.name}] from PostgreSQL"
+            cnt = db.psql.count( now.usr.id )
+            mdl.msg = f"Start getting assets[{cnt}] for user [{now.usr.name}] ?"
         else:
-            mdl.msg = "Start getting assets for all users from PostgreSQL"
+            cnt = db.psql.count()
+            mdl.msg = f"Start getting all users assets count[{cnt}] ?"
 
     return mdl.toStore(), nfy.toStore()
 
@@ -274,7 +279,7 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
 
         onUpdate(10, "10%", f"Starting to fetch assets for {now.usr.name} from PostgreSQL")
 
-        cntAll = db.psql.countAssets(now.usr.id)
+        cntAll = db.psql.count(now.usr.id)
         if cntAll <= 0:
             msg = f"No assets found for {now.usr.name}"
             nfy.info(msg)
@@ -282,7 +287,7 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
 
         onUpdate(15, "15%", f"Found {cntAll} photos, starting to fetch assets")
 
-        assets = db.psql.fetchAssets(now.usr.id)
+        assets = db.psql.fetchAssets(now.usr.id, onUpdate=onUpdate)
 
         if not assets or len(assets) == 0:
             msg = f"No assets retrieved for {now.usr.name}"

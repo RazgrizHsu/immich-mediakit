@@ -1,10 +1,11 @@
-
 from typing import Optional
 import traceback
+import time
 import psycopg2
 import psycopg2.extras
 from conf import Ks, envs
 from util import log
+from util.task import IFnProg
 
 lg = log.get(__name__)
 
@@ -57,6 +58,7 @@ def init():
         return None
 
 
+
 def fetchUsers():
     try:
         if not conn: raise RuntimeError("Failed to connect to psql")
@@ -82,7 +84,7 @@ def fetchUsers():
         return []
 
 
-def fetchAssets(usrId, asType="IMAGE"):
+def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
     def rmPrefixUpload(path):
         if path.startswith('upload/'): return path[7:]
@@ -91,6 +93,9 @@ def fetchAssets(usrId, asType="IMAGE"):
 
     try:
         if not conn: raise RuntimeError("Failed to connect to psql")
+
+        inPct = 0
+        if onUpdate: onUpdate(inPct, f"{inPct}%", "Start query...")
 
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
@@ -106,11 +111,15 @@ def fetchAssets(usrId, asType="IMAGE"):
 
         lg.info(f"Found {cntAll} {asType.lower()} assets...")
 
+        if onUpdate:
+            inPct = 5
+            onUpdate(inPct, f"{inPct}%", f"found {cntAll} ({asType.lower()}) assets...")
+
         sql = """
-			  Select a.*, e.*
-			  From assets a
-						   Left Join exif e On a.id = e."assetId"
-			  Where a.type = %s
+		  Select a.*, e.*
+		  From assets a
+					   Left Join exif e On a.id = e."assetId"
+		  Where a.type = %s
               """
 
         params = [asType]
@@ -138,10 +147,18 @@ def fetchAssets(usrId, asType="IMAGE"):
             'bitsPerSample', 'autoStackId'
         ]
 
-        # FetchAssets in batches to avoid memory issues
+        baseFetchPct = 40
+
+        if onUpdate:
+            inPct = 10
+            onUpdate(inPct, f"{inPct}%", "start reading...")
+
         szBatch = 500
+        szChunk = 500
         assets = []
         cntFetched = 0
+
+        tStart = time.time()
 
         while True:
             batch = cursor.fetchmany(szBatch)
@@ -152,13 +169,10 @@ def fetchAssets(usrId, asType="IMAGE"):
             for row in batch:
                 asset = {key: row[key] for key in row.keys()}
 
-                # Create exifInfo dictionary
                 exifInfo = {}
 
-                # Extract EXIF data (only keep API-compatible fields)
                 for fd in api_exif_fields:
                     if fd in asset and asset[fd] is not None:
-                        # For datetime fields, convert to string
                         if fd in ('dateTimeOriginal', 'modifyDate'):
                             if isinstance(asset[fd], str):
                                 exifInfo[fd] = asset[fd]
@@ -174,32 +188,60 @@ def fetchAssets(usrId, asType="IMAGE"):
                     if fd != 'description' or (fd == 'description' and asset.get(fd) is not None):
                         asset.pop(fd, None)
 
-                # Only add exifInfo to asset dictionary if it's not empty
-                if exifInfo:
-                    asset['exifInfo'] = exifInfo
+                if exifInfo: asset['exifInfo'] = exifInfo
 
                 assets.append(asset)
 
+            if onUpdate and cntAll > 0:
+                curPct = inPct + int(cntFetched / cntAll * (baseFetchPct - inPct))
+
+                if cntFetched > 0:
+                    tElapsed = time.time() - tStart
+                    tPerItem = tElapsed / cntFetched
+                    remainCnt = cntAll - cntFetched
+                    remainTime = tPerItem * remainCnt
+                    remainMins = int(remainTime / 60)
+                    timeSuffix = f"remain: {remainMins} mins"
+                else:
+                    timeSuffix = "calcuating..."
+
+                onUpdate(curPct, f"{curPct}%", f"processed {cntFetched}/{cntAll} ... {timeSuffix}")
+
         cursor.close()
+
+        if onUpdate:
+            curPct = baseFetchPct
+            onUpdate(curPct, f"{curPct}%", "main assets done... query for files..")
 
         # get thumbnail and preview paths for each asset
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         flsSql = """
-				   Select "assetId", type, path
-				   From asset_files
-				   Where "assetId" In %s
+			   Select "assetId", type, path
+			   From asset_files
+			   Where "assetId" In %s
                    """
 
         assetIds = [a['id'] for a in assets]
-        # Split into chunks of 1000 to avoid "too many parameters" error
-        szChunk = 500
         afs = []
 
-        for idx in range(0, len(assetIds), szChunk):
-            chunk = assetIds[idx:idx + szChunk]
+        pathFetchPct = 40
+        nextPct = baseFetchPct
+
+        for idx, i in enumerate(range(0, len(assetIds), szChunk)):
+            chunk = assetIds[i:i + szChunk]
             cursor.execute(flsSql, (tuple(chunk),))
-            afs.extend(cursor.fetchall())
+            chunkResults = cursor.fetchall()
+            afs.extend(chunkResults)
+
+            if onUpdate and len(assetIds) > 0:
+                chunkPct = min((idx + 1) * szChunk, len(assetIds))
+                curPct = baseFetchPct + int(chunkPct / len(assetIds) * pathFetchPct)
+                onUpdate(curPct, f"{curPct}%", f"query files.. {chunkPct}/{len(assetIds)}...")
+
+        if onUpdate:
+            nextPct = baseFetchPct + pathFetchPct
+            onUpdate(nextPct, f"{nextPct}%", "files ready, combine data...")
 
         # Create a lookup dictionary for fast access
         dictFiles = {}
@@ -211,6 +253,9 @@ def fetchAssets(usrId, asType="IMAGE"):
             dictFiles[assetId][typ] = path
 
         # Add path information to each asset
+        finalPct = 20
+        processedCount = 0
+
         for asset in assets:
             assetId = asset['id']
             if assetId in dictFiles:
@@ -218,27 +263,40 @@ def fetchAssets(usrId, asType="IMAGE"):
                     if typ == Ks.db.thumbnail: asset['thumbnail_path'] = rmPrefixUpload(path)
                     elif typ == Ks.db.preview: asset['preview_path'] = rmPrefixUpload(path)
 
-            # Convert to fullsize_path, because we use originalPath locally
             asset['fullsize_path'] = rmPrefixUpload(asset.get('originalPath', ''))
+
+            processedCount += 1
+
+            if onUpdate and len(assets) > 0 and (processedCount % 100 == 0 or processedCount == len(assets)):
+                curPct = nextPct + int(processedCount / len(assets) * finalPct)
+                onUpdate(curPct, f"{curPct}%", f"processing {processedCount}/{len(assets)}...")
 
         cursor.close()
 
         lg.info(f"Successfully fetched {len(assets)} {asType.lower()} assets")
 
+        if onUpdate:
+            onUpdate(100, "100%", f"Complete Assets[{len(assets)}] ({asType.lower()})")
+
         return assets
     except Exception as e:
         lg.error(f"Failed to FetchAssets: {str(e)}")
         lg.info(traceback.format_exc())
+
+        if onUpdate:
+            onUpdate(100, "100%", f"fetch Assets failed: {str(e)}")
+
         return []
 
 
-def countAssets(usrId, assetType="IMAGE"):
+def count(usrId=None, assetType="IMAGE"):
 
     try:
         if not conn: raise RuntimeError("Failed to connect to psql")
 
         cursor = conn.cursor()
 
+        # noinspection SqlConstantExpression
         sql = "Select Count(*) From assets Where 1=1"
         params = []
 
