@@ -1,6 +1,6 @@
 from typing import Callable, Tuple
 
-from dsh import htm, dbc, inp, out, ste, noUpd
+from dsh import htm, dbc, inp, out, ste, noUpd, getTriggerId
 from util import log, models
 from conf import Ks
 
@@ -64,14 +64,15 @@ def regBy(app):
         inp(Ks.store.tsk, "data"),
         prevent_initial_call=True
     )
-    def update_txt(dta_tsk):
+    def task_status(dta_tsk):
         tsk = models.Tsk.fromStore(dta_tsk)
 
         hasTsk = tsk.name is not None
 
         style = style_show if hasTsk else style_none
 
-        # lg.info(f"[Task] Update display: {hasTsk} id[{tsk.id}] name[{tsk.name}]")
+        triggerId = getTriggerId()
+        lg.info(f"[Task] Update display: {hasTsk} id[{tsk.id}] name[{tsk.name}] trigger[{triggerId}]")
 
         return style, tsk.name
 
@@ -87,6 +88,7 @@ def regBy(app):
         tsk = models.Tsk.fromStore(dta_tsk)
         if tsk.id or tsk.name:
             tsk.reset()
+            lg.info( "[task] close and reset.." )
 
         return tsk.toStore()
 
@@ -146,7 +148,8 @@ def regBy(app):
                 msg = f"Task[{tsk.id}] execution failed: {str(e)}"
                 lg.error(msg)
         else:
-            msg = f"Cannot find corresponding task keyFn[{tsk.keyFn}]"
             pct = 50
+            msg = f"task[{tsk.id}] NotFound task keyFn[{tsk.keyFn}]"
+            lg.error( msg )
 
         return msg, pct, tsk.toStore(), nfy.toStore(), now.toStore()

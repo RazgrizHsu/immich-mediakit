@@ -17,6 +17,7 @@ class AutoDbField:
 class DtoSets:
     usrId = AutoDbField('usrId')
     useType = AutoDbField('useType')
+    photoQ = AutoDbField('photoQ')
 
     @classmethod
     def get(cls, key, default=None):

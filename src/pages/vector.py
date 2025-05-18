@@ -14,7 +14,7 @@ dash.register_page(
 )
 
 class K:
-    selectQuality = "inp-photo-quality"
+    selectQ = "sel-photoQ"
     btnProcess = "btn-process-photos"
     btnClear = "btn-clear-vectors"
     txtDA = "txt-direct-access"
@@ -40,17 +40,26 @@ def layout():
                                 dbc.Col([
                                     dbc.Label("Photo Quality"),
                                     dbc.Select(
-                                        id=K.selectQuality,
+                                        id=K.selectQ,
                                         options=[
-                                            {"label": "Thumbnail (Fast)", "value": "thumbnail"},
-                                            {"label": "Preview", "value": "preview"},
-                                            {"label": "Original (Slow)", "value": "original"},
+                                            {"label": "Thumbnail (Fast)", "value": Ks.db.thumbnail},
+                                            {"label": "Preview", "value": Ks.db.preview},
+                                            {"label": "FullSize (Slow)", "value": Ks.db.fullsize},
                                         ],
-                                        value="thumbnail",
+                                        value=Ks.db.preview,
                                         className="mb-3",
                                     ),
                                 ], width=12),
                             ], className="mb-2"),
+                            dbc.Row([
+                                dbc.Col([
+                                    htm.Ul([
+                                    htm.Li( [htm.B( "Thumbnail" ),htm.Small( " Fastest, but with lower detail comparison accuracy" ), ]),
+                                    htm.Li( [htm.B( "Preview" ),htm.Small( " Medium quality, generally the most balanced option" ), ]),
+                                    htm.Li( [htm.B( "FullSize" ),htm.Small( " Slowest, but provides the most precise detail comparison" ), ]),
+                                    ]),
+                                ], width=12, className=""),
+                            ], className="mb-0"),
                         ])
                     ], className="mb-4")
                 ], width=8),
@@ -191,7 +200,7 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     disBtnClr = isTskin or now.cntVec <= 0
 
     if tsk.id:
-        nfy.error("A task is already running, please wait for it to complete or stop it before trying again")
+        nfy.error(f"task already running, id[{tsk.id}] name[{tsk.name}] keyFn[{tsk.keyFn}] trgId[{trgId}]")
         txtBtn = "Task in progress.."
 
     return txtBtn, disBtnRun, disBtnClr, nfy.toStore()
@@ -202,13 +211,14 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     [
         out(Ks.store.mdl, "data", allow_duplicate=True),
         out(Ks.store.nfy, "data", allow_duplicate=True),
+        out(Ks.store.now, "data", allow_duplicate=True),
     ],
     [
         inp(K.btnProcess, "n_clicks"),
         inp(K.btnClear, "n_clicks"),
     ],
     [
-        ste(K.selectQuality, "value"),
+        ste(K.selectQ, "value"),
         ste(Ks.store.now, "data"),
         ste(Ks.store.mdl, "data"),
         ste(Ks.store.tsk, "data"),
@@ -218,10 +228,10 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
 )
 def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, dta_nfy):
 
-    if not nclk_proc and not nclk_clear: return noUpd, noUpd
+    if not nclk_proc and not nclk_clear: return noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
-    if trgId == Ks.store.tsk and not dta_tsk.get('id'): return noUpd, noUpd
+    if trgId == Ks.store.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd
 
     now = models.Now.fromStore(dta_now)
     mdl = models.Mdl.fromStore(dta_mdl)
@@ -239,8 +249,9 @@ def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_t
         else:
             mdl.id = 'photovec'
             mdl.cmd = 'process'
-            mdl.msg = f"Start photos to vectors use[{now.useType}] quality[{photoQ}]?"
-            mdl.args = { 'photoQ': photoQ }
+            mdl.msg = f"Begin vector processing for {now.cntPic} photos with {photoQ} quality?\n"
+            mdl.msg += f"Note: Any existing vectors will be cleared first"
+            now.photoQ = photoQ
 
     elif trgId == K.btnClear:
         if now.cntVec <= 0:
@@ -251,7 +262,7 @@ def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_t
             mdl.cmd = 'clear'
             mdl.msg = "Are you sure you want to clear all vectors?"
 
-    return mdl.toStore(), nfy.toStore()
+    return mdl.toStore(), nfy.toStore(), now.toStore()
 
 
 #------------------------------------------------------------------------
@@ -264,7 +275,7 @@ def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_t
     ],
     [
         inp(Ks.store.mdl, "data"),
-        inp(K.selectQuality, "value"),
+        inp(K.selectQ, "value"),
     ],
     [
         ste(Ks.store.now, "data"),
@@ -292,7 +303,7 @@ def photoVec_RunActs(dta_mdl, photoQuality, dta_now, dta_nfy):
             nfy.info("Starting task: Photo Vector Processing")
 
         elif mdl.cmd == 'clear':
-            tsk.id = 'photovec_clear'
+            tsk.id = 'photoVec_Clear'
             tsk.name = 'Clear Vectors'
             tsk.keyFn = 'photoVec_Clear'
 
@@ -312,14 +323,17 @@ def photoVec_ToVec(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
     msg = "[PhotoVec] Processing successful"
 
     try:
-        photoQuality = tsk.args.get("photoQuality", "thumbnail")
+        photoQ = now.photoQ if now.photoQ else Ks.db.thumbnail
 
-        onUpdate(1, "1%", "Initializing database connections")
+        onUpdate(1, "1%", f"Initializing with photoQ[{photoQ}]")
 
         useType = now.useType
 
-        onUpdate(5, "5%", "Getting asset data")
+        onUpdate(5, "5%", f"Getting asset data count[{now.cntPic}]")
         assets = db.pics.getAll()
+
+        if now.cntVec:
+            db.vecs.clear()
 
         if not assets or len(assets) == 0:
             msg = "No assets to process"
@@ -329,11 +343,11 @@ def photoVec_ToVec(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
         cntAll = len(assets)
         onUpdate(8, "", f"Found {cntAll} photos, starting processing")
 
-        result = imgs.processPhotoToVectors(assets, photoQuality, onUpdate=onUpdate)
+        rst = imgs.processPhotoToVectors(assets, photoQ, onUpdate=onUpdate)
 
         now.cntVec = db.vecs.count()
 
-        msg = f"Completed photo vector processing - Processed: {result['processed']}, Skipped: {result['skipped']}, Errors: {result['errors']}"
+        msg = f"Completed: total[{rst.total}] done[{rst.done}, Skip[{rst.skip}] Error[{rst.error}]"
         nfy.success(msg)
 
         return nfy, now, msg
@@ -358,7 +372,8 @@ def photoVec_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
         onUpdate(30, "30%", "Clearing Vectors...")
 
         count = db.vecs.count()
-        db.vecs.clear()
+        if count >= 0:
+            db.vecs.clear()
 
         onUpdate(90, "90%", f"Cleared {count} vector records")
 

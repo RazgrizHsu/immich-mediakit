@@ -21,6 +21,7 @@ class Now(BaseDictModel):
     usrs: List[Usr] = field(default_factory=list)
     usr: Optional[Usr] = None
     useType: Optional[str] = None
+    photoQ: Optional[str] = None
     cntPic: int = 0
     cntVec: int = 0
 
@@ -102,6 +103,13 @@ class Mdl(BaseDictModel):
         self.ok = False
         self.args = {}
 
+
+@dataclass
+class ProcessInfo(BaseDictModel):
+    total: int = 0
+    skip: int = 0
+    error: int = 0
+    done: int = 0
 
 @dataclass
 class Asset(BaseDictModel):
