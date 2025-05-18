@@ -7,6 +7,7 @@ import db.sets as sets
 import db.vecs as vecs
 import db.psql as psql
 
+# noinspection PyUnresolvedReferences
 import db.dyn as dyn
 
 

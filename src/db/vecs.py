@@ -8,14 +8,14 @@ from util import log
 
 lg = log.get(__name__)
 
-keyColl = "photo_vectors"
+keyColl = "mediakit"
 
 conn: Optional[QdrantClient] = None
 
 def init():
     global conn
     try:
-        conn = QdrantClient(envs.qdrantUrl or ":memory:")
+        conn = QdrantClient(envs.qdrantUrl)
 
         collections = conn.get_collections().collections
         collection_names = [c.name for c in collections]
@@ -28,6 +28,7 @@ def init():
                     distance=models.Distance.COSINE
                 )
             )
+        lg.info( f"Qdrant connection successfully, collection: {keyColl}" )
     except Exception as e:
         lg.error(f"Failed to initialize Qdrant: {str(e)}")
 
@@ -51,6 +52,7 @@ def clear():
                 collection_names = [c.name for c in collections]
 
                 if keyColl in collection_names:
+                    lg.info( f"start clear collection: {keyColl}" )
                     conn.delete(
                         collection_name=keyColl,
                         points_selector=models.FilterSelector(filter=models.Filter())
@@ -102,10 +104,9 @@ def hasData():
     return c > 0
 
 
-def delete_photo_vector(photo_id):
+def deleteBy(photo_id):
     try:
-        if conn is None:
-            return False
+        if conn is None: return False
 
         conn.delete(
             collection_name=keyColl,

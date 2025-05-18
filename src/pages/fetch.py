@@ -288,9 +288,9 @@ def assets_RunActs(dta_mdl, dta_now, dta_nfy):
 from util.task import IFnProg
 
 #------------------------------------------------------------------------
-def onFetchAssetsPsql(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnProg):
+def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnProg):
     try:
-        onUpdate([5, "5%", "init connection"])
+        onUpdate(5, "5%", "init connection")
 
         if not db.psql.conn:
             msg = "Error: Cannot connect to PostgreSQL database"
@@ -308,7 +308,7 @@ def onFetchAssetsPsql(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdat
         else:
             db.pics.deleteUsrAssets(usrId)
 
-        onUpdate([10, "10%", f"Starting to fetch assets for {usrName} from PostgreSQL"])
+        onUpdate(10, "10%", f"Starting to fetch assets for {usrName} from PostgreSQL")
 
         cntAll = db.psql.countAssets(usrId)
         if cntAll <= 0:
@@ -316,7 +316,7 @@ def onFetchAssetsPsql(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdat
             nfy.info(msg)
             return nfy, now, msg
 
-        onUpdate([15, "15%", f"Found {cntAll} photos, starting to fetch assets"])
+        onUpdate(15, "15%", f"Found {cntAll} photos, starting to fetch assets")
 
         assets = db.psql.fetchAssets(usrId)
 
@@ -325,20 +325,20 @@ def onFetchAssetsPsql(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdat
             nfy.info(msg)
             return nfy, now, msg
 
-        onUpdate([50, "50%", f"Retrieved {len(assets)} photos, starting to save to local database"])
+        onUpdate(50, "50%", f"Retrieved {len(assets)} photos, starting to save to local database")
 
         cntSaved = 0
         for idx, asset in enumerate(assets):
             if idx % 10 == 0:
                 progress = 50 + int((idx / len(assets)) * 40)
-                onUpdate([progress, f"{progress}%", f"Saving photo {idx}/{len(assets)}"])
+                onUpdate(progress, f"{progress}%", f"Saving photo {idx}/{len(assets)}")
 
             db.pics.saveBy(asset)
             cntSaved += 1
 
         now.cntPic = db.pics.count()
 
-        onUpdate([100, "100%", f"Saved {cntSaved} photos"])
+        onUpdate(100, "100%", f"Saved {cntSaved} photos")
 
         msg = f"Successfully fetched and saved {cntSaved} photos from PostgreSQL"
         nfy.info(msg)
@@ -357,7 +357,7 @@ def onFetchClearAll(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
     msg = "[Assets:Clear] Successfully cleared all assets"
     import db
     try:
-        onUpdate([10, "10%", f"start clear.."])
+        onUpdate(10, "10%", f"start clear..")
         db.clear_all_data()
         now.cntPic = 0
         now.cntVec = 0
@@ -371,5 +371,5 @@ def onFetchClearAll(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
 #========================================================================
 # Set up global functions
 #========================================================================
-task.mapFns['fetch_assets_psql'] = onFetchAssetsPsql
+task.mapFns['fetch_assets_psql'] = onFetchAssets
 task.mapFns['fetch_assets_clear'] = onFetchClearAll

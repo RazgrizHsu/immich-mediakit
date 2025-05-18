@@ -52,7 +52,7 @@ def init():
 					   thumbnail_path   TEXT,
 					   preview_path     TEXT,
 					   fullsize_path    TEXT,
-					   jsonExif        TEXT,
+					   jsonExif        TEXT Default '{}',
 					   isVectored       INTEGER Default 0
 				   )
                    ''')
@@ -65,6 +65,7 @@ def init():
 					   apiKey TEXT
 				   )
                    ''')
+        lg.info( "Sqlite connected: pics.db" )
 
         conn.commit()
         return True
@@ -103,16 +104,7 @@ def saveBy(asset):
         jsonExif = None
         if exifInfo:
             try:
-                # Ensure all fields are saved, including fields with null values
-                # Use json.dumps to convert Python object to JSON string, ensuring null values are preserved
                 jsonExif = json.dumps(exifInfo, ensure_ascii=False)
-
-                if 'make' in exifInfo or 'model' in exifInfo:
-                    # This might be an asset from API
-                    lg.info(f"Saving API exifInfo: {jsonExif[:100]}...")
-                else:
-                    # This might be a PostgreSQL asset
-                    lg.info(f"Saving PSQL exifInfo: {jsonExif[:100]}...")
             except Exception as e:
                 print(f"Error converting EXIF to JSON: {str(e)}")
 
@@ -321,7 +313,7 @@ def deleteUsrAssets(usrId):
         conn.commit()
 
         for assId in assetIds:
-            vecs.delete_photo_vector(assId)
+            vecs.deleteBy(assId)
 
         return True
     except Exception as e:

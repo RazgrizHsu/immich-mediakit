@@ -41,7 +41,7 @@ class BaseDictModel:
     # noinspection PyTypeChecker
     def toDict(self) -> Dict[str, Any]: return asdict(self)
 
-    def toJson(self) -> str: return json.dumps(self.toDict(), default=self._json_serializer)
+    def toJson(self) -> str: return json.dumps(self.toDict(), default=self._json_serializer, ensure_ascii=False)
 
     def toStore(self) -> Dict[str, Any]:
         return self.toDict()
