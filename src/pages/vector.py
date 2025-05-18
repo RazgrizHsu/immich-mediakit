@@ -125,6 +125,7 @@ def layout():
         out(K.btnProcess, "children"),
         out(K.btnProcess, "disabled"),
         out(K.btnClear, "disabled"),
+        out(K.selectQ, "disabled"),
         out(K.txtDA, "children" ),
         out(K.txtDA, "style" ),
     ],
@@ -142,11 +143,13 @@ def photoVec_OnInit(dta_now):
     daSty = {}
     disBtnRun = True
     disBtnClr = True
+    disSelect = False
 
     if hasVecs:
-        btnTxt = "Vector Processing Complete"
+        btnTxt = "Vectors Complete"
         disBtnRun = True
         disBtnClr = False
+        disSelect = True
     elif hasPics:
         btnTxt = "Execute - Process Assets"
         disBtnRun = False
@@ -160,7 +163,7 @@ def photoVec_OnInit(dta_now):
         rst = imgs.testDirectAccess()
         daSty = { 'background': '#78c22a', 'padding': '3px 5px 2px 5px' } if rst.startswith( "OK" ) else { 'background': '#8A0100' }
 
-    return btnTxt, disBtnRun, disBtnClr, rst, daSty
+    return btnTxt, disBtnRun, disBtnClr, disSelect, rst, daSty
 
 
 #------------------------------------------------------------------------
@@ -170,6 +173,7 @@ def photoVec_OnInit(dta_now):
         out(K.btnProcess, "children", allow_duplicate=True),
         out(K.btnProcess, "disabled", allow_duplicate=True),
         out(K.btnClear, "disabled", allow_duplicate=True),
+        out(K.selectQ, "disabled", allow_duplicate=True),
         out(Ks.store.nfy, "data", allow_duplicate=True)
     ],
     [
@@ -192,17 +196,20 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     now = models.Now.fromStore(dta_now)
     nfy = models.Nfy.fromStore(dta_nfy)
 
-    hasData = now.cntPic > 0
+    hasPic = now.cntPic > 0
     isTskin = tsk.id is not None
 
     txtBtn = "Execute: Process Assets"
-    disBtnRun = isTskin or not hasData
+    disBtnRun = isTskin or not hasPic
     disBtnClr = isTskin or now.cntVec <= 0
+    disSelect = isTskin or now.cntVec >= 1
+
+    lg.info( f"[photoVec] vec[{now.cntVec}] select[{disSelect}]" )
 
     if tsk.id:
         txtBtn = "Task in progress.."
 
-    return txtBtn, disBtnRun, disBtnClr, nfy.toStore()
+    return txtBtn, disBtnRun, disBtnClr, disSelect, nfy.toStore()
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
@@ -248,8 +255,7 @@ def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_t
         else:
             mdl.id = 'photovec'
             mdl.cmd = 'process'
-            mdl.msg = f"Begin vector processing for {now.cntPic} photos with {photoQ} quality?\n"
-            mdl.msg += f"Note: Any existing vectors will be cleared first"
+            mdl.msg = f"Begin processing photos[{now.cntPic}] with quality[{photoQ}] ?"
             now.photoQ = photoQ
 
     elif trgId == K.btnClear:

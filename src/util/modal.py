@@ -20,7 +20,7 @@ def render():
             dbc.Button("Cancel", id=k.id.btnNo, className="ms-auto"),
             dbc.Button("Confirm", id=k.id.btnOk, color="danger"),
         ]),
-    ], id=k.id.div, is_open=False),
+    ], id=k.id.div, is_open=False, centered=True),
 
 
 #========================================================================

@@ -259,12 +259,20 @@ def get_paginated_assets(page=1, per_page=20, usrId=None) -> tuple[List[models.A
         return [], 0
 
 
-def count():
+def count(usrId=None):
     try:
         if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
-        c.execute("Select Count(*) From assets")
+
+        sql = "Select Count(*) From assets"
+
+        if usrId:
+            sql += " Where ownerId = ?"
+            c.execute(sql, (usrId,))
+        else:
+            c.execute( sql )
+
         cnt = c.fetchone()[0]
         return cnt
     except Exception as e:
