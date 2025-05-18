@@ -24,7 +24,7 @@ def injectCallbacks(app):
                     trigger = ctx.triggered[0] if ctx.triggered else "Unknown trigger source"
 
                     # Log detailed error
-                    error_msg = f"Callback error: {str(e)}"
+                    error_msg = f"[CallBack] ERR: {str(e)}"
                     stack_trace = traceback.format_exc()
                     lg.error(f"{error_msg}\nTrigger source: {trigger}\n{stack_trace}")
 

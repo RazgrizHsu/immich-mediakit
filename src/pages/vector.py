@@ -2,7 +2,7 @@ import db
 from dsh import dash, htm, callback, dbc, inp, out, ste, getTriggerId, noUpd
 from util import log, models, task
 
-from conf import Ks
+from conf import Ks, envs
 
 lg = log.get(__name__)
 
@@ -17,6 +17,7 @@ class K:
     selectQuality = "inp-photo-quality"
     btnProcess = "btn-process-photos"
     btnClear = "btn-clear-vectors"
+    txtDA = "txt-direct-access"
 
 
 #========================================================================
@@ -30,26 +31,55 @@ def layout():
                 className="mb-4"
             ),
 
-            dbc.Card([
-                dbc.CardHeader("Processing Settings"),
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Label("Photo Quality"),
-                            dbc.Select(
-                                id=K.selectQuality,
-                                options=[
-                                    {"label": "Thumbnail (Fast)", "value": "thumbnail"},
-                                    {"label": "Preview", "value": "preview"},
-                                    {"label": "Original (Slow)", "value": "original"},
-                                ],
-                                value="thumbnail",
-                                className="mb-3",
-                            ),
-                        ], width=12),
-                    ]),
-                ])
-            ], className="mb-4"),
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardHeader("Processing Settings"),
+                        dbc.CardBody([
+                            dbc.Row([
+                                dbc.Col([
+                                    dbc.Label("Photo Quality"),
+                                    dbc.Select(
+                                        id=K.selectQuality,
+                                        options=[
+                                            {"label": "Thumbnail (Fast)", "value": "thumbnail"},
+                                            {"label": "Preview", "value": "preview"},
+                                            {"label": "Original (Slow)", "value": "original"},
+                                        ],
+                                        value="thumbnail",
+                                        className="mb-3",
+                                    ),
+                                ], width=12),
+                            ], className="mb-2"),
+                        ])
+                    ], className="mb-4")
+                ], width=8),
+                dbc.Col([
+
+                    dbc.Card([
+                        dbc.CardHeader("env"),
+                        dbc.CardBody([
+                            dbc.Row([
+                                dbc.Col([
+                                    htm.Small([
+                                        "IMMICH_PATH : ",
+                                        htm.Span(f"{envs.immichPath if envs.immichPath else '--none--'}", className="tag" ),
+                                    ]),
+                                ], width=12),
+                            ], className="mb-2"),
+                            dbc.Row([
+                                dbc.Col([
+                                    htm.Small([
+                                        "Direct Access : ",
+                                        htm.Span("connect..", className="tag", id=K.txtDA ),
+                                    ]),
+                                ], width=12),
+                            ], className="mb-2"),
+                        ])
+                    ], className="mb-4"),
+
+                ]),
+            ]),
 
             dbc.Row([
                 dbc.Col([
@@ -86,6 +116,8 @@ def layout():
         out(K.btnProcess, "children"),
         out(K.btnProcess, "disabled"),
         out(K.btnClear, "disabled"),
+        out(K.txtDA, "children" ),
+        out(K.txtDA, "style" ),
     ],
     inp(Ks.store.now, "data"),
     prevent_initial_call=False
@@ -97,6 +129,8 @@ def photoVec_OnInit(dta_now):
     hasVecs = now.cntVec > 0
 
     btnTxt = "Execute - Process Assets"
+    daTxt = "testing..."
+    daSty = {}
     disBtnRun = True
     disBtnClr = True
 
@@ -113,7 +147,11 @@ def photoVec_OnInit(dta_now):
         disBtnRun = True
         disBtnClr = True
 
-    return btnTxt, disBtnRun, disBtnClr
+    if hasPics:
+        rst = imgs.testDirectAccess()
+        daSty = { 'background': '#78c22a', 'padding': '3px 5px 2px 5px' } if rst.startswith( "OK" ) else { 'background': '#8A0100' }
+
+    return btnTxt, disBtnRun, disBtnClr, rst, daSty
 
 
 #------------------------------------------------------------------------

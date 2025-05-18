@@ -123,9 +123,13 @@ def assets_Init(dta_now, opts):
             for usr in usrs:
                 opts.append({"label": usr.name, "value": usr.id})
 
-    usrId = now.usrId if now else ""
+    lg.info( f"[fetch:init] opts: {opts}" )
 
-    # lg.info(f"[assets] Initialization result useType[{useType}] usrId[{usrId}]({len(opts)})")
+    lg.info( f"[fetch:init] now.usr: {now.usr} type({type(now.usr)})" )
+
+    usrId = now.usr.id if now and now.usr else ""
+
+    lg.info(f"[assets] Initialization result srId[{usrId}]({len(opts)})")
 
     return opts, usrId
 
@@ -166,11 +170,10 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
 
     txtBtn = f"Fetch: Get Assets"
 
-    usrName = now.getUserName(usrId)
-
-    if usrId != now.usrId:
-        now.usrId = db.dyn.dto.usrId = usrId
-        nfy.info(f"Switched user: {'All Users' if not usrName else usrName}")
+    if now.usr and usrId != now.usr.id:
+        db.dyn.dto.usrId = usrId
+        now.switchUsr(usrId)
+        nfy.info(f"Switched user: {'All Users' if not now.usr else now.usr.name}")
 
     if isTasking:
         disBtnRun = True
@@ -188,7 +191,7 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
             txtBtn = "--No users--"
 
         else:
-            if usrName: txtBtn = f"Fetch: {usrName}"
+            if now.usr: txtBtn = f"Fetch: {now.usr.name}"
 
     return txtBtn, disBtnRun, disBtnClr, now.toStore(), nfy.toStore()
 
@@ -235,8 +238,8 @@ def assets_BtnRunModals(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk
     elif trgSrc == K.btnFetch:
         mdl.id = 'assets'
         mdl.cmd = 'fetch'
-        if usrId:
-            mdl.msg = f"Start getting assets for user [{now.getUserName(usrId)}] from PostgreSQL"
+        if now.usr:
+            mdl.msg = f"Start getting assets for user [{now.usr.name}] from PostgreSQL"
         else:
             mdl.msg = "Start getting assets for all users from PostgreSQL"
 
@@ -297,31 +300,30 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
             nfy.error(msg)
             return nfy, now, msg
 
-        usrId = now.usrId
-        usrName = now.getUserName(usrId)
+        usr = now.usr
 
-        if not usrName:
-            msg = f"Error: User with id[{usrId}] not found"
+        if not usr:
+            msg = f"Error: User not found"
             nfy.error(msg)
             return nfy, now, msg
 
         else:
-            db.pics.deleteUsrAssets(usrId)
+            db.pics.deleteUsrAssets(now.usr.id)
 
-        onUpdate(10, "10%", f"Starting to fetch assets for {usrName} from PostgreSQL")
+        onUpdate(10, "10%", f"Starting to fetch assets for {now.usr.name} from PostgreSQL")
 
-        cntAll = db.psql.countAssets(usrId)
+        cntAll = db.psql.countAssets(now.usr.id)
         if cntAll <= 0:
-            msg = f"No assets found for {usrName}"
+            msg = f"No assets found for {now.usr.name}"
             nfy.info(msg)
             return nfy, now, msg
 
         onUpdate(15, "15%", f"Found {cntAll} photos, starting to fetch assets")
 
-        assets = db.psql.fetchAssets(usrId)
+        assets = db.psql.fetchAssets(now.usr.id)
 
         if not assets or len(assets) == 0:
-            msg = f"No assets retrieved for {usrName}"
+            msg = f"No assets retrieved for {now.usr.name}"
             nfy.info(msg)
             return nfy, now, msg
 

@@ -27,9 +27,23 @@ def render():
     tsk: models.Tsk = models.Tsk()
     mdl: models.Mdl = models.Mdl()
 
-    usrId = dto.usrId
+    if not now.usrs:
+        uss = []
+        try:
+            rows = psql.fetchUsers()
+            lg.info(f"[session] Loading users.. {len(rows)}")
+            for r in rows:
+                usr = models.Usr(r.get('id'), r.get('name'), r.get('email'), r.get('apiKey'))
+                uss.append(usr)
+        except:
+            pass
 
-    now.usrId = dto.usrId
+        lg.info(f"[session] Initialized usrs: {len(uss)}")
+        now.usrs = uss
+
+    usrId = dto.usrId
+    if usrId: now.switchUsr(usrId)
+
     now.useType = dto.useType
 
     now.cntPic = pics.count()
@@ -38,27 +52,11 @@ def render():
     if not now.useType:
         now.useType = dto.useType = 'API'
 
-    if not now.usrs:
-        uss = []
-        try:
-            rows = psql.fetchUsers()
-            lg.info(f"[session] Loading users.. {len(rows)}")
-            for r in rows:
-                usr = models.usr(r.get('id'), r.get('name'), r.get('email'), r.get('apiKey'))
-                uss.append(usr)
-        except:
-            pass
-
-        lg.info(f"[session] Initialized usrs: {len(uss)}")
-        now.usrs = uss
-
-
     mk(Ks.store.now, now.toStore())
 
     mk(Ks.store.nfy, nfy.toStore())
     mk(Ks.store.tsk, tsk.toStore())
     mk(Ks.store.mdl, mdl.toStore())
-
 
     items.append(htm.Div(id=Ks.store.init, children='init'))
 
