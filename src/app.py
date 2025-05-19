@@ -90,8 +90,10 @@ if __name__ == "__main__":
 
     finally:
         import db
-
         db.close()
+
+        import multiprocessing
+        multiprocessing.current_process().close()
         lg.info("---------------------------------------")
         lg.info("Application closed, all connections closed")
         lg.info("=======================================")

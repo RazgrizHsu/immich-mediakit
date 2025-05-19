@@ -2,8 +2,10 @@ import json
 import sqlite3
 import traceback
 from typing import Optional, List
-from conf import Ks, envs
+
+from conf import envs
 from util import log, models
+from util.baseModel import BaseDictModel
 
 lg = log.get(__name__)
 conn: Optional[sqlite3.dbapi2.Connection] = None
@@ -92,7 +94,7 @@ def clear():
 
 def hasData(): return count() > 0
 
-def saveBy(asset:dict):
+def saveBy(asset: dict):
     try:
         if conn is None: raise RuntimeError('the db is not init')
 
@@ -105,9 +107,10 @@ def saveBy(asset:dict):
         jsonExif = None
         if exifInfo:
             try:
-                jsonExif = json.dumps(exifInfo, ensure_ascii=False)
+                jsonExif = json.dumps(exifInfo, ensure_ascii=False, default=BaseDictModel.jsonSerializer)
+                lg.info( f"json: {jsonExif}" )
             except Exception as e:
-                print(f"Error converting EXIF to JSON: {str(e)}")
+                raise f"[pics.save] Error converting EXIF to JSON: {str(e)}"
 
         c.execute("Select autoId, id From assets Where id = ?", (assetId,))
         row = c.fetchone()
@@ -193,7 +196,6 @@ def getAssetInfo(assetId) -> Optional[models.Asset]:
         row = c.fetchone()
         if row is None: return None
 
-        # 直接使用 fromDB 方法轉換
         return models.Asset.fromDB(c, row)
     except Exception as e:
         lg.error(f"Failed to get asset information: {str(e)}")
@@ -273,7 +275,7 @@ def count(usrId=None):
             sql += " Where ownerId = ?"
             c.execute(sql, (usrId,))
         else:
-            c.execute( sql )
+            c.execute(sql)
 
         cnt = c.fetchone()[0]
         return cnt
@@ -282,36 +284,7 @@ def count(usrId=None):
         return 0
 
 
-def getAssetImagePathBy(assetId, photoQ=Ks.db.thumbnail):
-    try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-        c.execute('''
-				   Select thumbnail_path, preview_path, fullsize_path
-				   From assets
-				   Where id = ?
-                   ''', (assetId,))
-
-        row = c.fetchone()
-        if not row:
-            print(f'[db] assetId[{assetId}] img paths not found in db')
-            return None
-
-        if photoQ == Ks.db.thumbnail and row[0]:
-            return row[0]
-        elif photoQ == Ks.db.preview and row[1]:
-            return row[1]
-        elif row[2]:
-            return row[2]
-
-        return None
-    except Exception as e:
-        lg.error(f"Failed to get asset file path: {str(e)}")
-        return None
-
-
-def deleteUsrAssets(usrId):
+def deleteForUsr(usrId):
     import db.vecs as vecs
     try:
         if conn is None: raise RuntimeError('the db is not init')
@@ -321,13 +294,13 @@ def deleteUsrAssets(usrId):
         c.execute("Select id From assets Where ownerId = ?", (usrId,))
         assetIds = [row[0] for row in c.fetchall()]
 
-        lg.info( f"[pics] delete pics[{len(assetIds)}] for usrId[{usrId}]" )
+        lg.info(f"[pics] delete pics[{len(assetIds)}] for usrId[{usrId}]")
 
         c.execute("Delete From assets Where ownerId = ?", (usrId,))
 
         conn.commit()
 
-        lg.info( f"[pics] delete vectors for usrId[{usrId}]" )
+        lg.info(f"[pics] delete vectors for usrId[{usrId}]")
         for assId in assetIds:
             vecs.deleteBy(assId)
 

@@ -204,8 +204,8 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
 
         upd("fetch", 0, cntAll, "start reading...", True)
 
-        szBatch = 500
-        szChunk = 500
+        szBatch = 100
+        szChunk = 100
         assets = []
         cntFetched = 0
 
@@ -284,7 +284,6 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         for idx, i in enumerate(range(0, len(assetIds), szChunk)):
             chunk = assetIds[i:i + szChunk]
 
-            lg.info( f"[psql] 查詢: {tuple(chunk)}" )
             cursor.execute(exifSql, (tuple(chunk),))
             chunkResults = cursor.fetchall()
 
