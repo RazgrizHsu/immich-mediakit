@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from dsh import dash, htm, dcc, dbc
 from dsh import bgCallbackManager
-from util import log, notify, session, task, err, modal
+from util import log, notify, session, task, err, modal, modalImg
 from ui import layout
 import conf, db, api
 
@@ -30,6 +30,7 @@ layout.regBy(app)
 task.regBy(app)
 notify.regBy(app)
 modal.regBy(app)
+modalImg.regBy(app)
 
 import pages
 pages.regBy(app)
@@ -38,6 +39,8 @@ pages.regBy(app)
 app.layout = htm.Div([
 
     session.render(),
+    *modal.render(),
+    *modalImg.render(),
 
     dcc.Location(id='url', refresh=False),
 
@@ -49,7 +52,6 @@ app.layout = htm.Div([
             dbc.Col([
 
                 htm.Div(notify.render()),
-                htm.Div(modal.render()),
 
                 htm.Div(task.render(), className="m-4"),
 
@@ -79,7 +81,7 @@ if __name__ == "__main__":
             debug=True,
             host='0.0.0.0',
             port=int(conf.envs.mkitPort),
-            dev_tools_ui=False,
+            dev_tools_ui=True,
             dev_tools_props_check=True,
             dev_tools_hot_reload=True,
             dev_tools_silence_routes_logging=True,
