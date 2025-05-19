@@ -1,4 +1,3 @@
-import os
 import db
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId
 from util import log, models
@@ -278,10 +277,10 @@ def on_pagination_controls(
         pag_data["per_page"] = perPage
 
         total = getTotalFilteredCount(
-            userId=userId,
-            filterOption=filterOption,
-            searchKeyword=searchKeyword,
-            favoritesOnly=favoritesOnly
+            usrId=userId,
+            opts=filterOption,
+            search=searchKeyword,
+            favOnly=favoritesOnly
         )
         pag_data["total"] = total
 
@@ -346,14 +345,14 @@ def viewGrid_Load(
     current_page = min(total_pages, max(1, page))
 
     photos = getFilteredAssets(
-        userId=userId,
-        sortBy=sortBy,
-        sortOrder=sortOrder,
-        filterOption=filterOption,
-        searchKeyword=searchKeyword,
-        favoritesOnly=favoritesOnly,
+        usrId=userId,
+        sort=sortBy,
+        sortOrd=sortOrder,
+        opts=filterOption,
+        search=searchKeyword,
+        onlyFav=favoritesOnly,
         page=current_page,
-        itemsPerPage=per_page
+        pageSize=per_page
     )
 
     grid = createPhotoGrid(photos)
@@ -368,75 +367,72 @@ def viewGrid_Load(
 # Helper Functions
 #========================================================================
 def getFilteredAssets(
-    userId="", sortBy="fileCreatedAt", sortOrder="desc",
-    filterOption="all", searchKeyword="", favoritesOnly=False,
-    page=1, itemsPerPage=24
-):
+    usrId="", sort="fileCreatedAt", sortOrd="desc",
+    opts="all", search="", onlyFav=False,
+    page=1, pageSize=24
+) -> list[models.Asset]:
     try:
         conditions = []
         params = []
 
-        if userId:
+        if usrId:
             conditions.append("ownerId = ?")
-            params.append(userId)
+            params.append(usrId)
 
-        if favoritesOnly:
+        if onlyFav:
             conditions.append("isFavorite = 1")
 
-        if filterOption == "with_vectors":
+        if opts == "with_vectors":
             conditions.append("isVectored = 1")
-        elif filterOption == "without_vectors":
+        elif opts == "without_vectors":
             conditions.append("isVectored = 0")
 
-        if searchKeyword and len(searchKeyword.strip()) > 0:
+        if search and len(search.strip()) > 0:
             conditions.append("originalFileName LIKE ?")
-            params.append(f"%{searchKeyword}%")
+            params.append(f"%{search}%")
 
         query = "Select * From assets"
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
 
-        query += f" ORDER BY {sortBy} {'DESC' if sortOrder == 'desc' else 'ASC'}"
-        query += f" LIMIT {itemsPerPage} OFFSET {(page - 1) * itemsPerPage}"
+        query += f" ORDER BY {sort} {'DESC' if sortOrd == 'desc' else 'ASC'}"
+        query += f" LIMIT {pageSize} OFFSET {(page - 1) * pageSize}"
 
         conn = db.pics.mkconn()
         cursor = conn.cursor()
         cursor.execute(query, params)
 
-        photos = []
-        columns = [col[0] for col in cursor.description]
+        assets = []
         for row in cursor.fetchall():
-            photo = dict(zip(columns, row))
-            photos.append(photo)
+            asset = models.Asset.fromDB(cursor, row)
+            assets.append(asset)
 
-        return photos
+        return assets
     except Exception as e:
         lg.error(f"Error fetching photos: {str(e)}")
         return []
 
 
-def getTotalFilteredCount(
-    userId="", filterOption="all", searchKeyword="", favoritesOnly=False
-):
+def getTotalFilteredCount(usrId="", opts="all", search="", favOnly=False):
     try:
         conditions = []
         params = []
 
-        if userId:
+        if usrId:
             conditions.append("ownerId = ?")
-            params.append(userId)
+            params.append(usrId)
 
-        if favoritesOnly:
+        if favOnly:
             conditions.append("isFavorite = 1")
 
-        if filterOption == "with_vectors":
+        if opts == "with_vectors":
             conditions.append("isVectored = 1")
-        elif filterOption == "without_vectors":
+        elif opts == "without_vectors":
             conditions.append("isVectored = 0")
 
-        if searchKeyword and len(searchKeyword.strip()) > 0:
+        if search and len(search.strip()) > 0:
             conditions.append("originalFileName LIKE ?")
-            params.append(f"%{searchKeyword}%")
+            params.append(f"%{search}%")
 
         query = "Select Count(*) From assets"
         if conditions: query += " WHERE " + " AND ".join(conditions)
@@ -450,10 +446,6 @@ def getTotalFilteredCount(
         lg.error(f"Error counting photos: {str(e)}")
         return 0
 
-
-import conf
-
-PathImmichRoot = conf.envs.immichPath
 
 
 def createPhotoGrid(photos):
@@ -482,33 +474,20 @@ def createPhotoGrid(photos):
 
 
 
+def createPhotoCard(idx, asset):
+    hasVec = asset.isVectored == 1
+    filename = asset.originalFileName or 'Unknown'
+    created_date = asset.fileCreatedAt or 'Unknown date'
+    is_favorite = asset.isFavorite == 1
 
-import imgs
-
-def createPhotoCard(idx, photo):
-    pathThumbnail = photo.get('thumbnail_path')
-    pathPreview = photo.get('preview_path')
-    pathFullsize = photo.get('fullsize_path')
-
-    pathImg = pathThumbnail or pathPreview or pathFullsize or ""
-
-    if pathImg:
-        pathImg = os.path.join(PathImmichRoot, pathImg)
-        exist = os.path.exists(pathImg)
-        # lg.info(f"[img:{idx}] exist[{exist}]")
-
-    hasVec = photo.get('isVectored', 0) == 1
-
-    filename = photo.get('originalFileName', 'Unknown')
-    created_date = photo.get('fileCreatedAt', 'Unknown date')
-    is_favorite = photo.get('isFavorite', 0) == 1
-
-
-    # lg.info(f"[img:{idx}] pathImg[{image_path}]")
+    if asset.id:
+        image_src = f"/api/img/{asset.id}"
+    else:
+        image_src = "assets/noimg.png"
 
     return dbc.Card([
         dbc.CardImg(
-            src=imgs.toB64(pathImg),
+            src=image_src,
             top=True,
             style={"height": "160px", "objectFit": "cover"}
         ),

@@ -5,26 +5,27 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from dsh import dash, htm, dcc, dbc
 from dsh import bgCallbackManager
-from util import log, notify, session, task, error, modal
+from util import log, notify, session, task, err, modal
 from ui import layout
-import conf, db
+import conf, db, api
 
 db.init()
 
 app = dash.Dash(
     __name__,
+    title=conf.Ks.title,
     external_stylesheets=[dbc.themes.DARKLY],
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
     suppress_callback_exceptions=True,
     use_pages=True,
     pages_folder="pages",
-    background_callback_manager=bgCallbackManager
+    background_callback_manager=bgCallbackManager,
 )
 
-error.injectCallbacks(app)
+err.injectCallbacks(app)
 
-app.title = conf.Ks.title
-
+import serve
+serve.regBy(app)
 layout.regBy(app)
 task.regBy(app)
 notify.regBy(app)

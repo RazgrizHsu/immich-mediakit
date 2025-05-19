@@ -53,8 +53,7 @@ def init():
 					   preview_path     TEXT,
 					   fullsize_path    TEXT,
 					   jsonExif        TEXT Default '{}',
-					   isVectored       INTEGER Default 0,
-					   b64img           TEXT
+					   isVectored       INTEGER Default 0
 				   )
                    ''')
 
@@ -92,7 +91,7 @@ def clear():
 
 def hasData(): return count() > 0
 
-def saveBy(asset):
+def saveBy(asset:dict):
     try:
         if conn is None: raise RuntimeError('the db is not init')
 
@@ -117,7 +116,7 @@ def saveBy(asset):
 					   Insert Into assets (id, ownerId, deviceId, type, originalFileName,
 						   fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
 						   libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path,
-						   jsonExif, b64img)
+						   jsonExif)
 					   Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                        ''', (
                 assetId,
@@ -136,7 +135,6 @@ def saveBy(asset):
                 asset.get('preview_path'),
                 asset.get('fullsize_path', asset.get('originalPath')),
                 jsonExif,
-                asset.get('b64img', None),
             ))
 
         elif asset.get('thumbnail_path') or asset.get('preview_path') or asset.get('fullsize_path') or jsonExif:
@@ -321,10 +319,13 @@ def deleteUsrAssets(usrId):
         c.execute("Select id From assets Where ownerId = ?", (usrId,))
         assetIds = [row[0] for row in c.fetchall()]
 
+        lg.info( f"[pics] delete pics[{len(assetIds)}] for usrId[{usrId}]" )
+
         c.execute("Delete From assets Where ownerId = ?", (usrId,))
 
         conn.commit()
 
+        lg.info( f"[pics] delete vectors for usrId[{usrId}]" )
         for assId in assetIds:
             vecs.deleteBy(assId)
 

@@ -267,7 +267,6 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
 
         # todo: add support for all users?
 
-        lg.info( f"[fetch] ==========>>> usr: {now.usr}" )
 
         db.pics.deleteUsrAssets(now.usr.id)
 

@@ -1,6 +1,6 @@
 import requests
 
-from conf import envs
+from conf import envs, Ks
 from util import log
 
 lg = log.get(__name__)
@@ -17,7 +17,7 @@ lg = log.get(__name__)
 
 assets = []
 timeout = 5000
-urlApi = envs.immichUrl
+urlApi:str = envs.immichUrl
 
 if not urlApi.endswith('/'): urlApi += '/'
 if not urlApi.endswith('api'): urlApi = urlApi + 'api'
@@ -91,6 +91,12 @@ def _api_delete(endpoint: str, apiKey: str, json_data=None, headers=None):
     except Exception as e:
         lg.error(f"Unexpected error in API DELETE: {str(e)}")
         return None
+
+
+# 獲取圖片URL路徑，用於前端直接引用
+def get_image_url(asset_id, quality=Ks.db.thumbnail):
+    return f"/api/image/{asset_id}?quality={quality}"
+
 
 
 # def fetchAssets(apiKey, fetchType="IMAGE"):
