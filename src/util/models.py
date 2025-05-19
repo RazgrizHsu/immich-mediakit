@@ -112,6 +112,22 @@ class ProcessInfo(BaseDictModel):
     done: int = 0
 
 @dataclass
+class AssetExif(BaseDictModel):
+    make: Optional[str] = None
+    model: Optional[str] = None
+    orientation: Optional[int] = None
+    exposureTime: Optional[str] = None
+    fNumber: Optional[float] = None
+    focalLength: Optional[float] = None
+    iso: Optional[int] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    dateTimeOriginal: Optional[str] = None
+    lensModel: Optional[str] = None
+
+@dataclass
 class Asset(BaseDictModel):
     autoId: Optional[int] = None
     id: Optional[str] = None
@@ -129,7 +145,7 @@ class Asset(BaseDictModel):
     thumbnail_path: Optional[str] = None
     preview_path: Optional[str] = None
     fullsize_path: Optional[str] = None
-    jsonExif: Optional[str] = None
+    jsonExif: Optional[AssetExif] = None
     exifInfo: Json = field(default_factory=Json)
     isVectored: int = 0
 

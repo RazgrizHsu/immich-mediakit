@@ -1,11 +1,9 @@
-import os
 from typing import Optional
 import traceback
 import time
 import psycopg2
 import psycopg2.extras
 
-import imgs
 from conf import Ks, envs
 from util import log, models
 from util.task import IFnProg
@@ -302,17 +300,6 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
                 asset['exifInfo'] = exifData[assetId]
             else:
                 lg.warn( f"[exif] NotFound.. assetId[{assetId}]" )
-
-            # b64 img from api
-            path: Optional[str] = asset.get('thumbnail_path', None)
-
-            if not path:
-                lg.warn( f"[thumbnail] not found thumbnail path for assetId[{assetId}]" )
-            else:
-
-                b64 = imgs.getImgB64( path )
-                lg.info( f"[b64img] {'ok' if b64 else '--none--'}" )
-                asset['b64img'] = b64
 
             processedCount += 1
 
