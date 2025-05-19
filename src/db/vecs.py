@@ -151,10 +151,9 @@ def save(photo_id, vector):
                 return False
 
             if not hasattr(stored[0], 'vector') or stored[0].vector is None:
-                lg.info(f"Warning: Stored vector is null")
-                lg.info(f"No vector available")
-            else:
-                lg.info(f"Vector successfully saved: length={len(stored[0].vector)}")
+                lg.warn(f"Stored vector is null")
+
+            #lg.info(f"Vector successfully saved: length={len(stored[0].vector)}")
         except Exception as ve:
             lg.info(f"Error validating vector storage: {str(ve)}")
 

@@ -84,16 +84,7 @@ def _api_delete(endpoint: str, apiKey: str, json_data=None, headers=None):
         return None
 
 
-# Expected exifInfo fields (may vary between versions)
-expected_exif_fields = [
-    'make', 'model', 'exifImageWidth', 'exifImageHeight',
-    'fileSizeInByte', 'orientation', 'dateTimeOriginal', 'modifyDate',
-    'timeZone', 'lensModel', 'fNumber', 'focalLength', 'iso', 'exposureTime',
-    'latitude', 'longitude', 'city', 'state', 'country',
-    'description', 'projectionType', 'rating'
-]
-
-def fetchAssets( apiKey, fetchType="IMAGE"):
+def fetchAssets(apiKey, fetchType="IMAGE"):
     global assets
     assets = []
 
@@ -136,22 +127,6 @@ def fetchAssets( apiKey, fetchType="IMAGE"):
         if not filtered_assets:
             lg.error("No assets found via API")
             return []
-
-        if filtered_assets and len(filtered_assets) > 0 and 'exifInfo' in filtered_assets[0]:
-            actual_exif_fields = set()
-            for asset in filtered_assets:
-                if 'exifInfo' in asset and asset['exifInfo']:
-                    actual_exif_fields.update(asset['exifInfo'].keys())
-
-            # Check for added fields (fields in API but not in expected list)
-            unexpected_fields = actual_exif_fields - set(expected_exif_fields)
-            if unexpected_fields:
-                lg.warning(f"API returned unexpected exifInfo fields: {sorted(list(unexpected_fields))}")
-
-            # Check for removed fields (fields in expected list but not in API)
-            missing_fields = set(expected_exif_fields) - actual_exif_fields
-            if missing_fields:
-                lg.warning(f"API did not return expected exifInfo fields: {sorted(list(missing_fields))}")
 
         return filtered_assets
     except requests.exceptions.RequestException as e:

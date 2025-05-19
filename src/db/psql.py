@@ -85,21 +85,61 @@ def fetchUsers():
 
 
 def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
+    from dataclasses import dataclass
 
+    @dataclass
+    class StageInfo:
+        name: str
+        base: int
+        range: int
+
+    #------------------------------------------------------
+    # 因為db裡的值會帶upload/ (經由web上傳的)
+    # 要對應到真實路徑, 必需要把upload替換為實際路徑
+    #------------------------------------------------------
     def rmPrefixUpload(path):
         if path.startswith('upload/'): return path[7:]
         return path
 
+    #------------------------------------------------------
+    # 進度計算與回報的嵌套函數
+    #------------------------------------------------------
+    def upd(sid, cnow, call, msg, force=False):
+        if not onUpdate: return
+
+        stg = stages.get(sid)
+        if not stg: return
+
+        if call <= 0:
+            pct = stg.base
+            onUpdate(pct, f"{pct}%", msg)
+            return pct
+
+        fraction = min(1.0, cnow / call)
+        pct = stg.base + int(fraction * stg.range)
+
+        if force or cnow == call or cnow % 100 == 0: onUpdate(pct, f"{pct}%", msg)
+
+        return pct
 
     try:
         if not conn: raise RuntimeError("Failed to connect to psql")
 
-        inPct = 0
-        if onUpdate: onUpdate(inPct, f"{inPct}%", "Start query...")
+        stages = {
+            "init": StageInfo("初始化", 0, 5),
+            "fetch": StageInfo("獲取資產", 5, 35),
+            "files": StageInfo("獲取檔案", 40, 40),
+            "exif": StageInfo("獲取EXIF", 80, 10),
+            "combine": StageInfo("合併數據", 90, 10),
+            "complete": StageInfo("完成", 100, 0)
+        }
+
+        upd("init", 0, 1, "Start query...", True)
 
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-        cntSql = "Select Count( * ) From assets Where type = %s"
+        # count all
+        cntSql = "Select Count( * ) From assets Where status = 'active' And type = %s"
         cntArs = [asType]
 
         if usrId:
@@ -111,16 +151,10 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
         lg.info(f"Found {cntAll} {asType.lower()} assets...")
 
-        if onUpdate:
-            inPct = 5
-            onUpdate(inPct, f"{inPct}%", f"found {cntAll} ({asType.lower()}) assets...")
+        upd("init", 1, 1, f"found {cntAll} ({asType.lower()}) assets...", True)
 
-        sql = """
-		  Select a.*, e.*
-		  From assets a
-					   Left Join exif e On a.id = e."assetId"
-		  Where a.type = %s
-              """
+        # query assets
+        sql = "Select * From assets Where status = 'active' And type = %s"
 
         params = [asType]
 
@@ -132,26 +166,8 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
         cursor.execute(sql, params)
 
-        # API-compatible EXIF field list (based on API return results)
-        api_exif_fields = [
-            'make', 'model', 'exifImageWidth', 'exifImageHeight',
-            'fileSizeInByte', 'orientation', 'dateTimeOriginal', 'modifyDate',
-            'timeZone', 'lensModel', 'fNumber', 'focalLength', 'iso', 'exposureTime',
-            'latitude', 'longitude', 'city', 'state', 'country',
-            'description', 'projectionType', 'rating'
-        ]
+        upd("fetch", 0, cntAll, "start reading...", True)
 
-        # All possible EXIF field names (including fields not used by API)
-        all_exif_fields = api_exif_fields + [
-            'fps', 'livePhotoCID', 'profileDescription', 'colorspace',
-            'bitsPerSample', 'autoStackId'
-        ]
-
-        baseFetchPct = 40
-
-        if onUpdate:
-            inPct = 10
-            onUpdate(inPct, f"{inPct}%", "start reading...")
 
         szBatch = 500
         szChunk = 500
@@ -168,54 +184,28 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
             for row in batch:
                 asset = {key: row[key] for key in row.keys()}
-
-                exifInfo = {}
-
-                for fd in api_exif_fields:
-                    if fd in asset and asset[fd] is not None:
-                        if fd in ('dateTimeOriginal', 'modifyDate'):
-                            if isinstance(asset[fd], str):
-                                exifInfo[fd] = asset[fd]
-                            else:
-                                exifInfo[fd] = asset[fd].isoformat() if asset[fd] else None
-                        else:
-                            exifInfo[fd] = asset[fd]
-
-                # Remove all EXIF fields from asset dictionary
-                for fd in all_exif_fields:
-                    # If the field is 'description', only delete it if it's not empty
-                    # because the assets table also has a description field
-                    if fd != 'description' or (fd == 'description' and asset.get(fd) is not None):
-                        asset.pop(fd, None)
-
-                if exifInfo: asset['exifInfo'] = exifInfo
-
                 assets.append(asset)
 
-            if onUpdate and cntAll > 0:
-                curPct = inPct + int(cntFetched / cntAll * (baseFetchPct - inPct))
-
+            if cntAll > 0:
                 if cntFetched > 0:
-                    tElapsed = time.time() - tStart
-                    tPerItem = tElapsed / cntFetched
-                    remainCnt = cntAll - cntFetched
-                    remainTime = tPerItem * remainCnt
-                    remainMins = int(remainTime / 60)
-                    timeSuffix = f"remain: {remainMins} mins"
+                    tmUsed = time.time() - tStart
+                    tPerItem = tmUsed / cntFetched
+                    remCnt = cntAll - cntFetched
+                    remTime = tPerItem * remCnt
+                    remMins = int(remTime / 60)
+                    tmSuffix = f"remain: {remMins} mins"
                 else:
-                    timeSuffix = "calcuating..."
+                    tmSuffix = "calcuating..."
 
-                onUpdate(curPct, f"{curPct}%", f"processed {cntFetched}/{cntAll} ... {timeSuffix}")
+                upd("fetch", cntFetched, cntAll, f"processed {cntFetched}/{cntAll} ... {tmSuffix}")
 
         cursor.close()
 
-        if onUpdate:
-            curPct = baseFetchPct
-            onUpdate(curPct, f"{curPct}%", "main assets done... query for files..")
+        upd("fetch", cntAll, cntAll, "main assets done... query for files..", True)
 
-        # get thumbnail and preview paths for each asset
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+        # query asset files
         flsSql = """
 			   Select "assetId", type, path
 			   From asset_files
@@ -225,25 +215,18 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
         assetIds = [a['id'] for a in assets]
         afs = []
 
-        pathFetchPct = 40
-        nextPct = baseFetchPct
-
         for idx, i in enumerate(range(0, len(assetIds), szChunk)):
             chunk = assetIds[i:i + szChunk]
             cursor.execute(flsSql, (tuple(chunk),))
             chunkResults = cursor.fetchall()
             afs.extend(chunkResults)
 
-            if onUpdate and len(assetIds) > 0:
-                chunkPct = min((idx + 1) * szChunk, len(assetIds))
-                curPct = baseFetchPct + int(chunkPct / len(assetIds) * pathFetchPct)
-                onUpdate(curPct, f"{curPct}%", f"query files.. {chunkPct}/{len(assetIds)}...")
+            chunkPct = min((idx + 1) * szChunk, len(assetIds))
+            upd("files", chunkPct, len(assetIds), f"query files.. {chunkPct}/{len(assetIds)}...")
 
-        if onUpdate:
-            nextPct = baseFetchPct + pathFetchPct
-            onUpdate(nextPct, f"{nextPct}%", "files ready, combine data...")
+        upd("files", len(assetIds), len(assetIds), "files ready, combine data...", True)
 
-        # Create a lookup dictionary for fast access
+
         dictFiles = {}
         for af in afs:
             assetId = af['assetId']
@@ -252,8 +235,45 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
             if assetId not in dictFiles: dictFiles[assetId] = {}
             dictFiles[assetId][typ] = path
 
-        # Add path information to each asset
-        finalPct = 20
+        upd("exif", 0, len(assetIds), "files ready, query exif data...", True)
+
+
+        # query exif
+        exifSql = """
+        Select *
+        From exif
+        Where "assetId" In %s
+        """
+
+        exifData = {}
+        for idx, i in enumerate(range(0, len(assetIds), szChunk)):
+            chunk = assetIds[i:i + szChunk]
+            cursor.execute(exifSql, (tuple(chunk),))
+            chunkResults = cursor.fetchall()
+
+            for row in chunkResults:
+                assetId = row['assetId']
+                exifItem = {}
+
+                for key, val in row.items():
+                    if key == 'assetId': continue
+
+                    if key in ('dateTimeOriginal', 'modifyDate') and val is not None:
+                        if isinstance(val, str):
+                            exifItem[key] = val
+                        else:
+                            exifItem[key] = val.isoformat() if val else None
+                    elif val is not None:
+                        exifItem[key] = val
+
+                if exifItem:
+                    exifData[assetId] = exifItem
+
+            chunkPct = min((idx + 1) * szChunk, len(assetIds))
+            upd("exif", chunkPct, len(assetIds), f"query exif.. {chunkPct}/{len(assetIds)}...")
+
+        upd("exif", len(assetIds), len(assetIds), "exif ready, combine data...", True)
+
         processedCount = 0
 
         for asset in assets:
@@ -265,18 +285,18 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
             asset['fullsize_path'] = rmPrefixUpload(asset.get('originalPath', ''))
 
+            if assetId in exifData: asset['exifInfo'] = exifData[assetId]
+
             processedCount += 1
 
-            if onUpdate and len(assets) > 0 and (processedCount % 100 == 0 or processedCount == len(assets)):
-                curPct = nextPct + int(processedCount / len(assets) * finalPct)
-                onUpdate(curPct, f"{curPct}%", f"processing {processedCount}/{len(assets)}...")
+            if len(assets) > 0 and (processedCount % 100 == 0 or processedCount == len(assets)):
+                upd("combine", processedCount, len(assets), f"processing {processedCount}/{len(assets)}...")
 
         cursor.close()
 
         lg.info(f"Successfully fetched {len(assets)} {asType.lower()} assets")
 
-        if onUpdate:
-            onUpdate(100, "100%", f"Complete Assets[{len(assets)}] ({asType.lower()})")
+        upd("complete", 1, 1, f"Complete Assets[{len(assets)}] ({asType.lower()})", True)
 
         return assets
     except Exception as e:

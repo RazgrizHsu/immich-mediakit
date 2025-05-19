@@ -301,7 +301,7 @@ def photoVec_ToVec(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
         cntAll = len(assets)
         onUpdate(8, "", f"Found {cntAll} photos, starting processing")
 
-        rst = imgs.processPhotoToVectors(assets, photoQ, onUpdate=onUpdate)
+        rst = imgs.toVectors(assets, photoQ, onUpdate=onUpdate)
 
         now.cntVec = db.vecs.count()
 

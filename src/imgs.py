@@ -1,6 +1,7 @@
 import os
 import time
 import torch
+import base64
 
 from typing import List, Optional
 
@@ -43,6 +44,17 @@ model.eval()
 def convert_image_to_rgb(image):
     if image.mode == 'RGBA': return image.convert('RGB')
     return image
+
+def toB64(path):
+
+    if isinstance(path, str):
+        with open(path, 'rb') as f:
+            image = f.read()
+        return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
+    elif isinstance(path, bytes):
+        return base64.b64encode(path).decode('utf-8')
+
+    return None
 
 transform = Compose([
     convert_image_to_rgb,
@@ -115,7 +127,7 @@ def getImage(path) -> Optional[Image.Image]:
 
 def getImageFromLocal(assetId, photoQ):
     path = db.pics.getAssetImagePathBy(assetId, photoQ)
-    lg.info(f"[getImgLocal] id[{assetId}], photoQ[{photoQ}] path[{path}]")
+    # lg.info(f"[getImgLocal] id[{assetId}], photoQ[{photoQ}] path[{path}]")
     return getImage(path)
 
 
@@ -136,15 +148,14 @@ def testDirectAccess():
 
     return f"access failed"
 
-def processPhotoToVectors(assets: List[models.Asset], photoQ, onUpdate:IFnProg=None) -> models.ProcessInfo:
+def toVectors(assets: List[models.Asset], photoQ, onUpdate:IFnProg=None) -> models.ProcessInfo:
     tS = time.time()
     pi = models.ProcessInfo(total=len(assets), done=0, skip=0, error=0)
 
-    # 初始進度為15%
     inPct = 15
 
     if onUpdate:
-        onUpdate(inPct, f"{inPct}%", f"準備處理 {pi.total} 張照片, 品質: {photoQ}")
+        onUpdate(inPct, f"{inPct}%", f"Preparing to process {pi.total} photos, quality: {photoQ}")
 
     for idx, asset in enumerate(assets):
         assetId = asset.id
@@ -153,7 +164,7 @@ def processPhotoToVectors(assets: List[models.Asset], photoQ, onUpdate:IFnProg=N
         img = getImageFromLocal(assetId, photoQ)
 
         if not img:
-            lg.error(f"無法取得照片: assetId[{assetId}], photoQ[{photoQ}]")
+            lg.error(f"Unable to get photo: assetId[{assetId}], photoQ[{photoQ}]")
             pi.error += 1
             continue
 
@@ -165,7 +176,7 @@ def processPhotoToVectors(assets: List[models.Asset], photoQ, onUpdate:IFnProg=N
             elif result is False or result is None:
                 pi.skip += 1
         except Exception as e:
-            lg.error(f"處理失敗: {assetId} - {str(e)}")
+            lg.error(f"Processing failed: {assetId} - {str(e)}")
             pi.error += 1
 
         if idx > 0:
@@ -175,14 +186,13 @@ def processPhotoToVectors(assets: List[models.Asset], photoQ, onUpdate:IFnProg=N
             remainTime = tPerItem * remainCnt
             remainMins = int(remainTime / 60)
         else:
-            remainMins = "計算中"
+            remainMins = "Calculating"
 
         if onUpdate and (idx % 10 == 0 or idx == pi.total - 1):
-            # 將剩餘的85%進度分配給實際處理過程
             percent = inPct + int((idx + 1) / pi.total * (100 - inPct))
-            onUpdate(percent, f"{percent}%", f"處理照片 {idx + 1}/{pi.total} - (完成: {pi.done}, 跳過: {pi.skip}, 錯誤: {pi.error}). 預估剩餘時間: {remainMins} 分鐘")
+            onUpdate(percent, f"{percent}%", f"Processing photo {idx + 1}/{pi.total} - (Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}). Estimated remaining time: {remainMins} minutes")
 
     if onUpdate:
-        onUpdate(100, "100%", f"處理完成! 完成: {pi.done}, 跳過: {pi.skip}, 錯誤: {pi.error}")
+        onUpdate(100, "100%", f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
 
     return pi

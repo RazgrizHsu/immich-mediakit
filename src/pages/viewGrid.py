@@ -480,37 +480,35 @@ def createPhotoGrid(photos):
 
     return htm.Div(rows)
 
-import base64
 
-def b64Img(image_filename):
-    with open(image_filename, 'rb') as f:
-        image = f.read()
-    return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
 
+
+import imgs
 
 def createPhotoCard(idx, photo):
-    thumbnail_path = photo.get('thumbnail_path')
-    preview_path = photo.get('preview_path')
-    fullsize_path = photo.get('fullsize_path')
+    pathThumbnail = photo.get('thumbnail_path')
+    pathPreview = photo.get('preview_path')
+    pathFullsize = photo.get('fullsize_path')
 
-    image_path = thumbnail_path or preview_path or fullsize_path or ""
+    pathImg = pathThumbnail or pathPreview or pathFullsize or ""
 
-    if image_path:
-        image_path = os.path.join(PathImmichRoot, image_path)
-        exist = os.path.exists(image_path)
-        lg.info(f"[img:{idx}] exist[{exist}]")
+    if pathImg:
+        pathImg = os.path.join(PathImmichRoot, pathImg)
+        exist = os.path.exists(pathImg)
+        # lg.info(f"[img:{idx}] exist[{exist}]")
 
-    has_vector = photo.get('isVectored', 0) == 1
+    hasVec = photo.get('isVectored', 0) == 1
 
     filename = photo.get('originalFileName', 'Unknown')
     created_date = photo.get('fileCreatedAt', 'Unknown date')
     is_favorite = photo.get('isFavorite', 0) == 1
 
-    lg.info(f"[img:{idx}] pathImg[{image_path}]")
+
+    # lg.info(f"[img:{idx}] pathImg[{image_path}]")
 
     return dbc.Card([
         dbc.CardImg(
-            src=b64Img(image_path),
+            src=imgs.toB64(pathImg),
             top=True,
             style={"height": "160px", "objectFit": "cover"}
         ),
@@ -528,9 +526,9 @@ def createPhotoCard(idx, photo):
             ),
             htm.Div([
                 dbc.Badge(
-                    "Has Vector", color="success", className="me-1"
-                ) if has_vector else dbc.Badge(
-                    "No Vector", color="warning", className="me-1"
+                    "VecOk", color="success", className="me-1"
+                ) if hasVec else dbc.Badge(
+                    "NoVec", color="warning", className="me-1"
                 ),
                 dbc.Badge(
                     "❤️ Favorite", color="danger", className="ms-1"
