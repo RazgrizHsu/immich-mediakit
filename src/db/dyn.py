@@ -1,3 +1,4 @@
+# noinspection PyUnresolvedReferences
 from db.sets import lg, get, save
 
 class AutoDbField:
@@ -10,7 +11,7 @@ class AutoDbField:
         return get(self.key, self.default)
 
     def __set__(self, instance, value):
-        # lg.info(f"[dynField] Saving setting value: {self.key} = {value}")
+        # lg.info(f"[dynField] Saving setting k[{self.key}] v[{value}]")
         save(self.key, str(value))
 
 

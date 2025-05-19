@@ -53,7 +53,8 @@ def init():
 					   preview_path     TEXT,
 					   fullsize_path    TEXT,
 					   jsonExif        TEXT Default '{}',
-					   isVectored       INTEGER Default 0
+					   isVectored       INTEGER Default 0,
+					   b64img           TEXT
 				   )
                    ''')
 
@@ -116,8 +117,8 @@ def saveBy(asset):
 					   Insert Into assets (id, ownerId, deviceId, type, originalFileName,
 						   fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
 						   libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path,
-						   jsonExif)
-					   Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+						   jsonExif, b64img)
+					   Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                        ''', (
                 assetId,
                 asset.get('ownerId'),
@@ -134,7 +135,8 @@ def saveBy(asset):
                 asset.get('thumbnail_path'),
                 asset.get('preview_path'),
                 asset.get('fullsize_path', asset.get('originalPath')),
-                jsonExif
+                jsonExif,
+                asset.get('b64img', None),
             ))
 
         elif asset.get('thumbnail_path') or asset.get('preview_path') or asset.get('fullsize_path') or jsonExif:
@@ -280,7 +282,7 @@ def count(usrId=None):
         return 0
 
 
-def getAssetImagePathBy(assetId, photoQ):
+def getAssetImagePathBy(assetId, photoQ=Ks.db.thumbnail):
     try:
         if conn is None: raise RuntimeError('the db is not init')
 

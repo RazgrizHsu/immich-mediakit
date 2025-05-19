@@ -25,7 +25,7 @@ def regBy(app):
         mdl = models.Mdl.fromStore(dta_mdl)
 
         tid = getTriggerId()
-        lg.info(f"[tsk] runActs tid[{tid}] mdl: ok[{mdl.ok}] id[{mdl.id}]")
+        # lg.info(f"[tsk] runActs tid[{tid}] mdl: ok[{mdl.ok}] id[{mdl.id}]")
 
         if not mdl.ok: return noUpd, noUpd, noUpd
 

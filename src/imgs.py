@@ -2,6 +2,7 @@ import os
 import time
 import torch
 import base64
+from io import BytesIO
 
 from typing import List, Optional
 
@@ -18,6 +19,8 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
 import api, db, conf
 from util import log, models
 from util.task import IFnProg
+
+from conf import envs
 
 
 lg = log.get(__name__)
@@ -52,7 +55,13 @@ def toB64(path):
             image = f.read()
         return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
     elif isinstance(path, bytes):
-        return base64.b64encode(path).decode('utf-8')
+        return 'data:image/png;base64,' + base64.b64encode(path).decode('utf-8')
+    elif isinstance(path, Image.Image):
+        buffer = BytesIO()
+        path.save(buffer, format="PNG")
+        buffer.seek(0)
+        image_bytes = buffer.getvalue()
+        return 'data:image/png;base64,' + base64.b64encode(image_bytes).decode('utf-8')
 
     return None
 
@@ -107,29 +116,29 @@ def saveVectorBy(assetId, img):
     except Exception as e:
         raise f"Error processing asset {assetId}: {str(e)}"
 
-def getImage(path) -> Optional[Image.Image]:
-    if path:
-        path = os.path.join(conf.envs.immichPath, path.lstrip('/'))
 
-        try:
-            if os.path.exists(path):
-                size = os.path.getsize(path)
-                # lg.info(f"[getImgLocal] image[{os.path.basename(path)}] size[{size / 1024 / 1024:.2f} MB]")
-                image = Image.open(path)
-                image.load()
-                return image
-            else:
-                lg.error(f"File not found: {path}")
-        except Exception as e:
-            lg.error(f"Error opening image from local path: {str(e)}")
+def getImg(path) -> Optional[Image.Image]:
+
+    if not path.startswith(envs.immichPath): path = os.path.join(envs.immichPath, path)
+    try:
+        if os.path.exists(path):
+            size = os.path.getsize(path)
+            # lg.info(f"[getImgLocal] image[{os.path.basename(path)}] size[{size / 1024 / 1024:.2f} MB]")
+            image = Image.open(path)
+            image.load()
+            return image
+        else:
+            lg.error(f"File not found: {path}")
+    except Exception as e:
+        lg.error(f"Error opening image from local path: {str(e)}")
 
     return None
 
-def getImageFromLocal(assetId, photoQ):
-    path = db.pics.getAssetImagePathBy(assetId, photoQ)
-    # lg.info(f"[getImgLocal] id[{assetId}], photoQ[{photoQ}] path[{path}]")
-    return getImage(path)
+def getImgB64( path ) -> Optional[str]:
+    img = getImg(path)
+    if img: return toB64(img)
 
+    return toB64(path) if os.path.exists(path) else None
 
 def testDirectAccess():
     import db.pics as pics
@@ -139,7 +148,6 @@ def testDirectAccess():
     if not asset: return "No Assets"
 
     path = asset.getImagePath(conf.Ks.db.preview)
-
 
     if os.path.exists(path):
         return "OK! path exists!"
@@ -160,8 +168,7 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate:IFnProg=None) -> mode
     for idx, asset in enumerate(assets):
         assetId = asset.id
 
-        # img = api.getImage(apiKey, assetId, photoQ)
-        img = getImageFromLocal(assetId, photoQ)
+        img = getImg(asset.getImagePath(photoQ))
 
         if not img:
             lg.error(f"Unable to get photo: assetId[{assetId}], photoQ[{photoQ}]")

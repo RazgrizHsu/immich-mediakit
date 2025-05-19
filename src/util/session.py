@@ -32,7 +32,7 @@ def render():
         try:
             rows = psql.fetchUsers()
             for r in rows:
-                usr = models.Usr(r.get('id'), r.get('name'), r.get('email'), r.get('apiKey'))
+                usr = models.Usr(r.get('id'), r.get('name'), r.get('email'), r.get('ak'))
                 uss.append(usr)
         except:
             pass
@@ -41,7 +41,9 @@ def render():
         now.usrs = uss
 
     usrId = dto.usrId
-    if usrId: now.switchUsr(usrId)
+    if usrId:
+        now.switchUsr(usrId)
+        lg.info( f"[session] set usrId[{usrId}] now.usr: {now.usr}" )
 
     now.useType = dto.useType
     if not now.photoQ:

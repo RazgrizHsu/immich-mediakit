@@ -1,10 +1,13 @@
+import os
 from typing import Optional
 import traceback
 import time
 import psycopg2
 import psycopg2.extras
+
+import imgs
 from conf import Ks, envs
-from util import log
+from util import log, models
 from util.task import IFnProg
 
 lg = log.get(__name__)
@@ -68,7 +71,7 @@ def fetchUsers():
             u.id,
             u.name,
             u.email,
-            a.key As apiKey
+            a.key As ak 
         From users u
         Join api_keys a On u.id = a."userId"
         """
@@ -83,9 +86,11 @@ def fetchUsers():
         lg.info(traceback.format_exc())
         return []
 
+from dataclasses import dataclass
 
-def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
-    from dataclasses import dataclass
+def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
+
+    usrId = usr.id
 
     @dataclass
     class StageInfo:
@@ -153,16 +158,18 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
         upd("init", 1, 1, f"found {cntAll} ({asType.lower()}) assets...", True)
 
+        #----------------------------------------------------------------
         # query assets
+        #----------------------------------------------------------------
         sql = "Select * From assets Where status = 'active' And type = %s"
 
         params = [asType]
 
         if usrId:
-            sql += " AND a.\"ownerId\" = %s"
+            sql += " AND \"ownerId\" = %s"
             params.append(usrId)
 
-        sql += " ORDER BY a.\"createdAt\" DESC"
+        sql += " ORDER BY \"createdAt\" DESC"
 
         cursor.execute(sql, params)
 
@@ -203,9 +210,11 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
         upd("fetch", cntAll, cntAll, "main assets done... query for files..", True)
 
-        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+        #----------------------------------------------------------------
         # query asset files
+        #----------------------------------------------------------------
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         flsSql = """
 			   Select "assetId", type, path
 			   From asset_files
@@ -235,10 +244,11 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
             if assetId not in dictFiles: dictFiles[assetId] = {}
             dictFiles[assetId][typ] = path
 
-        upd("exif", 0, len(assetIds), "files ready, query exif data...", True)
 
-
+        #----------------------------------------------------------------
         # query exif
+        #----------------------------------------------------------------
+        upd("exif", 0, len(assetIds), "files ready, query exif data...", True)
         exifSql = """
         Select *
         From exif
@@ -272,6 +282,9 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
             chunkPct = min((idx + 1) * szChunk, len(assetIds))
             upd("exif", chunkPct, len(assetIds), f"query exif.. {chunkPct}/{len(assetIds)}...")
 
+        #----------------------------------------------------------------
+        # combine & fetch thumbnail image
+        #----------------------------------------------------------------
         upd("exif", len(assetIds), len(assetIds), "exif ready, combine data...", True)
 
         processedCount = 0
@@ -285,7 +298,21 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
             asset['fullsize_path'] = rmPrefixUpload(asset.get('originalPath', ''))
 
-            if assetId in exifData: asset['exifInfo'] = exifData[assetId]
+            if assetId in exifData:
+                asset['exifInfo'] = exifData[assetId]
+            else:
+                lg.warn( f"[exif] NotFound.. assetId[{assetId}]" )
+
+            # b64 img from api
+            path: Optional[str] = asset.get('thumbnail_path', None)
+
+            if not path:
+                lg.warn( f"[thumbnail] not found thumbnail path for assetId[{assetId}]" )
+            else:
+
+                b64 = imgs.getImgB64( path )
+                lg.info( f"[b64img] {'ok' if b64 else '--none--'}" )
+                asset['b64img'] = b64
 
             processedCount += 1
 
@@ -294,19 +321,20 @@ def fetchAssets(usrId, asType="IMAGE", onUpdate:IFnProg=None):
 
         cursor.close()
 
+
+
         lg.info(f"Successfully fetched {len(assets)} {asType.lower()} assets")
 
         upd("complete", 1, 1, f"Complete Assets[{len(assets)}] ({asType.lower()})", True)
 
         return assets
     except Exception as e:
-        lg.error(f"Failed to FetchAssets: {str(e)}")
-        lg.info(traceback.format_exc())
+        msg = f"Failed to FetchAssets: {str(e)}"
+        lg.error(msg)
+        lg.error(traceback.format_exc())
 
-        if onUpdate:
-            onUpdate(100, "100%", f"fetch Assets failed: {str(e)}")
-
-        return []
+        if onUpdate: onUpdate(100, "Erorr", msg)
+        raise
 
 
 def count(usrId=None, assetType="IMAGE"):
