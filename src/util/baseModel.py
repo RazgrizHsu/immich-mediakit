@@ -73,8 +73,16 @@ class BaseDictModel:
         origin = get_origin(hint_type)
 
         if origin is None:
-            if cls._is_model_subclass(hint_type) and isinstance(val, dict):
-                return hint_type.fromStore(val)  # type: ignore
+            if cls._is_model_subclass(hint_type):
+                if isinstance(val, dict):
+                    return hint_type.fromStore(val)
+                elif isinstance(val, str):
+                    try:
+                        json_data = json.loads(val)
+                        if isinstance(json_data, dict):
+                            return hint_type.fromStore(json_data)
+                    except:
+                        pass
             return val
 
         if origin is list and isinstance(val, list):
@@ -92,8 +100,16 @@ class BaseDictModel:
 
             if len(real_types) == 1:
                 real_type = real_types[0]
-                if cls._is_model_subclass(real_type) and isinstance(val, dict):
-                    return real_type.fromStore(val)
+                if cls._is_model_subclass(real_type):
+                    if isinstance(val, dict):
+                        return real_type.fromStore(val)
+                    elif isinstance(val, str):
+                        try:
+                            json_data = json.loads(val)
+                            if isinstance(json_data, dict):
+                                return real_type.fromStore(json_data)
+                        except:
+                            pass
             return val
 
         return val
@@ -133,23 +149,27 @@ class BaseDictModel:
         type_hints = cls._get_type_hints()
         complex_fields = cls._has_complex_types(type_hints)
 
-        if not complex_fields or not any(k in complex_fields and k in src and isinstance(src[k], (dict, list)) for k in complex_fields):
-            filtered_data = {k: v for k, v in src.items() if k in type_hints}
-            try:
-                return cls(**filtered_data)
-            except (TypeError, ValueError):
-                pass
-
         processed_data = {}
         for key, val in src.items():
             if key not in type_hints: continue
 
-            if key in complex_fields and (isinstance(val, dict) or isinstance(val, list)):
+            hint_type = type_hints[key]
+            origin = get_origin(hint_type)
+            
+            if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or 
+                    (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
                 processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
             else:
                 processed_data[key] = val
 
-        return cls(**processed_data)
+        try:
+            return cls(**processed_data)
+        except (TypeError, ValueError) as e:
+            filtered_data = {k: v for k, v in src.items() if k in type_hints}
+            try:
+                return cls(**filtered_data)
+            except:
+                raise e
 
     @classmethod
     def fromDB(cls: Type[T], cursor: sqlite3.Cursor, row: tuple) -> Optional[T]:
@@ -171,22 +191,26 @@ class BaseDictModel:
 
         complex_fields = cls._has_complex_types(type_hints)
 
-        complex_present = any(k in complex_fields and k in data for k in complex_fields)
-
-        if not complex_present:
-            filtered_data = {k: v for k, v in data.items() if k in type_hints}
-            try:
-                return cls(**filtered_data)
-            except (TypeError, ValueError):
-                pass
-
         processed_data = {}
         for key, val in data.items():
             if key not in type_hints: continue
 
-            if key in complex_fields and (isinstance(val, dict) or isinstance(val, list)):
+            hint_type = type_hints[key]
+            origin = get_origin(hint_type)
+            
+            if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or 
+                    (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
                 processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
             else:
                 processed_data[key] = val
+
+        try:
+            return cls(**processed_data)
+        except (TypeError, ValueError) as e:
+            filtered_data = {k: v for k, v in data.items() if k in type_hints}
+            try:
+                return cls(**filtered_data)
+            except:
+                raise e
 
         return cls(**processed_data)

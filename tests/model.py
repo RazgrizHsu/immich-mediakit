@@ -7,8 +7,12 @@ from datetime import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from util.models import Now, Usr, AppState, Nfy, Tsk, Mdl, Asset
+from util.models import Now, Usr, AppState, Nfy, Tsk, Mdl, Asset, AssetExif
 from util.baseModel import Json
+import db.pics as pics
+from util import log
+
+lg = log.get(__name__)
 
 
 class TestBaseDictModel(unittest.TestCase):
@@ -160,11 +164,34 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset_restored.originalFileName, "test.jpg")
 
         self.assertEqual(asset_restored.isVectored, 0)
-
-        self.assertIsInstance(asset_restored.exifInfo, Json)
-
-        asset_restored.exifInfo["camera"] = "Canon"
-        self.assertEqual(asset_restored.exifInfo["camera"], "Canon")
+        
+    def test_asset_exif_json_string_conversion(self):
+        exif_json_string = '{"make":"Canon","model":"EOS 5D","fNumber":2.8,"iso":100,"focalLength":24.0}'
+        
+        asset_dict = {
+            "id": "test-asset",
+            "jsonExif": exif_json_string
+        }
+        
+        asset = Asset.fromStore(asset_dict)
+        self.assertIsInstance(asset.jsonExif, AssetExif)
+        self.assertEqual(asset.jsonExif.make, "Canon")
+        self.assertEqual(asset.jsonExif.model, "EOS 5D")
+        self.assertEqual(asset.jsonExif.fNumber, 2.8)
+        self.assertEqual(asset.jsonExif.iso, 100)
+        self.assertEqual(asset.jsonExif.focalLength, 24.0)
+        
+    def test_asset_exif_from_db(self):
+        mock_cursor = type('MockCursor', (), {'description': [('id',), ('jsonExif',)]})()
+        row = ('test-asset', '{"make":"Nikon","model":"D850","fNumber":4.0,"iso":200,"focalLength":70.0}')
+        
+        asset = Asset.fromDB(mock_cursor, row)
+        self.assertIsInstance(asset.jsonExif, AssetExif)
+        self.assertEqual(asset.jsonExif.make, "Nikon")
+        self.assertEqual(asset.jsonExif.model, "D850")
+        self.assertEqual(asset.jsonExif.fNumber, 4.0)
+        self.assertEqual(asset.jsonExif.iso, 200)
+        self.assertEqual(asset.jsonExif.focalLength, 70.0)
 
     def test_datetime_serialization(self):
         test_dt = datetime(2023, 1, 1, 12, 0, 0)
@@ -286,6 +313,61 @@ class TestBaseDictModel(unittest.TestCase):
         now_restored.switchUsr("2")
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "2")
+        
+    def test_db_assets_exif_conversion(self):
+        try:
+            pics.init()
+            assets = pics.getAll(count=5)
+            
+            if not assets:
+                self.skipTest("No assets found in database")
+                
+            for asset in assets:
+                if asset.jsonExif is not None:
+                    self.assertIsInstance(asset.jsonExif, AssetExif)
+                    
+                    if hasattr(asset.jsonExif, 'make') and asset.jsonExif.make:
+                        self.assertIsInstance(asset.jsonExif.make, str)
+                    if hasattr(asset.jsonExif, 'model') and asset.jsonExif.model:
+                        self.assertIsInstance(asset.jsonExif.model, str)
+                    if hasattr(asset.jsonExif, 'fNumber') and asset.jsonExif.fNumber:
+                        self.assertIsInstance(asset.jsonExif.fNumber, float)
+                    if hasattr(asset.jsonExif, 'iso') and asset.jsonExif.iso:
+                        self.assertIsInstance(asset.jsonExif.iso, int)
+                    if hasattr(asset.jsonExif, 'dateTimeOriginal') and asset.jsonExif.dateTimeOriginal:
+                        self.assertIsInstance(asset.jsonExif.dateTimeOriginal, str)
+        finally:
+            pics.close()
+            
+    def test_specific_asset_exif_conversion(self):
+        try:
+            pics.init()
+            assets = pics.getAll(count=1)
+            
+            if not assets:
+                self.skipTest("No assets found in database")
+                
+            asset_id = assets[0].id
+            asset = pics.getAssetInfo(asset_id)
+            
+            self.assertIsNotNone(asset)
+            self.assertEqual(asset.id, asset_id)
+            
+            if asset.jsonExif is not None:
+                self.assertIsInstance(asset.jsonExif, AssetExif)
+                
+                if hasattr(asset.jsonExif, 'make') and asset.jsonExif.make:
+                    self.assertIsInstance(asset.jsonExif.make, str)
+                if hasattr(asset.jsonExif, 'model') and asset.jsonExif.model:
+                    self.assertIsInstance(asset.jsonExif.model, str)
+                if hasattr(asset.jsonExif, 'fNumber') and asset.jsonExif.fNumber:
+                    self.assertIsInstance(asset.jsonExif.fNumber, float)
+                if hasattr(asset.jsonExif, 'iso') and asset.jsonExif.iso:
+                    self.assertIsInstance(asset.jsonExif.iso, int)
+                if hasattr(asset.jsonExif, 'dateTimeOriginal') and asset.jsonExif.dateTimeOriginal:
+                    self.assertIsInstance(asset.jsonExif.dateTimeOriginal, str)
+        finally:
+            pics.close()
 
 
 if __name__ == "__main__":
