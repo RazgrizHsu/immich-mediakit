@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import traceback
 from typing import Optional, List
 from conf import Ks, envs
 from util import log, models
@@ -117,7 +118,7 @@ def saveBy(asset:dict):
 						   fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
 						   libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path,
 						   jsonExif)
-					   Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					   Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                        ''', (
                 assetId,
                 asset.get('ownerId'),
@@ -178,7 +179,8 @@ def saveBy(asset:dict):
         return True
     except Exception as e:
         lg.error(f"Failed to save asset information: {str(e)}")
-        return False
+        lg.error(traceback.format_exc())
+        raise
 
 
 def getAssetInfo(assetId) -> Optional[models.Asset]:

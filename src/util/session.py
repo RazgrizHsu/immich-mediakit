@@ -43,7 +43,7 @@ def render():
     usrId = dto.usrId
     if usrId:
         now.switchUsr(usrId)
-        lg.info( f"[session] set usrId[{usrId}] now.usr: {now.usr}" )
+        # lg.info( f"[session] set usrId[{usrId}] now.usr: {now.usr}" )
 
     now.useType = dto.useType
     if not now.photoQ:

@@ -7,15 +7,15 @@ import sys
 import os
 from datetime import datetime
 
-ENABLE_FILE_LOGGING = False
-LOG_LEVEL = logging.INFO
+EnableLogFile = False
+LogLevel = logging.INFO
 
 log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'logs')
 os.makedirs(log_dir, exist_ok=True)
 
 log_file = os.path.join(log_dir, f'app_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
 
-def setup(level=LOG_LEVEL, enableFile=ENABLE_FILE_LOGGING):
+def setup(level=LogLevel, enableFile=EnableLogFile):
     """Configure logging system"""
     formatter = logging.Formatter(
         fmt='%(asctime)s.%(msecs)03d|%(levelname)s| %(message)s',
@@ -48,15 +48,15 @@ def setup(level=LOG_LEVEL, enableFile=ENABLE_FILE_LOGGING):
 
 def enableFile(enable=True):
     """Enable or disable file logging"""
-    global ENABLE_FILE_LOGGING
-    ENABLE_FILE_LOGGING = enable
+    global EnableLogFile
+    EnableLogFile = enable
     setup(enableFile=enable)
     logging.info(f"File logging is {'enabled' if enable else 'disabled'}")
 
 def setLog(level):
     """Set logging level"""
-    global LOG_LEVEL
-    LOG_LEVEL = level
+    global LogLevel
+    LogLevel = level
     setup(level=level)
     logging.info(f"Log level has been set to {logging.getLevelName(level)}")
 

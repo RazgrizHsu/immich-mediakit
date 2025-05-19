@@ -139,7 +139,7 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
     now = models.Now.fromStore(dta_now)
     nfy = models.Nfy.fromStore(dta_nfy)
 
-    lg.info(f"[assets] Status: usrId[{usrId}]")
+    # lg.info(f"[assets] Status: usrId[{usrId}]")
 
     hasData = now.cntVec > 0 or now.cntPic > 0
 
@@ -215,12 +215,9 @@ def assets_BtnRunModals(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk
 
     if tsk.id: return noUpd, noUpd
     trgSrc = getTriggerId()
-    lg.info(f"[srcFetch] trgSrc[{trgSrc}]")
 
 
     if trgSrc == K.btnClean:
-        nfy.info(f"[assets] Triggered: Clear all asset data")
-
         mdl.id = 'assets'
         mdl.cmd = 'clear'
         mdl.msg = 'Start clearing all asset data'
@@ -266,7 +263,6 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
             return nfy, now, msg
 
         # todo: add support for all users?
-
 
         db.pics.deleteUsrAssets(now.usr.id)
 

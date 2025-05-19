@@ -153,6 +153,8 @@ body {
 .card-body {
 	color:#e0e0e0;
 }
+
+
 .loading-spinner {
 	display:inline-block;
 	width:20px;
@@ -220,6 +222,13 @@ body {
 	flex: none;
 }
 
+.tag {
+	background: #8A0100;
+	padding: 3px 5px 2px 5px;
+}
+.tag.ok {
+	background: #78c22a;
+}
 
 
 .photo-card img:hover {

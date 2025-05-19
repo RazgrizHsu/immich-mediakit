@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 import traceback
 import time
@@ -7,6 +8,7 @@ import psycopg2.extras
 from conf import Ks, envs
 from util import log, models
 from util.task import IFnProg
+import imgs
 
 lg = log.get(__name__)
 
@@ -59,7 +61,6 @@ def init():
         return None
 
 
-
 def fetchUsers():
     try:
         if not conn: raise RuntimeError("Failed to connect to psql")
@@ -84,10 +85,48 @@ def fetchUsers():
         lg.info(traceback.format_exc())
         return []
 
+# ------------------------------------------------------
+# 因為db裡的值會帶upload/ (經由web上傳的)
+# 要對應到真實路徑, 必需要把upload替換為實際路徑
+# ------------------------------------------------------
+def fixPrefix(path: Optional[str]):
+    if path and path.startswith('upload/'): return path[7:]
+    return path
+
+
+def testAssetsPath():
+    if not conn: return f"pql not ready"
+
+    sql = "Select path From asset_files Limit 5"
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    cursor.execute(sql)
+    rows = [dict(row) for row in cursor.fetchall()]
+    cursor.close()
+
+    isOk = False
+
+    # lg.info( f"[psql] test AccessPath.. fetched: {len(rows)}" )
+
+    if not rows or not len(rows): return "No Assets"
+
+    for row in rows:
+        path = row.get("path", None)
+        if path:
+            path = imgs.fixPath(fixPrefix(path))
+            isOk = os.path.exists(path)
+            # lg.info( f"[psql] test isOk[{isOk}] path: {path}" )
+            if isOk:
+                return "OK"
+
+    if not isOk: return "Access Failed"
+
+    return f"test failed"
+
+
 from dataclasses import dataclass
 
-def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
-
+def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
     usrId = usr.id
 
     @dataclass
@@ -96,17 +135,9 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
         base: int
         range: int
 
-    #------------------------------------------------------
-    # 因為db裡的值會帶upload/ (經由web上傳的)
-    # 要對應到真實路徑, 必需要把upload替換為實際路徑
-    #------------------------------------------------------
-    def rmPrefixUpload(path):
-        if path.startswith('upload/'): return path[7:]
-        return path
-
-    #------------------------------------------------------
+    # ------------------------------------------------------
     # 進度計算與回報的嵌套函數
-    #------------------------------------------------------
+    # ------------------------------------------------------
     def upd(sid, cnow, call, msg, force=False):
         if not onUpdate: return
 
@@ -156,9 +187,9 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
 
         upd("init", 1, 1, f"found {cntAll} ({asType.lower()}) assets...", True)
 
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         # query assets
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         sql = "Select * From assets Where status = 'active' And type = %s"
 
         params = [asType]
@@ -172,7 +203,6 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
         cursor.execute(sql, params)
 
         upd("fetch", 0, cntAll, "start reading...", True)
-
 
         szBatch = 500
         szChunk = 500
@@ -208,10 +238,9 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
 
         upd("fetch", cntAll, cntAll, "main assets done... query for files..", True)
 
-
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         # query asset files
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         flsSql = """
 			   Select "assetId", type, path
@@ -233,7 +262,6 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
 
         upd("files", len(assetIds), len(assetIds), "files ready, combine data...", True)
 
-
         dictFiles = {}
         for af in afs:
             assetId = af['assetId']
@@ -242,10 +270,9 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
             if assetId not in dictFiles: dictFiles[assetId] = {}
             dictFiles[assetId][typ] = path
 
-
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         # query exif
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         upd("exif", 0, len(assetIds), "files ready, query exif data...", True)
         exifSql = """
         Select *
@@ -256,6 +283,8 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
         exifData = {}
         for idx, i in enumerate(range(0, len(assetIds), szChunk)):
             chunk = assetIds[i:i + szChunk]
+
+            lg.info( f"[psql] 查詢: {tuple(chunk)}" )
             cursor.execute(exifSql, (tuple(chunk),))
             chunkResults = cursor.fetchall()
 
@@ -280,9 +309,9 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
             chunkPct = min((idx + 1) * szChunk, len(assetIds))
             upd("exif", chunkPct, len(assetIds), f"query exif.. {chunkPct}/{len(assetIds)}...")
 
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         # combine & fetch thumbnail image
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         upd("exif", len(assetIds), len(assetIds), "exif ready, combine data...", True)
 
         processedCount = 0
@@ -291,15 +320,15 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
             assetId = asset['id']
             if assetId in dictFiles:
                 for typ, path in dictFiles[assetId].items():
-                    if typ == Ks.db.thumbnail: asset['thumbnail_path'] = rmPrefixUpload(path)
-                    elif typ == Ks.db.preview: asset['preview_path'] = rmPrefixUpload(path)
+                    if typ == Ks.db.thumbnail: asset['thumbnail_path'] = fixPrefix(path)
+                    elif typ == Ks.db.preview: asset['preview_path'] = fixPrefix(path)
 
-            asset['fullsize_path'] = rmPrefixUpload(asset.get('originalPath', ''))
+            asset['fullsize_path'] = fixPrefix(asset.get('originalPath', ''))
 
             if assetId in exifData:
                 asset['exifInfo'] = exifData[assetId]
             else:
-                lg.warn( f"[exif] NotFound.. assetId[{assetId}]" )
+                lg.warn(f"[exif] NotFound.. assetId[{assetId}]")
 
             processedCount += 1
 
@@ -307,8 +336,6 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
                 upd("combine", processedCount, len(assets), f"processing {processedCount}/{len(assets)}...")
 
         cursor.close()
-
-
 
         lg.info(f"Successfully fetched {len(assets)} {asType.lower()} assets")
 
@@ -325,7 +352,6 @@ def fetchAssets( usr:models.Usr, asType="IMAGE", onUpdate:IFnProg=None):
 
 
 def count(usrId=None, assetType="IMAGE"):
-
     try:
         if not conn: raise RuntimeError("Failed to connect to psql")
 

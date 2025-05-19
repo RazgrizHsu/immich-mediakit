@@ -49,7 +49,6 @@ def convert_image_to_rgb(image):
     return image
 
 def toB64(path):
-
     if isinstance(path, str):
         with open(path, 'rb') as f:
             image = f.read()
@@ -117,9 +116,13 @@ def saveVectorBy(assetId, img):
         raise f"Error processing asset {assetId}: {str(e)}"
 
 
-def getImg(path) -> Optional[Image.Image]:
+def fixPath(path: Optional[str]):
+    if path and not path.startswith(envs.immichPath):
+        path = os.path.join(envs.immichPath, path)
+    return path
 
-    if not path.startswith(envs.immichPath): path = os.path.join(envs.immichPath, path)
+def getImg(path) -> Optional[Image.Image]:
+    path = fixPath(path)
     try:
         if os.path.exists(path):
             size = os.path.getsize(path)
@@ -134,29 +137,14 @@ def getImg(path) -> Optional[Image.Image]:
 
     return None
 
-def getImgB64( path ) -> Optional[str]:
+def getImgB64(path) -> Optional[str]:
     img = getImg(path)
     if img: return toB64(img)
 
     return toB64(path) if os.path.exists(path) else None
 
-def testDirectAccess():
-    import db.pics as pics
-    assets = pics.getAll(1)
-    asset = assets[0] if assets else None
 
-    if not asset: return "No Assets"
-
-    path = asset.getImagePath(conf.Ks.db.preview)
-
-    if os.path.exists(path):
-        return "OK! path exists!"
-    else:
-        lg.warn( f"[imgs] image path not exist: {path}" )
-
-    return f"access failed"
-
-def toVectors(assets: List[models.Asset], photoQ, onUpdate:IFnProg=None) -> models.ProcessInfo:
+def toVectors(assets: List[models.Asset], photoQ, onUpdate: IFnProg = None) -> models.ProcessInfo:
     tS = time.time()
     pi = models.ProcessInfo(total=len(assets), done=0, skip=0, error=0)
 
