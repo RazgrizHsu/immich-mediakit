@@ -1,6 +1,7 @@
 from conf import envs, Ks
 from dsh import htm, dbc, inp, out, ste
 from util import log, models
+from db import psql
 
 lg = log.get(__name__)
 
@@ -114,12 +115,7 @@ def renderSideBar():
 
             htm.Hr(),
 
-            htm.Div([
-                htm.Div(htm.Small("Cache Count:"), className="mb-2 text-muted"),
-                htm.Div(id=K.div.sideState)
-            ],
-                className="mb-4"
-            ),
+            htm.Div(id=K.div.sideState, className="mb4"),
 
             # htm.Hr(),
             # dbc.Row([
@@ -129,14 +125,6 @@ def renderSideBar():
 
 
             htm.Hr(),
-
-            htm.Div(
-                [
-                    htm.Div(htm.Small("Connection Information"), className="mb-2 text-muted"),
-                    htm.Div([htm.Div("---")], id=K.div.connInfo)
-                ],
-                className="mb-4"
-            ),
         ],
         className="bg-dark p-3 h-100 border rounded"
     )
@@ -150,7 +138,7 @@ def regBy(app):
         out(K.nav.viewGrid, 'disabled'),
         inp(Ks.store.now, 'data')
     )
-    def onNowChange(dta_now):
+    def onUpdateMenus(dta_now):
         if not dta_now: return True, True, True
 
         # lg.info("Registered pages:")
@@ -158,57 +146,86 @@ def regBy(app):
 
         now = models.Now.fromStore(dta_now)
 
-        disPhotoVec = disViewGrid = now.cntPic <= 0
-        disSearchDups = now.cntVec <= 0
+        disVec = now.cntPic <= 0
+        disGrd = disVec
+        disDup = now.cntVec <= 0
 
-        return disPhotoVec, disSearchDups, disViewGrid
+        return disVec, disDup, disGrd
 
     #------------------------------------------------------------------------
     @app.callback(
         out(K.div.sideState, "children"),
-        [
-            inp(Ks.store.now, "data")
-        ]
+        inp(Ks.store.now, "data"),
+        inp(Ks.store.init, "children")
     )
-    def update_side_state(dta_now):
+    def onUpdateSideBar(dta_now, _trigger):
         now = models.Now.fromStore(dta_now)
 
-        return htm.Div([
+        testIP = envs.immichPath if envs.immichPath else '--none--'
+        testDA = psql.testAssetsPath()
 
-            dbc.Row([
-                dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=5),
-                dbc.Col(dbc.Alert(f"{now.cntPic}", color="info", className="py-0 px-2 mb-2")),
-            ]),
-            dbc.Row([
-                dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=5),
-                dbc.Col(dbc.Alert(f"{now.cntVec}", color="info", className="py-0 px-2 mb-2")),
-            ]),
+        htmCnts = htm.Div([
+            dbc.Card([
+                dbc.CardHeader("env"),
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col([htm.Small("IMMICH_PATH:")], width=5, className=""),
+                        dbc.Col([
+                            htm.Span(f"{testIP}", className="tag" ),
+                        ]),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col([htm.Small("Path Test:")], width=5, className=""),
+                        dbc.Col([
+                            htm.Span(
+                                f"{testDA}", className="tag ok"
+                            ) if testDA.startswith("OK") else htm.Span
+                            (
+                                f"{testDA}", className="tag"
+                            )
+                        ]),
+                    ], className="mb-2"),
+                ])
+            ], className="mb-4"),
+
+            dbc.Card([
+                dbc.CardHeader("Cache Count"),
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=5),
+                        dbc.Col(dbc.Alert(f"{now.cntPic}", color="info", className="py-0 px-2 mb-2")),
+                    ]),
+                    dbc.Row([
+                        dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=5),
+                        dbc.Col(dbc.Alert(f"{now.cntVec}", color="info", className="py-0 px-2 mb-2")),
+                    ]),
+                ])
+            ], className="mb-4"),
+
+            dbc.Card([
+                dbc.CardHeader("Connection Information"),
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col(htm.Small("Server:"), width=5),
+                        dbc.Col(htm.Code(envs.psqlHost or "Not set")),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col(htm.Small("Database:"), width=5),
+                        dbc.Col(htm.Code(envs.psqlDb or "Not set")),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col(htm.Small("User:"), width=5),
+                        dbc.Col(htm.Code(envs.psqlUser or "Not set")),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col(htm.Small("Password:"), width=5),
+                        dbc.Col(htm.Code("--OK--" if envs.psqlPass else "--None--")),
+                    ], className="mb-2"),
+                ])
+            ], className="mb-4"),
         ])
 
-
-    #------------------------------------------------------------------------
-    @app.callback(
-        out(K.div.connInfo, "children"),
-        inp(Ks.store.init, "children"),
-        ste(Ks.store.now, "data")
-    )
-    def cb_init(_trigger, dta_now):
-        lg.info("[layout] Initializing SideBar...")
-
-        now = models.Now.fromStore(dta_now)
-
-        info = [
-            htm.P(["Data Source: ", htm.Strong(now.useType)], className="mb-2"),
-            htm.P(["Server: ", htm.Code(envs.psqlHost or "Not set")], className="mb-2"),
-            htm.P(["Database: ", htm.Code(envs.psqlDb or "Not set")], className="mb-2"),
-            htm.P(["User: ", htm.Code(envs.psqlUser or "Not set")], className="mb-2"),
-            htm.P(
-                ["Password: ", htm.Code("--OK--" if envs.psqlPass else "--None--")],
-                className="mb-2"
-            )
-        ]
-
-        return info
+        return htmCnts
 
 
 #------------------------------------------------------------------------

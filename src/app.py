@@ -73,7 +73,7 @@ if __name__ == "__main__":
         lg.info("=======================================")
         lg.info("Starting Dash application...")
 
-        if log.log_file: lg.info(f"Log file recording: {log.log_file}")
+        if log.EnableLogFile: lg.info(f"Log file recording: {log.log_file}")
 
         lg.info("---------------------------------------")
 

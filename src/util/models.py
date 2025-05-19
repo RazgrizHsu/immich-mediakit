@@ -53,7 +53,7 @@ class Nfy(BaseDictModel):
     def remove(self, nid):
         if nid in self.msgs: del self.msgs[nid]
 
-    def info(self, message, timeout=5000):
+    def info(self, message, timeout=3000):
         lg.info(message)
         self._add(message, "info", timeout)
 
