@@ -20,7 +20,7 @@ def render():
         items.append(sto)
 
     lg.info("---------------------------------------")
-    lg.info("[session] Initializing session data")
+    lg.info("[session] Initializing..")
 
     now: models.Now = models.Now()
     nfy: models.Nfy = models.Nfy()
@@ -31,14 +31,13 @@ def render():
         uss = []
         try:
             rows = psql.fetchUsers()
-            lg.info(f"[session] Loading users.. {len(rows)}")
             for r in rows:
                 usr = models.Usr(r.get('id'), r.get('name'), r.get('email'), r.get('apiKey'))
                 uss.append(usr)
         except:
             pass
 
-        lg.info(f"[session] Initialized usrs: {len(uss)}")
+        lg.info(f"[session] load usrs: {len(uss)}")
         now.usrs = uss
 
     usrId = dto.usrId

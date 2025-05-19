@@ -42,6 +42,7 @@ def setup(level=LOG_LEVEL, enableFile=ENABLE_FILE_LOGGING):
 
     logging.getLogger('werkzeug').setLevel(logging.INFO)
     logging.getLogger('flask').setLevel(logging.INFO)
+    logging.getLogger('httpx').setLevel(logging.WARNING)
 
     return root_logger
 

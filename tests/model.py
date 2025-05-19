@@ -5,9 +5,7 @@ import sys
 import unittest
 from datetime import datetime
 
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, root_dir)
-sys.path.insert(0, os.path.join(root_dir, 'src'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 from util.models import Now, Usr, AppState, Nfy, Tsk, Mdl, Asset
 from util.baseModel import Json

@@ -28,7 +28,7 @@ class Now(BaseDictModel):
 
     def switchUsr(self, usrId):
         if self.usrs:
-            lg.info( f"[switch] usr[{self.usrs[0]}]({type(self.usrs[0])})" )
+            # lg.info( f"[switch] usr[{self.usrs[0]}]({type(self.usrs[0])})" )
             self.usr = next((u for u in self.usrs if u.id == usrId), None)
 
 

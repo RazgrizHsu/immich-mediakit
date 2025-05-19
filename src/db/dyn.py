@@ -10,7 +10,7 @@ class AutoDbField:
         return get(self.key, self.default)
 
     def __set__(self, instance, value):
-        lg.info(f"[dynField] Saving setting value: {self.key} = {value}")
+        # lg.info(f"[dynField] Saving setting value: {self.key} = {value}")
         save(self.key, str(value))
 
 
