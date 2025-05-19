@@ -42,7 +42,7 @@ def regBy(app):
                 rep.headers['Cache-Control'] = 'public, max-age=31536000'  # client 1year
                 return rep
 
-            conn = db.pics.mkconn()
+            conn = db.pics.getConn()
             cursor = conn.cursor()
             cursor.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", [assetId])
             row = cursor.fetchone()

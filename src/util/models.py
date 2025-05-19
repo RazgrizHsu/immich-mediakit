@@ -147,6 +147,7 @@ class Asset(BaseDictModel):
     fullsize_path: Optional[str] = None
     jsonExif: Optional[AssetExif] = None
     isVectored: int = 0
+    simIds: List[str] = field(default_factory=list)
 
     def getImagePath(self, photoQ=None):
         import os

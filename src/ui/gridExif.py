@@ -11,9 +11,9 @@ def createExifTooltip(asset_id, exif_data):
 
     exif_table = []
 
-    for key in Ks.exifColumns.keys():
+    for key in Ks.defs.exif.keys():
         if key in exif_data and exif_data[key] is not None:
-            display_key = Ks.exifColumns.get(key, key)
+            display_key = Ks.defs.exif.get(key, key)
 
             value = exif_data[key]
             if key == "fileSizeInByte" and isinstance(value, (int, float)):
@@ -38,7 +38,7 @@ def createExifTooltip(asset_id, exif_data):
             )
 
     for key, value in exif_data.items():
-        if key not in Ks.exifColumns and value is not None:
+        if key not in Ks.defs.exif and value is not None:
             exif_table.append(
                 htm.Tr([
                     htm.Td(key, style={"fontWeight": "bold", "padding": "2px 8px"}),

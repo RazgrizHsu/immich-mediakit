@@ -10,9 +10,11 @@ from util.baseModel import BaseDictModel
 lg = log.get(__name__)
 conn: Optional[sqlite3.dbapi2.Connection] = None
 
-def mkconn():
+def getConn():
     global conn
-    if conn is None: conn = sqlite3.connect(envs.mkitData + 'pics.db', check_same_thread=False)
+    pathDb = envs.mkitData + 'pics.db'
+    if conn is None: conn = sqlite3.connect(pathDb, check_same_thread=False)
+    lg.info(f"[pics] connected db: {pathDb}")
     return conn
 
 
@@ -34,30 +36,31 @@ def init():
             conn.close()
             conn = None
 
-        conn = mkconn()
+        conn = getConn()
         c = conn.cursor()
 
         c.execute('''
-				   Create Table If Not Exists assets (
-					   autoId           INTEGER Primary Key AUTOINCREMENT,
-					   id               TEXT Unique,
-					   ownerId          TEXT,
-					   deviceId         TEXT,
-					   type             TEXT,
-					   originalFileName TEXT,
-					   fileCreatedAt    TEXT,
-					   fileModifiedAt   TEXT,
-					   isFavorite       INTEGER,
-					   isVisible        INTEGER,
-					   isArchived       INTEGER,
-					   libraryId        TEXT,
-					   localDateTime    TEXT,
-					   thumbnail_path   TEXT,
-					   preview_path     TEXT,
-					   fullsize_path    TEXT,
-					   jsonExif        TEXT Default '{}',
-					   isVectored       INTEGER Default 0
-				   )
+                Create Table If Not Exists assets (
+                autoId           INTEGER Primary Key AUTOINCREMENT,
+                id               TEXT Unique,
+                ownerId          TEXT,
+                deviceId         TEXT,
+                type             TEXT,
+                originalFileName TEXT,
+                fileCreatedAt    TEXT,
+                fileModifiedAt   TEXT,
+                isFavorite       INTEGER,
+                isVisible        INTEGER,
+                isArchived       INTEGER,
+                libraryId        TEXT,
+                localDateTime    TEXT,
+                thumbnail_path   TEXT,
+                preview_path     TEXT,
+                fullsize_path    TEXT,
+                jsonExif        TEXT Default '{}',
+                isVectored       INTEGER Default 0,
+                simIds           TEXT Default '[]'
+                )
                    ''')
 
         c.execute('''
@@ -68,7 +71,6 @@ def init():
 					   apiKey TEXT
 				   )
                    ''')
-        lg.info("Sqlite connected: pics.db")
 
         conn.commit()
         return True
@@ -108,7 +110,7 @@ def saveBy(asset: dict):
         if exifInfo:
             try:
                 jsonExif = json.dumps(exifInfo, ensure_ascii=False, default=BaseDictModel.jsonSerializer)
-                lg.info( f"json: {jsonExif}" )
+                lg.info(f"json: {jsonExif}")
             except Exception as e:
                 raise f"[pics.save] Error converting EXIF to JSON: {str(e)}"
 
@@ -117,12 +119,11 @@ def saveBy(asset: dict):
 
         if row is None:
             c.execute('''
-					   Insert Into assets (id, ownerId, deviceId, type, originalFileName,
-						   fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
-						   libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path,
-						   jsonExif)
-					   Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                       ''', (
+                Insert Into assets (id, ownerId, deviceId, type, originalFileName,
+                fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
+                libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
+                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
                 assetId,
                 asset.get('ownerId'),
                 asset.get('deviceId'),
@@ -186,7 +187,7 @@ def saveBy(asset: dict):
         raise
 
 
-def getAssetInfo(assetId) -> Optional[models.Asset]:
+def get(assetId) -> Optional[models.Asset]:
     try:
         if conn is None: raise RuntimeError('the db is not init')
 
@@ -196,7 +197,8 @@ def getAssetInfo(assetId) -> Optional[models.Asset]:
         row = c.fetchone()
         if row is None: return None
 
-        return models.Asset.fromDB(c, row)
+        asset = models.Asset.fromDB(c, row)
+        return asset
     except Exception as e:
         lg.error(f"Failed to get asset information: {str(e)}")
         return None
@@ -208,9 +210,12 @@ def getAll(count=0) -> list[models.Asset]:
 
         c = conn.cursor()
 
-        sql = "Select * From assets"
-
-        c.execute(sql)
+        if not count:
+            sql = "Select * From assets"
+            c.execute(sql)
+        else:
+            sql = "Select * From assets LIMIT ?"
+            c.execute(sql, (count,))
 
         rows = c.fetchall()
         if not rows: return []
@@ -239,19 +244,19 @@ def get_paginated_assets(page=1, per_page=20, usrId=None) -> tuple[List[models.A
 
         if usrId:
             c.execute('''
-					   Select *
-					   From assets
-					   Where ownerId = ?
-					   Order By autoId Desc
-					   Limit ? Offset ?
-                       ''', (usrId, per_page, offset))
+                Select *
+                From assets
+                Where ownerId = ?
+                Order By autoId Desc
+                Limit ? Offset ?
+                ''', (usrId, per_page, offset))
         else:
             c.execute('''
-					   Select *
-					   From assets
-					   Order By autoId Desc
-					   Limit ? Offset ?
-                       ''', (per_page, offset))
+                Select *
+                From assets
+                Order By autoId Desc
+                Limit ? Offset ?
+                ''', (per_page, offset))
 
         rows = c.fetchall()
         if not rows: return [], cnt
@@ -283,6 +288,27 @@ def count(usrId=None):
         lg.error(f"Failed to get asset count: {str(e)}")
         return 0
 
+
+def setSimIds(assetId: str, similarIds: List[str]):
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+
+        c.execute("SELECT id FROM assets WHERE id = ?", (assetId,))
+        if not c.fetchone():
+            lg.error(f"Asset {assetId} not found")
+            return False
+
+        c.execute("UPDATE assets SET simIds = ? WHERE id = ?", (json.dumps(similarIds), assetId))
+        conn.commit()
+
+        lg.info(f"Updated simIds for asset {assetId}: {len(similarIds)} similar assets")
+        return True
+    except Exception as e:
+        lg.error(f"Failed to set similar IDs: {str(e)}")
+        lg.error(traceback.format_exc())
+        return False
 
 def deleteForUsr(usrId):
     import db.vecs as vecs

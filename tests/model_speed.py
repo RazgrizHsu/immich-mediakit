@@ -473,16 +473,6 @@ def run_all_tests(small_only: bool = False):
     lg.info(f"Complex data: dict+JSON is on average {avg_complex_ratio:.2f}x faster than BaseDictModel")
     lg.info(f"Nested objects: Pure dictionary processing is on average {nested_time2 / nested_time1:.2f}x faster than BaseDictModel")
 
-    lg.info("\nBased on these results, BaseDictModel is suitable for:")
-    lg.info("1. Scenarios requiring strong type checking and automatic type conversion")
-    lg.info("2. When code readability and maintainability take priority over pure performance")
-    lg.info("3. Processing complex nested data structures with object-oriented operations")
-
-    lg.info("\nWhile dictionary processing is suitable for:")
-    lg.info("1. Extremely performance-sensitive scenarios")
-    lg.info("2. Simple data structures and operations")
-    lg.info("3. Fast processing of large amounts of data")
-
     lg.info("\n" + "=" * 80)
 
 

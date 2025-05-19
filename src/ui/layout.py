@@ -29,6 +29,13 @@ def renderHeader():
             className="custom-nav-link"
         )),
         dbc.NavItem(dbc.NavLink(
+            htm.Span(["🖼️ Assets"]),
+            href=f"/{Ks.pgs.viewGrid}",
+            active="exact",
+            id=K.nav.viewGrid,
+            className="custom-nav-link"
+        )),
+        dbc.NavItem(dbc.NavLink(
             htm.Span(["🔄 Vectors"]),
             href=f"/{Ks.pgs.photoVec}",
             active="exact",
@@ -37,16 +44,9 @@ def renderHeader():
         )),
         dbc.NavItem(dbc.NavLink(
             htm.Span(["🔍 Similar"]),
-            href=f"/{Ks.pgs.findDups}",
+            href=f"/{Ks.pgs.similar}",
             active="exact",
             id=K.nav.searchDups,
-            className="custom-nav-link"
-        )),
-        dbc.NavItem(dbc.NavLink(
-            htm.Span(["🖼️ AssetsGrid"]),
-            href=f"/{Ks.pgs.viewGrid}",
-            active="exact",
-            id=K.nav.viewGrid,
             className="custom-nav-link"
         )),
         dbc.NavItem(dbc.NavLink(

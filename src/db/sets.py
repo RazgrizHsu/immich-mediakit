@@ -10,7 +10,9 @@ conn: Optional[sqlite3.dbapi2.Connection] = None
 
 def getConn():
     global conn
-    if conn is None: conn = sqlite3.connect(envs.mkitData + 'sets.db', check_same_thread=False)
+    pathDb = envs.mkitData + 'sets.db'
+    if conn is None: conn = sqlite3.connect(pathDb, check_same_thread=False)
+    lg.info(f"[pics] connected db: {pathDb}")
     return conn
 
 
@@ -26,7 +28,6 @@ def close():
 
 def init():
     global conn
-    os.makedirs(envs.mkitData, exist_ok=True)
 
     conn = getConn()
     c = conn.cursor()
@@ -39,7 +40,6 @@ def init():
 ''')
 
     conn.commit()
-    lg.info( "Sqlite connected: sets.db" )
 
 def get(key, defaultValue=None):
     try:

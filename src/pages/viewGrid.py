@@ -37,7 +37,7 @@ class K:
 # ========================================================================
 def layout():
     return htm.Div([
-        htm.H3("Assets Grid View", className="mb-4"),
+        htm.H3("Assets", className="mb-4"),
 
         htm.Div([
             htm.P(
@@ -390,7 +390,7 @@ def getFilteredAssets(
         query += f" ORDER BY {sort} {'DESC' if sortOrd == 'desc' else 'ASC'}"
         query += f" LIMIT {pageSize} OFFSET {(page - 1) * pageSize}"
 
-        conn = db.pics.mkconn()
+        conn = db.pics.getConn()
         cursor = conn.cursor()
         cursor.execute(query, params)
 
@@ -429,7 +429,7 @@ def getTotalFilteredCount(usrId="", opts="all", search="", favOnly=False):
         query = "Select Count(*) From assets"
         if conditions: query += " WHERE " + " AND ".join(conditions)
 
-        conn = db.pics.mkconn()
+        conn = db.pics.getConn()
         cursor = conn.cursor()
         cursor.execute(query, params)
 
