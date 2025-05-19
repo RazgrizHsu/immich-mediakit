@@ -264,7 +264,7 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
 
         # todo: add support for all users?
 
-        db.pics.deleteUsrAssets(now.usr.id)
+        db.pics.deleteForUsr(now.usr.id)
 
         onUpdate(10, "10%", f"Starting to fetch assets for {now.usr.name} from PostgreSQL")
 

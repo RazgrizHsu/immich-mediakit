@@ -39,14 +39,14 @@ class BaseDictModel:
     _complex_type_cache = {}  # 緩存嵌套類型檢查結果
 
     @staticmethod
-    def _json_serializer(obj: Any) -> Any:
+    def jsonSerializer(obj: Any) -> Any:
         if isinstance(obj, datetime): return obj.isoformat()
         return str(obj)
 
     # noinspection PyTypeChecker
     def toDict(self) -> Dict[str, Any]: return asdict(self)
 
-    def toJson(self) -> str: return json.dumps(self.toDict(), default=self._json_serializer, ensure_ascii=False)
+    def toJson(self) -> str: return json.dumps(self.toDict(), default=self.jsonSerializer, ensure_ascii=False)
 
     def toStore(self) -> Dict[str, Any]:
         return self.toDict()
