@@ -13,12 +13,14 @@ dash.register_page(
 )
 
 class K:
-    selectUsrId = "inp-user-selector"
+    selectUsr = "inp-user-selector"
     btnFetch = "btn-assets-fetch"
     btnClean = "btn-assets-clear"
 
+    pageInit = "fetch-page-init"
 
-opts = [{"label": "All Users", "value": ""}]
+
+opts = [] #[{"label": "All Users", "value": ""}] # current no support
 
 
 #========================================================================
@@ -36,32 +38,15 @@ def layout():
             dbc.Card([
                 dbc.CardHeader("Settings"),
                 dbc.CardBody([
-                    # dbc.Row([
-                    #     dbc.Col([
-                    #         dbc.Label("Data Source"),
-                    #         dbc.RadioItems(
-                    #             id=K.selectUseType,
-                    #             options=[
-                    #                 {"label": Ks.use.api, "value": Ks.use.api},
-                    #                 {"label": Ks.use.dir, "value": Ks.use.dir}
-                    #             ],
-                    #             value=Ks.use.api,
-                    #             inline=True,
-                    #             className="mb-3"
-                    #         ),
-                    #     ], width=12),
-                    # ]),
-
                     htm.Div([
                         htm.Div([
                             dbc.Row([
                                 dbc.Col([
                                     dbc.Label("Select User"),
                                     dcc.Dropdown(
-                                        id=K.selectUsrId,
+                                        id=K.selectUsr,
                                         options=opts,
-                                        placeholder="Select user (defaults to all users)",
-                                        value="",
+                                        placeholder="Select user.",
                                         clearable=False
                                     ),
                                 ], width=12),
@@ -96,6 +81,7 @@ def layout():
             ], className="mb-4"),
 
         ]),
+        dcc.Store( id=K.pageInit ),
     ])
 
 
@@ -106,13 +92,15 @@ dis_hide = {"display": "none"}
 #========================================================================
 @callback(
     [
-        out(K.selectUsrId, "options"),
-        out(K.selectUsrId, "value"),
+        out(K.selectUsr, "options"),
+        out(K.selectUsr, "value"),
     ],
-    inp(Ks.store.now, "data"),
-    ste(K.selectUsrId, "options")
+    inp(K.pageInit, "data"),
+    ste(Ks.store.now, "data"),
+    ste(K.selectUsr, "value"),
+    ste(K.selectUsr, "options")
 )
-def assets_Init(dta_now, opts):
+def assets_Init(dta_pi, dta_now, selId, opts):
     # lg.info("[Assets] Initialization: PageInit by Sess")
 
     now = models.Now.fromStore(dta_now)
@@ -123,11 +111,7 @@ def assets_Init(dta_now, opts):
             for usr in usrs:
                 opts.append({"label": usr.name, "value": usr.id})
 
-    # lg.info( f"[fetch:init] now.usr: {now.usr} type({type(now.usr)}) opts: {opts}" )
-
-    usrId = now.usr.id if now and now.usr else ""
-
-    return opts, usrId
+    return opts, db.dyn.dto.usrId
 
 
 #------------------------------------------------------------------------
@@ -142,7 +126,7 @@ def assets_Init(dta_now, opts):
         out(Ks.store.nfy, "data", allow_duplicate=True)
     ],
     [
-        inp(K.selectUsrId, "value"),
+        inp(K.selectUsr, "value"),
         inp(Ks.store.tsk, "data"),
     ],
     ste(Ks.store.now, "data"),
@@ -155,7 +139,7 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
     now = models.Now.fromStore(dta_now)
     nfy = models.Nfy.fromStore(dta_nfy)
 
-    # lg.info(f"[assets] Status: useType[{useType}] usrId[{usrId}] apiKey[{apiKey}]")
+    lg.info(f"[assets] Status: usrId[{usrId}]")
 
     hasData = now.cntVec > 0 or now.cntPic > 0
 
@@ -166,22 +150,29 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
 
     txtBtn = f"Fetch: Get Assets"
 
-    if now.usr and usrId != now.usr.id:
+    if usrId and usrId != ( now.usr.id if now and now.usr else None ):
         db.dyn.dto.usrId = usrId
         now.switchUsr(usrId)
-        nfy.info(f"Switched user: {'All Users' if not now.usr else now.usr.name}")
+        if now.usr:
+            if not now.usr.key:
+                nfy.warn(f"Switched user: {now.usr.name} key is None")
+            else:
+                nfy.info(f"Switched user: {now.usr.name}")
+        #nfy.info(f"Switched user: {'All Users' if not now.usr else now.usr.name}")
 
     if isTasking:
         disBtnRun = True
         txtBtn = "Task in progress..."
 
-    if not usrId and usrId != "":
+    if not usrId:
         disBtnRun = True
         txtBtn = "Please select user"
 
     elif usrId == "":
-        cnt = db.psql.count()
-        txtBtn = f"Fetch: All ({cnt})"
+        # cnt = db.psql.count()
+        # txtBtn = f"Fetch: All ({cnt})"
+        disBtnRun = True
+        txtBtn = "Please select user"
     else:
         if not now.usrs:
             disBtnRun = True
@@ -206,7 +197,7 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
         inp(K.btnClean, "n_clicks"),
     ],
     [
-        ste(K.selectUsrId, "value"),
+        ste(K.selectUsr, "value"),
         ste(Ks.store.now, "data"),
         ste(Ks.store.mdl, "data"),
         ste(Ks.store.tsk, "data"),
@@ -240,9 +231,9 @@ def assets_BtnRunModals(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk
         if now.usr:
             cnt = db.psql.count( now.usr.id )
             mdl.msg = f"Start getting assets[{cnt}] for user [{now.usr.name}] ?"
-        else:
-            cnt = db.psql.count()
-            mdl.msg = f"Start getting all users assets count[{cnt}] ?"
+        # else:
+        #     cnt = db.psql.count()
+        #     mdl.msg = f"Start getting all users assets count[{cnt}] ?"
 
     return mdl.toStore(), nfy.toStore()
 
@@ -274,8 +265,11 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
             nfy.error(msg)
             return nfy, now, msg
 
-        else:
-            db.pics.deleteUsrAssets(now.usr.id)
+        # todo: add support for all users?
+
+        lg.info( f"[fetch] ==========>>> usr: {now.usr}" )
+
+        db.pics.deleteUsrAssets(now.usr.id)
 
         onUpdate(10, "10%", f"Starting to fetch assets for {now.usr.name} from PostgreSQL")
 
@@ -287,7 +281,14 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
 
         onUpdate(15, "15%", f"Found {cntAll} photos, starting to fetch assets")
 
-        assets = db.psql.fetchAssets(now.usr.id, onUpdate=onUpdate)
+        try:
+
+            assets = db.psql.fetchAssets(now.usr, onUpdate=onUpdate)
+
+        except Exception as e:
+            msg = f"Error fetching assets for {now.usr.name}, {str(e)}"
+            nfy.error(msg)
+            return nfy, now, msg
 
         if not assets or len(assets) == 0:
             msg = f"No assets retrieved for {now.usr.name}"

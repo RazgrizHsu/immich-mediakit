@@ -14,7 +14,7 @@ class Usr(BaseDictModel):
     id: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
-    apiKey: Optional[str] = None
+    key: Optional[str] = None
 
 @dataclass
 class Now(BaseDictModel):

@@ -14,7 +14,7 @@ from util.baseModel import Json
 class TestBaseDictModel(unittest.TestCase):
 
     def test_simple_model(self):
-        usr = Usr(id="1", name="TestUser", email="test@example.com", apiKey="test-key")
+        usr = Usr(id="1", name="TestUser", email="test@example.com", key="test-key")
 
         usr_dict = usr.toDict()
         usr_json = usr.toJson()
@@ -35,7 +35,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(usr1.id, "1")
         self.assertEqual(usr1.name, "User1")
         self.assertIsNone(usr1.email)
-        self.assertIsNone(usr1.apiKey)
+        self.assertIsNone(usr1.key)
 
         usr1_dict = usr1.toDict()
         usr1_restored = Usr.fromStore(usr1_dict)

@@ -46,7 +46,7 @@ def regBy(app):
 
         trigId = getTriggerId()
 
-        lg.info( f"[modal] Trigger[{trigId}] mdl: id[{mdl.id}]" )
+        # lg.info( f"[modal] Trigger[{trigId}] mdl: id[{mdl.id}]" )
 
         if trigId == k.id.btnNo:
             lg.info(f"[modal] Cancel execution: id[{mdl.id}]")
