@@ -1,4 +1,3 @@
-import os
 import sqlite3
 from typing import Optional
 
@@ -11,8 +10,9 @@ conn: Optional[sqlite3.dbapi2.Connection] = None
 def getConn():
     global conn
     pathDb = envs.mkitData + 'sets.db'
-    if conn is None: conn = sqlite3.connect(pathDb, check_same_thread=False)
-    lg.info(f"[pics] connected db: {pathDb}")
+    if conn is None:
+        conn = sqlite3.connect(pathDb, check_same_thread=False)
+        lg.info(f"[pics] connected db: {pathDb}")
     return conn
 
 

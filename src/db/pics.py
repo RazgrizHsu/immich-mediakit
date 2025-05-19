@@ -13,8 +13,9 @@ conn: Optional[sqlite3.dbapi2.Connection] = None
 def getConn():
     global conn
     pathDb = envs.mkitData + 'pics.db'
-    if conn is None: conn = sqlite3.connect(pathDb, check_same_thread=False)
-    lg.info(f"[pics] connected db: {pathDb}")
+    if conn is None:
+        conn = sqlite3.connect(pathDb, check_same_thread=False)
+        lg.info(f"[pics] connected db: {pathDb}")
     return conn
 
 
@@ -57,8 +58,9 @@ def init():
                 thumbnail_path   TEXT,
                 preview_path     TEXT,
                 fullsize_path    TEXT,
-                jsonExif        TEXT Default '{}',
+                jsonExif         TEXT Default '{}',
                 isVectored       INTEGER Default 0,
+                simOk            INTEGER Default 0,
                 simIds           TEXT Default '[]'
                 )
                    ''')
