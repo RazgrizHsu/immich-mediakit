@@ -163,9 +163,7 @@ body {
 	animation:spin 1s linear infinite;
 }
 @keyframes spin {
-	to {
-		transform:rotate(360deg);
-	}
+	to { transform:rotate(360deg)}
 }
 .info-label {
 	font-size:14px;
@@ -177,6 +175,7 @@ body {
 	font-weight:500;
 	color:#e0e0e0;
 }
+/*======================== Modal ========================*/
 .modal-content {
 	border-radius:20px;
 	box-shadow:0 0 12px 5px rgba(255, 255, 255, 0.3);
@@ -203,17 +202,36 @@ body {
 	border-bottom-left-radius:20px;
 	border-bottom-right-radius:20px;
 }
-.tab-content {
-	background-color:#3a3a3a;
-	border:1px solid #444444;
-	border-top:none;
-	padding:15px;
+
+/* modal-img */
+.modal-dialog.img-pop .modal-body {
+	margin: auto;
+	text-align:center;
+	padding: 5px 0px;
 }
-.input-group-text {
-	background-color:#212121;
-	border:1px solid #444444;
-	color:#a0a0a0;
+.img-pop img {
+	max-width: 99vw;
+	margin: auto;
 }
+.img-pop.auto img {
+	max-height: 92vh;
+}
+.img-pop .modal-body {
+	flex: none;
+}
+
+
+
+.photo-card img:hover {
+    opacity: 1;
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255,255,255,1);
+}
+
+
+
 @media (max-width:768px) {
 	.sidebar-column {
 		margin-bottom:20px;

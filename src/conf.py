@@ -43,11 +43,12 @@ class Ks:
         dir = 'DIR'
 
     class store:
+        init = 'store-init'
         now = 'store-now'
         tsk = 'store-tsk'
         nfy = 'store-nfy'
         mdl = 'store-mdl'
-        init = 'store-init'
+        mdlImg = 'store-mdl-img'
 
 
 

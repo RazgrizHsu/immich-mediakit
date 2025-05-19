@@ -146,7 +146,6 @@ def layout():
                 ])
             ], className="mb-4"),
 
-            # No data alert
             htm.Div(
                 dbc.Alert(
                     "No photos available. Please fetch first.",
@@ -157,7 +156,6 @@ def layout():
                 style={"display": "none"}
             ),
 
-            # Photo grid with loading spinner
             dbc.Spinner(
                 htm.Div(id=K.div.grid, className="mb-4"),
                 color="primary",
@@ -203,7 +201,7 @@ def layout():
                 ], width=4),
             ], className="mt-3 mb-4"),
 
-            dcc.Store(id=K.div.paginationStore, data={"page": 1, "per_page": 24, "total": 0})
+            dcc.Store(id=K.div.paginationStore, data={"page": 1, "per_page": 24, "total": 0}),
         ]),
     ])
 
@@ -355,12 +353,18 @@ def viewGrid_Load(
         pageSize=per_page
     )
 
+    if photos and len(photos) > 0:
+        lg.info(f"Loaded {len(photos)} photos")
+    else:
+        lg.info("No photos loaded")
+
     grid = createPhotoGrid(photos)
 
     prev_disabled = current_page <= 1
     next_disabled = current_page >= total_pages
 
     return grid, f"{total_pages}", current_page, total_pages, prev_disabled, next_disabled
+
 
 
 #========================================================================
@@ -447,8 +451,7 @@ def getTotalFilteredCount(usrId="", opts="all", search="", favOnly=False):
         return 0
 
 
-
-def createPhotoGrid(photos):
+def createPhotoGrid(photos: list[models.Asset]):
     if not photos or len(photos) == 0:
         return htm.Div(
             dbc.Alert("No photos match your filter criteria", color="warning"),
@@ -464,7 +467,7 @@ def createPhotoGrid(photos):
         if len(row_photos) == 4 or i == len(photos) - 1:
             cols = []
             for idx, p in enumerate(row_photos):
-                cols.append(dbc.Col(createPhotoCard(idx, p), width=3, className="mb-4"))
+                cols.append(dbc.Col(createPhotoCard(p), width=3, className="mb-4"))
 
             rows.append(dbc.Row(cols, className="mb-2"))
 
@@ -473,12 +476,12 @@ def createPhotoGrid(photos):
     return htm.Div(rows)
 
 
-
-def createPhotoCard(idx, asset):
+def createPhotoCard(asset: models.Asset):
     hasVec = asset.isVectored == 1
-    filename = asset.originalFileName or 'Unknown'
+    filename = asset.originalFileName or '---'
     created_date = asset.fileCreatedAt or 'Unknown date'
     is_favorite = asset.isFavorite == 1
+    img_index = asset.id
 
     if asset.id:
         image_src = f"/api/img/{asset.id}"
@@ -486,21 +489,23 @@ def createPhotoCard(idx, asset):
         image_src = "assets/noimg.png"
 
     return dbc.Card([
-        dbc.CardImg(
-            src=image_src,
-            top=True,
-            style={"height": "160px", "objectFit": "cover"}
-        ),
+        htm.Div([
+            dbc.CardImg(
+                src=image_src,
+                top=True,
+                style={"height": "160px", "objectFit": "cover", "cursor": "pointer"},
+            )
+        ], id={"type": "img-pop", "index": img_index}, n_clicks=0),
         dbc.CardBody([
             htm.H6(
                 filename,
-                className="card-title text-truncate",
+                className="text-truncate",
                 title=filename,
                 style={"fontSize": "0.9rem"}
             ),
             htm.P(
                 created_date,
-                className="card-text small",
+                className="small",
                 style={"fontSize": "0.8rem"}
             ),
             htm.Div([
@@ -510,8 +515,10 @@ def createPhotoCard(idx, asset):
                     "NoVec", color="warning", className="me-1"
                 ),
                 dbc.Badge(
-                    "❤️ Favorite", color="danger", className="ms-1"
+                    "❤️", color="danger", className="ms-1"
                 ) if is_favorite else htm.Span(),
             ], className="d-flex flex-wrap")
         ], className="p-2")
     ], className="h-100 photo-card")
+
+

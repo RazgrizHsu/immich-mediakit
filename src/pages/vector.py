@@ -189,8 +189,8 @@ def photoVec_OnInit(dta_now):
 )
 def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     trgId = getTriggerId()
-    if not trgId or (not nclk_proc and not nclk_clear): return noUpd, noUpd, noUpd, noUpd
-    if trgId == Ks.store.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd
+    if not trgId or (not nclk_proc and not nclk_clear): return noUpd, noUpd, noUpd, noUpd, noUpd
+    if trgId == Ks.store.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd, noUpd
 
     tsk = models.Tsk.fromStore(dta_tsk)
     now = models.Now.fromStore(dta_now)

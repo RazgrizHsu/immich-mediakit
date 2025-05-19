@@ -5,7 +5,9 @@ import dash_bootstrap_components as dbc
 # noinspection PyUnresolvedReferences
 from dash import html as htm, dcc
 # noinspection PyUnresolvedReferences
-from dash.dependencies import Input as inp, Output as out, State as ste, ALL
+from dash.dependencies import Input as inp, Output as out, State as ste
+# noinspection PyUnresolvedReferences
+from dash.dependencies import ALL, MATCH
 # noinspection PyUnresolvedReferences
 from dash import callback, no_update as noUpd, callback_context as ctx
 # noinspection PyUnresolvedReferences
@@ -32,9 +34,9 @@ bgCallbackManager = dskMgr(
 )
 
 
-def getTriggerId():
-    ctx = dash.callback_context
+def getTriggerId(ctx=None):
+    ctx = dash.callback_context if ctx is None else ctx
 
-    #lg.info( f"[getTriggerId] tid[{ctx.triggered_id}] propid[{ctx.triggered[0]['prop_id']}] len[{len(ctx.triggered)}]" )
+    # lg.info( f"[getTriggerId] tid[{ctx.triggered_id}] propid[{ctx.triggered[0]['prop_id']}] len[{len(ctx.triggered)}]" )
 
     return ctx.triggered[0]['prop_id'].split('.')[0]
