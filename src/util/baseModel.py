@@ -65,31 +65,47 @@ class BaseDictModel:
             BaseDictModel._type_checks_cache[cache_key] = result
         return BaseDictModel._type_checks_cache[cache_key]
 
+
     @classmethod
     def _process_typed_field(cls, key: str, val: Any, hint_type: Type) -> Any:
-        if val is None:
-            return None
-
         origin = get_origin(hint_type)
+
+        if val is None:
+            if origin is list:
+                return []
+            return None
 
         if origin is None:
             if cls._is_model_subclass(hint_type):
                 if isinstance(val, dict):
+                    # noinspection PyUnresolvedReferences
                     return hint_type.fromStore(val)
                 elif isinstance(val, str):
                     try:
                         json_data = json.loads(val)
                         if isinstance(json_data, dict):
+                            # noinspection PyUnresolvedReferences
                             return hint_type.fromStore(json_data)
                     except:
                         pass
             return val
 
-        if origin is list and isinstance(val, list):
-            item_type = get_args(hint_type)[0]
-
-            if cls._is_model_subclass(item_type):
-                return [item_type.fromStore(item) for item in val]
+        if origin is list:
+            if isinstance(val, list):
+                item_type = get_args(hint_type)[0]
+                if cls._is_model_subclass(item_type):
+                    return [item_type.fromStore(item) for item in val]
+                return val
+            elif isinstance(val, str):
+                try:
+                    list_data = json.loads(val)
+                    if isinstance(list_data, list):
+                        item_type = get_args(hint_type)[0]
+                        if cls._is_model_subclass(item_type):
+                            return [item_type.fromStore(item) for item in list_data]
+                        return list_data
+                except:
+                    pass
             return val
 
         if origin is dict: return val
@@ -155,8 +171,8 @@ class BaseDictModel:
 
             hint_type = type_hints[key]
             origin = get_origin(hint_type)
-            
-            if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or 
+
+            if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or
                     (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
                 processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
             else:
@@ -197,8 +213,8 @@ class BaseDictModel:
 
             hint_type = type_hints[key]
             origin = get_origin(hint_type)
-            
-            if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or 
+
+            if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or
                     (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
                 processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
             else:
