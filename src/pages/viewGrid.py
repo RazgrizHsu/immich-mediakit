@@ -2,6 +2,7 @@ import db
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId
 from util import log, models
 from conf import Ks
+from ui.grid import createPhotoGrid
 
 lg = log.get(__name__)
 
@@ -33,7 +34,7 @@ class K:
         paginationStore = "store-grid-pagination"
 
 
-#========================================================================
+# ========================================================================
 def layout():
     return htm.Div([
         htm.H3("Assets Grid View", className="mb-4"),
@@ -206,9 +207,9 @@ def layout():
     ])
 
 
-#========================================================================
+# ========================================================================
 # Page initialization
-#========================================================================
+# ========================================================================
 @callback(
     [
         out(K.inp.selectUserId, "options"),
@@ -233,9 +234,9 @@ def viewGrid_Init(dta_now):
     return user_options, show_alert, pag_data
 
 
-#========================================================================
+# ========================================================================
 # Handle filter changes and pagination controls
-#========================================================================
+# ========================================================================
 @callback(
     out(K.div.paginationStore, "data", allow_duplicate=True),
     [
@@ -302,9 +303,9 @@ def on_pagination_controls(
     return pag_data
 
 
-#========================================================================
+# ========================================================================
 # Handle photo grid loading
-#========================================================================
+# ========================================================================
 @callback(
     [
         out(K.div.grid, "children"),
@@ -326,32 +327,20 @@ def on_pagination_controls(
     ste(Ks.store.now, "data"),
     prevent_initial_call=False
 )
-def viewGrid_Load(
-    pag_data, userId, sortBy, sortOrder, filterOption,
-    searchKeyword, favoritesOnly, dta_now
-):
+def viewGrid_Load(pag_data, userId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now):
     now = models.Now.fromStore(dta_now)
 
     page = pag_data["page"]
-    per_page = pag_data["per_page"]
+    pageSize = pag_data["per_page"]
     total = pag_data["total"]
 
     if now.cntPic <= 0: return htm.Div("No photos available"), "0", 1, 1, True, True
 
-    total_pages = max(1, (total + per_page - 1) // per_page)
+    total_pages = max(1, (total + pageSize - 1) // pageSize)
 
-    current_page = min(total_pages, max(1, page))
+    pageIdx = min(total_pages, max(1, page))
 
-    photos = getFilteredAssets(
-        usrId=userId,
-        sort=sortBy,
-        sortOrd=sortOrder,
-        opts=filterOption,
-        search=searchKeyword,
-        onlyFav=favoritesOnly,
-        page=current_page,
-        pageSize=per_page
-    )
+    photos = getFilteredAssets(userId, sortBy, sortOrd, filOpt, shKey, onlyFav, pageIdx, pageSize)
 
     if photos and len(photos) > 0:
         lg.info(f"Loaded {len(photos)} photos")
@@ -360,16 +349,15 @@ def viewGrid_Load(
 
     grid = createPhotoGrid(photos)
 
-    prev_disabled = current_page <= 1
-    next_disabled = current_page >= total_pages
+    prev_disabled = pageIdx <= 1
+    next_disabled = pageIdx >= total_pages
 
-    return grid, f"{total_pages}", current_page, total_pages, prev_disabled, next_disabled
+    return grid, f"{total_pages}", pageIdx, total_pages, prev_disabled, next_disabled
 
 
-
-#========================================================================
+# ========================================================================
 # Helper Functions
-#========================================================================
+# ========================================================================
 def getFilteredAssets(
     usrId="", sort="fileCreatedAt", sortOrd="desc",
     opts="all", search="", onlyFav=False,
@@ -449,76 +437,3 @@ def getTotalFilteredCount(usrId="", opts="all", search="", favOnly=False):
     except Exception as e:
         lg.error(f"Error counting photos: {str(e)}")
         return 0
-
-
-def createPhotoGrid(photos: list[models.Asset]):
-    if not photos or len(photos) == 0:
-        return htm.Div(
-            dbc.Alert("No photos match your filter criteria", color="warning"),
-            className="text-center mt-4"
-        )
-
-    rows = []
-    row_photos = []
-
-    for i, photo in enumerate(photos):
-        row_photos.append(photo)
-
-        if len(row_photos) == 4 or i == len(photos) - 1:
-            cols = []
-            for idx, p in enumerate(row_photos):
-                cols.append(dbc.Col(createPhotoCard(p), width=3, className="mb-4"))
-
-            rows.append(dbc.Row(cols, className="mb-2"))
-
-            row_photos = []
-
-    return htm.Div(rows)
-
-
-def createPhotoCard(asset: models.Asset):
-    hasVec = asset.isVectored == 1
-    filename = asset.originalFileName or '---'
-    created_date = asset.fileCreatedAt or 'Unknown date'
-    is_favorite = asset.isFavorite == 1
-    img_index = asset.id
-
-    if asset.id:
-        image_src = f"/api/img/{asset.id}"
-    else:
-        image_src = "assets/noimg.png"
-
-    return dbc.Card([
-        htm.Div([
-            dbc.CardImg(
-                src=image_src,
-                top=True,
-                style={"height": "160px", "objectFit": "cover", "cursor": "pointer"},
-            )
-        ], id={"type": "img-pop", "index": img_index}, n_clicks=0),
-        dbc.CardBody([
-            htm.H6(
-                filename,
-                className="text-truncate",
-                title=filename,
-                style={"fontSize": "0.9rem"}
-            ),
-            htm.P(
-                created_date,
-                className="small",
-                style={"fontSize": "0.8rem"}
-            ),
-            htm.Div([
-                dbc.Badge(
-                    "VecOk", color="success", className="me-1"
-                ) if hasVec else dbc.Badge(
-                    "NoVec", color="warning", className="me-1"
-                ),
-                dbc.Badge(
-                    "❤️", color="danger", className="ms-1"
-                ) if is_favorite else htm.Span(),
-            ], className="d-flex flex-wrap")
-        ], className="p-2")
-    ], className="h-100 photo-card")
-
-

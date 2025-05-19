@@ -49,6 +49,21 @@ class Ks:
         nfy = 'store-nfy'
         mdl = 'store-mdl'
         mdlImg = 'store-mdl-img'
+    
+    exifColumns = {
+        "dateTimeOriginal": "Capture Time",
+        "modifyDate": "Modify Time",
+        "make": "Camera Brand",
+        "model": "Camera Model",
+        "lensModel": "Lens",
+        "fNumber": "Aperture",
+        "focalLength": "Focal Length",
+        "exposureTime": "Exposure Time",
+        "iso": "ISO",
+        "exifImageWidth": "Width",
+        "exifImageHeight": "Height",
+        "fileSizeInByte": "File Size"
+    }
 
 
 
