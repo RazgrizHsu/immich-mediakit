@@ -23,10 +23,11 @@ class TestBase(unittest.TestCase):
         mdl = Mdl()
 
         mdl.id = ks.pg.fetch
-        mdl.cmd = 'tests'
+        mdl.cmd = ks.cmd.fetch.asset
         mdl.args = { 'a':'what?' }
 
         tsk = mdl.mkTsk()
+        if not tsk: self.fail( "no task" )
 
         self.assertEqual(mdl.id, tsk.id)
         self.assertEqual(mdl.cmd, tsk.cmd)

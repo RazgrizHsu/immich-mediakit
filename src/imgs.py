@@ -15,11 +15,10 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
 
-# noinspection PyUnresolvedReferences
-import api, db, conf
+import db, conf
 from util import log, models
 from util.task import IFnProg
-
+from util.err import mkErr
 from conf import envs
 
 
@@ -150,44 +149,54 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: IFnProg = None) -> m
 
     inPct = 15
 
-    if onUpdate:
-        onUpdate(inPct, f"{inPct}%", f"Preparing to process {pi.total} photos, quality: {photoQ}")
+    try:
+        conn = db.pics.getConn()
+        cur = conn.cursor()
 
-    for idx, asset in enumerate(assets):
-        assetId = asset.id
+        if onUpdate:
+            onUpdate(inPct, f"{inPct}%", f"Preparing to process {pi.total} photos, quality: {photoQ}")
 
-        img = getImg(asset.getImagePath(photoQ))
+        for idx, asset in enumerate(assets):
+            assetId = asset.id
 
-        if not img:
-            lg.error(f"Unable to get photo: assetId[{assetId}], photoQ[{photoQ}]")
-            pi.error += 1
-            continue
+            img = getImg(asset.getImagePath(photoQ))
 
-        try:
-            result = saveVectorBy(assetId, img)
+            if not img:
+                lg.error(f"Unable to get photo: assetId[{assetId}], photoQ[{photoQ}]")
+                pi.error += 1
+                continue
 
-            if result is True:
-                pi.done += 1
-            elif result is False or result is None:
-                pi.skip += 1
-        except Exception as e:
-            lg.error(f"Processing failed: {assetId} - {str(e)}")
-            pi.error += 1
+            try:
+                result = saveVectorBy(assetId, img)
 
-        if idx > 0:
-            tElapsed = time.time() - tS
-            tPerItem = tElapsed / (idx + 1)
-            remainCnt = pi.total - (idx + 1)
-            remainTime = tPerItem * remainCnt
-            remainMins = int(remainTime / 60)
-        else:
-            remainMins = "Calculating"
+                if result is True:
+                    pi.done += 1
 
-        if onUpdate and (idx % 10 == 0 or idx == pi.total - 1):
-            percent = inPct + int((idx + 1) / pi.total * (100 - inPct))
-            onUpdate(percent, f"{percent}%", f"Processing photo {idx + 1}/{pi.total} - (Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}). Estimated remaining time: {remainMins} minutes")
+                    db.pics.updateVecBy(asset, cur=cur)
+                elif result is False or result is None:
+                    pi.skip += 1
+            except Exception as e:
+                lg.error(f"Processing failed: {assetId} - {str(e)}")
+                pi.error += 1
 
-    if onUpdate:
-        onUpdate(100, "100%", f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
+            if idx > 0:
+                tElapsed = time.time() - tS
+                tPerItem = tElapsed / (idx + 1)
+                remainCnt = pi.total - (idx + 1)
+                remainTime = tPerItem * remainCnt
+                remainMins = int(remainTime / 60)
+            else:
+                remainMins = "Calculating"
 
-    return pi
+            if onUpdate and (idx % 10 == 0 or idx == pi.total - 1):
+                percent = inPct + int((idx + 1) / pi.total * (100 - inPct))
+                onUpdate(percent, f"{percent}%", f"Processing photo {idx + 1}/{pi.total} - (Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}). Estimated remaining time: {remainMins} minutes")
+
+        conn.commit()
+        if onUpdate:
+            onUpdate(100, "100%", f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
+
+        return pi
+
+    except Exception as e:
+        raise mkErr("Failed to close database connection", e)

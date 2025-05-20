@@ -17,20 +17,20 @@ class Nfy(BaseDictModel):
     def remove(self, nid):
         if nid in self.msgs: del self.msgs[nid]
 
-    def info(self, msg, to=3000):
-        lg.info(msg)
+    def info(self, msg, to=5000):
+        lg.info(f"notify: {msg}")
         self._add(msg, "info", to)
 
     def success(self, msg, to=5000):
-        lg.info(msg)
+        lg.info(f"notify: {msg}")
         self._add(msg, "success", to)
 
     def warn(self, msg, to=8000):
-        lg.warning(msg)
+        lg.warning(f"notify: {msg}")
         self._add(msg, "warning", to)
 
     def error(self, msg, to=0):
-        lg.error(msg)
+        lg.error(f"notify: {msg}")
         self._add(msg, "danger", to)
 
     def _add(self, msg, typ, to):
@@ -48,9 +48,10 @@ class Cmd(BaseDictModel):
 @dataclass
 class Tsk(Cmd):
     name: Optional[str] = None
+    msg: Optional[str] = None
 
     def reset(self, withDone=True):
-        self.id = self.name = self.cmd = None
+        self.id = self.name = self.cmd = self.msg = None
         self.args = {}
 
 
@@ -69,15 +70,21 @@ class Mdl(Cmd):
 
         tit = ks.pg.find(self.id)
         if tit:
-            if not self.id in tit.cmds:
-                lg.error(f'the MDL.id[{self.id}] not in [{tit}]')
+            lg.info( f"tit.cmds({type(tit.cmds)}) => {tit.cmds}" )
+            if not self.cmd in tit.cmds.values():
+                lg.error(f'the MDL.cmd[{self.cmd}] not in [{tit.cmds}]')
                 return None
 
-            cmds = tit.cmds.keys()
+            cmd = next(v for k, v in tit.cmds.items() if v == self.cmd)
+            lg.info( f"cmd => type({type(cmd)}) v:{cmd}" )
+
             tsk.id = self.id
             tsk.name = tit.name
             tsk.cmd = self.cmd
             tsk.args |= self.args
+
+            if hasattr( cmd, 'desc' ): tsk.msg = cmd.desc
+
             return tsk
         else:
             return None
@@ -89,6 +96,12 @@ class ProcessInfo(BaseDictModel):
     skip: int = 0
     error: int = 0
     done: int = 0
+
+@dataclass
+class SimilarInfo(BaseDictModel):
+    ida: Optional[str] = None
+    idb: Optional[str] = None
+    score: Optional[float] = None
 
 
 @dataclass

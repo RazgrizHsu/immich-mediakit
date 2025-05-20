@@ -1,11 +1,12 @@
 import json
 import sqlite3
-import traceback
+from sqlite3 import Cursor
 from typing import Optional, List
 
 from conf import envs
 from util import log, models
 from util.baseModel import BaseDictModel
+from util.err import mkErr
 
 lg = log.get(__name__)
 conn: Optional[sqlite3.dbapi2.Connection] = None
@@ -26,8 +27,7 @@ def close():
         conn = None
         return True
     except Exception as e:
-        lg.error(f"Failed to close database connection: {str(e)}")
-        return False
+        raise mkErr("Failed to close database connection", e)
 
 
 def init():
@@ -42,43 +42,42 @@ def init():
 
         c.execute('''
                 Create Table If Not Exists assets (
-                autoId           INTEGER Primary Key AUTOINCREMENT,
-                id               TEXT Unique,
-                ownerId          TEXT,
-                deviceId         TEXT,
-                type             TEXT,
-                originalFileName TEXT,
-                fileCreatedAt    TEXT,
-                fileModifiedAt   TEXT,
-                isFavorite       INTEGER,
-                isVisible        INTEGER,
-                isArchived       INTEGER,
-                libraryId        TEXT,
-                localDateTime    TEXT,
-                thumbnail_path   TEXT,
-                preview_path     TEXT,
-                fullsize_path    TEXT,
-                jsonExif         TEXT Default '{}',
-                isVectored       INTEGER Default 0,
-                simOk            INTEGER Default 0,
-                simIds           TEXT Default '[]'
+                    autoId           INTEGER Primary Key AUTOINCREMENT,
+                    id               TEXT Unique,
+                    ownerId          TEXT,
+                    deviceId         TEXT,
+                    type             TEXT,
+                    originalFileName TEXT,
+                    fileCreatedAt    TEXT,
+                    fileModifiedAt   TEXT,
+                    isFavorite       INTEGER,
+                    isVisible        INTEGER,
+                    isArchived       INTEGER,
+                    libraryId        TEXT,
+                    localDateTime    TEXT,
+                    thumbnail_path   TEXT,
+                    preview_path     TEXT,
+                    fullsize_path    TEXT,
+                    jsonExif         TEXT Default '{}',
+                    isVectored       INTEGER Default 0,
+                    simOk            INTEGER Default 0,
+                    simIds           TEXT Default '[]'
                 )
-                   ''')
+                ''')
 
         c.execute('''
-				   Create Table If Not Exists users (
-					   id     TEXT Primary Key,
-					   name   TEXT,
-					   email  TEXT,
-					   apiKey TEXT
-				   )
-                   ''')
+                Create Table If Not Exists users (
+                    id     TEXT Primary Key,
+                    name   TEXT,
+                    email  TEXT,
+                    apiKey TEXT
+                )
+                ''')
 
         conn.commit()
         return True
     except Exception as e:
-        lg.error(f"Failed to initialize duplicate photo database: {str(e)}")
-        return False
+        raise mkErr("Failed to initialize duplicate photo database", e)
 
 def clear():
     try:
@@ -92,8 +91,7 @@ def clear():
 
         return init()
     except Exception as e:
-        lg.error(f"Failed to clear database: {str(e)}")
-        return False
+        raise mkErr("Failed to clear database", e)
 
 
 def hasData(): return count() > 0
@@ -116,13 +114,12 @@ def count(usrId=None):
         cnt = c.fetchone()[0]
         return cnt
     except Exception as e:
-        lg.error(f"Failed to get asset count: {str(e)}")
-        return 0
+        raise mkErr("Failed to get asset count", e)
 
 
 def getAnyNonSim() -> Optional[models.Asset]:
     try:
-        if conn is None: raise RuntimeError('the db is not init')
+        if conn is None: raise mkErr('the db is not init')
 
         c = conn.cursor()
         c.execute("Select * From assets Where simOk!=1")
@@ -133,12 +130,11 @@ def getAnyNonSim() -> Optional[models.Asset]:
         asset = models.Asset.fromDB(c, row)
         return asset
     except Exception as e:
-        lg.error(f"Failed to get asset information: {str(e)}")
-        return None
+        raise mkErr("Failed to get asset information", e)
 
 def get(assetId) -> Optional[models.Asset]:
     try:
-        if conn is None: raise RuntimeError('the db is not init')
+        if conn is None: raise mkErr('the db is not init')
 
         c = conn.cursor()
         c.execute("Select * From assets Where id = ?", (assetId,))
@@ -149,13 +145,29 @@ def get(assetId) -> Optional[models.Asset]:
         asset = models.Asset.fromDB(c, row)
         return asset
     except Exception as e:
-        lg.error(f"Failed to get asset information: {str(e)}")
-        return None
+        raise mkErr("Failed to get asset information", e)
+
+def getBy(ids: List[str]) -> List[models.Asset]:
+    try:
+        if conn is None: raise mkErr('the db is not init')
+        if not ids: return []
+
+        c = conn.cursor()
+        placeholders = ','.join(['?' for _ in ids])
+        c.execute(f"Select * From assets Where id IN ({placeholders})", ids)
+
+        rows = c.fetchall()
+        if not rows: return []
+
+        assets = [models.Asset.fromDB(c, row) for row in rows]
+        return assets
+    except Exception as e:
+        raise mkErr(f"Failed to get asset by ids[{ids}]", e)
 
 
 def getAll(count=0) -> list[models.Asset]:
     try:
-        if conn is None: raise RuntimeError('the db is not init')
+        if conn is None: raise mkErr('the db is not init')
 
         c = conn.cursor()
 
@@ -172,13 +184,12 @@ def getAll(count=0) -> list[models.Asset]:
         assets = [models.Asset.fromDB(c, row) for row in rows]
         return assets
     except Exception as e:
-        lg.error(f"Failed to get all asset information: {str(e)}")
-        return []
+        raise mkErr("Failed to get all asset information", e)
 
 
 def getPaged(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
     try:
-        if conn is None: raise RuntimeError('the db is not init')
+        if conn is None: raise mkErr('the db is not init')
 
         c = conn.cursor()
 
@@ -213,10 +224,21 @@ def getPaged(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
         assets = [models.Asset.fromDB(c, row) for row in rows]
         return assets, cnt
     except Exception as e:
-        lg.error(f"Failed to get paginated asset information: {str(e)}")
-        return [], 0
+        raise mkErr("Failed to get paginated asset information", e)
 
 
+def updateVecBy(asset: models.Asset, done=1, cur: Cursor = None):
+    try:
+        if conn is None: raise mkErr('the db is not init')
+
+        c = cur if cur else conn.cursor()
+
+        c.execute("UPDATE assets SET isVectored=? WHERE id = ?", (done, asset.id))
+
+        if not cur: conn.commit()
+
+    except Exception as e:
+        raise mkErr(f"Failed to updateVecBy: {asset}", e)
 
 def saveBy(asset: dict):
     try:
@@ -234,7 +256,7 @@ def saveBy(asset: dict):
                 jsonExif = json.dumps(exifInfo, ensure_ascii=False, default=BaseDictModel.jsonSerializer)
                 lg.info(f"json: {jsonExif}")
             except Exception as e:
-                raise f"[pics.save] Error converting EXIF to JSON: {str(e)}"
+                raise mkErr("[pics.save] Error converting EXIF to JSON", e)
 
         c.execute("Select autoId, id From assets Where id = ?", (assetId,))
         row = c.fetchone()
@@ -303,9 +325,7 @@ def saveBy(asset: dict):
         conn.commit()
         return True
     except Exception as e:
-        lg.error(f"Failed to save asset information: {str(e)}")
-        lg.error(traceback.format_exc())
-        raise
+        raise mkErr("Failed to save asset information", e)
 
 
 def deleteForUsr(usrId):
@@ -325,16 +345,11 @@ def deleteForUsr(usrId):
         conn.commit()
 
         lg.info(f"[pics] delete vectors for usrId[{usrId}]")
-        for assId in assetIds:
-            vecs.deleteBy(assId)
+        for assId in assetIds: vecs.deleteBy(assId)
 
         return True
     except Exception as e:
-        lg.error(f"Failed to delete user assets: {str(e)}")
-        return False
-
-
-
+        raise mkErr("Failed to delete user assets", e)
 
 def setSimIds(assetId: str, similarIds: List[str]):
     try:
@@ -343,9 +358,7 @@ def setSimIds(assetId: str, similarIds: List[str]):
         c = conn.cursor()
 
         c.execute("SELECT id FROM assets WHERE id = ?", (assetId,))
-        if not c.fetchone():
-            lg.error(f"Asset {assetId} not found")
-            return False
+        if not c.fetchone(): raise RuntimeError(f"Asset {assetId} not found")
 
         c.execute("UPDATE assets SET simIds = ? WHERE id = ?", (json.dumps(similarIds), assetId))
         conn.commit()
@@ -353,10 +366,7 @@ def setSimIds(assetId: str, similarIds: List[str]):
         lg.info(f"Updated simIds for asset {assetId}: {len(similarIds)} similar assets")
         return True
     except Exception as e:
-        lg.error(f"Failed to set similar IDs: {str(e)}")
-        lg.error(traceback.format_exc())
-        return False
-
+        raise mkErr("Failed to set similar IDs", e)
 
 def clearSimIds():
     try:
@@ -370,9 +380,7 @@ def clearSimIds():
         lg.info(f"Cleared similarity results for {count} assets")
         return True
     except Exception as e:
-        lg.error(f"Failed to clear similarity results: {str(e)}")
-        lg.error(traceback.format_exc())
-        return False
+        raise mkErr("Failed to clear similarity results:", e)
 
 
 def countSimOk(isOk=0):
@@ -380,13 +388,11 @@ def countSimOk(isOk=0):
         if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM assets WHERE simOk = ?", (isOk,))
+        c.execute("SELECT COUNT(*) FROM assets WHERE isVectored = 1 AND simOk = ?", (isOk,))
         count = c.fetchone()[0]
 
-        lg.info( f"[pics] count type[{isOk}] cnt[{count}]" )
+        lg.info(f"[pics] count type[{isOk}] cnt[{count}]")
 
         return count
     except Exception as e:
-        lg.error(f"Failed to count assets with simOk={isOk}: {str(e)}")
-        lg.error(traceback.format_exc())
-        return 0
+        raise mkErr(f"Failed to count assets with simOk={isOk}", e)
