@@ -27,38 +27,40 @@ class co:
         desc: str = ''
         cmds: Dict[str, str] = None
 
-        # noinspection PyTypeChecker
         def __new__(cls, v='', name='', cmds: Dict[str, str] = None, desc='') -> 'co.title':
             me = super().__new__(cls, v)
             me.name = name
             me.cmds = cmds
-
+            # noinspection PyTypeChecker
             return me
 
     class find:
-
         @classmethod
         def find(cls, key: str):
             for attr_name in dir(cls):
                 if attr_name.startswith('__') or callable(getattr(cls, attr_name)): continue
-
                 attr = getattr(cls, attr_name)
-
                 if isinstance(attr, co.title) and attr == key: return attr
-
             return None
 
         @classmethod
         def findBy(cls, key: str, value):
             for name in dir(cls):
                 if name.startswith('__') or callable(getattr(cls, name)): continue
-
                 obj = getattr(cls, name)
-
                 if isinstance(obj, co.title) and hasattr(obj, key):
                     if getattr(obj, key) == value: return obj
-
             return None
+
+    class valid:
+        @staticmethod
+        def float(v, default, mi=0.01, mx=1):
+            try:
+                fv = float(v)
+                if fv < mi or fv > mx: return default
+                return fv
+            except (ValueError, TypeError):
+                return default
 
 # ------------------------------------------------------------------------
 # keys
@@ -74,6 +76,7 @@ class cmds:
 
     class sim(co.to):
         find = 'sim_find'
+        clear = 'sim_clear'
 
 class ks:
     title = "Immich-MediaKit"

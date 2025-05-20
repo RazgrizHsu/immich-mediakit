@@ -126,6 +126,8 @@ span.tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px;
 
 .custom-nav-link span { display: flex; align-items: center; gap: 8px; }
 
+.notify .alert { box-shadow: 0 0 3px 3px #FFFFFF66 !important; margin: 20px; text-shadow: 0 0 10px #1A1A1A; }
+
 .nav-glow { position: relative; }
 
 .nav-glow::after { content: ""; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(to right, color-mix(in srgb, var(--nav-base) 70%, transparent), color-mix(in srgb, var(--nav-accent) 80%, transparent), color-mix(in srgb, var(--nav-base) 70%, transparent)); }
