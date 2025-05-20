@@ -2,7 +2,7 @@ from typing import Callable, Tuple
 
 from dsh import htm, dbc, inp, out, ste, noUpd, getTriggerId
 from util import log, models
-from conf import Ks
+from conf import ks
 
 lg = log.get(__name__)
 
@@ -61,7 +61,7 @@ def regBy(app):
             out(k.div, "style"),
             out(k.txt, "children"),
         ],
-        inp(Ks.store.tsk, "data"),
+        inp(ks.sto.tsk, "data"),
         prevent_initial_call=True
     )
     def task_status(dta_tsk):
@@ -79,9 +79,9 @@ def regBy(app):
 
     # ------------------------------------------------------------------------
     @app.callback(
-        out(Ks.store.tsk, "data"),
+        out(ks.sto.tsk, "data"),
         inp(k.btn, "n_clicks"),
-        ste(Ks.store.tsk, "data"),
+        ste(ks.sto.tsk, "data"),
         prevent_initial_call=True
     )
     def onBtnTaskClose(_nclk, dta_tsk):
@@ -97,13 +97,13 @@ def regBy(app):
         [
             out(k.rst, "children"),
             out(k.prg, "value", allow_duplicate=True),
-            out(Ks.store.tsk, "data", allow_duplicate=True),
-            out(Ks.store.nfy, "data", allow_duplicate=True),
-            out(Ks.store.now, "data", allow_duplicate=True),
+            out(ks.sto.tsk, "data", allow_duplicate=True),
+            out(ks.sto.nfy, "data", allow_duplicate=True),
+            out(ks.sto.now, "data", allow_duplicate=True),
         ],
-        inp(Ks.store.tsk, "data"),
-        ste(Ks.store.nfy, "data"),
-        ste(Ks.store.now, "data"),
+        inp(ks.sto.tsk, "data"),
+        ste(ks.sto.nfy, "data"),
+        ste(ks.sto.now, "data"),
         background=True,
         running=[
             (out(k.btn, "disabled"), True, False),
@@ -126,9 +126,9 @@ def regBy(app):
         if not tsk.id:
             return noUpd, noUpd, noUpd, noUpd, noUpd
 
-        lg.info(f"[Task] Start.. id[{tsk.id}] name[{tsk.name}] keyFn[{tsk.keyFn}]")
+        lg.info(f"[Task] Start.. id[{tsk.id}] name[{tsk.name}] keyFn[{tsk.cmd}]")
 
-        fn = mapFns[tsk.keyFn]
+        fn = mapFns[tsk.cmd]
         msg = None
         pct = 0
 
@@ -149,7 +149,7 @@ def regBy(app):
                 lg.error(msg)
         else:
             pct = 50
-            msg = f"task[{tsk.id}] NotFound task keyFn[{tsk.keyFn}]"
+            msg = f"task[{tsk.id}] NotFound task keyFn[{tsk.cmd}]"
             lg.error( msg )
 
         return msg, pct, tsk.toStore(), nfy.toStore(), now.toStore()

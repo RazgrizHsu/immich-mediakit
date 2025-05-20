@@ -1,4 +1,6 @@
 import os
+from typing import Dict
+
 import dotenv
 import torch
 
@@ -7,42 +9,83 @@ import torch
 
 dotenv.load_dotenv()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-def isInDocker(): return os.path.exists('/.dockerenv')
-
 pathRoot = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+isDock = os.path.exists('/.dockerenv')
 
-def pathFromRoot(path):
-    if os.path.isabs(path): return path
-    joined_path = os.path.join(pathRoot, path)
-    return os.path.normpath(joined_path)
+# ------------------------------------------------------------------------
+# code helper
+# ------------------------------------------------------------------------
+class co:
+    class to:
+        @classmethod
+        def dict(cls):
+            return {key: value for key, value in vars(cls).items() if not key.startswith('_') and not callable(value)}
 
-class envs:
-    isDev = False if isInDocker() else os.getenv('IsDev')
-    qdrantUrl = 'http://qdrant:6333' if isInDocker() else os.getenv('QDRANT_URL')
-    psqlHost = os.getenv('PSQL_HOST')
-    psqlPort = os.getenv('PSQL_PORT')
-    psqlDb = os.getenv('PSQL_DB')
-    psqlUser = os.getenv('PSQL_USER')
-    psqlPass = os.getenv('PSQL_PASS')
-    immichUrl = os.getenv('IMMICH_URL')
-    immichPath = os.getenv('IMMICH_PATH')
-    mkitPort = os.getenv('MKIT_PORT', '8086')
 
-    if os.getcwd().startswith(os.path.join(pathRoot, 'tests')):
-        mkitData = os.path.join(pathRoot, 'data/')
-    else:
-        mkitData = 'data/' if isInDocker() else os.getenv('MKIT_DATA', os.path.join(pathRoot, 'data/'))
+    class title(str):
+        name: str = ''
+        desc: str = ''
+        cmds: Dict[str, str] = None
 
-class Ks:
+        # noinspection PyTypeChecker
+        def __new__(cls, v='', name='', cmds: Dict[str, str] = None, desc='') -> 'co.title':
+            me = super().__new__(cls, v)
+            me.name = name
+            me.cmds = cmds
+
+            return me
+
+    class find:
+
+        @classmethod
+        def find(cls, key: str):
+            for attr_name in dir(cls):
+                if attr_name.startswith('__') or callable(getattr(cls, attr_name)): continue
+
+                attr = getattr(cls, attr_name)
+
+                if isinstance(attr, co.title) and attr == key: return attr
+
+            return None
+
+        @classmethod
+        def findBy(cls, key: str, value):
+            for name in dir(cls):
+                if name.startswith('__') or callable(getattr(cls, name)): continue
+
+                obj = getattr(cls, name)
+
+                if isinstance(obj, co.title) and hasattr(obj, key):
+                    if getattr(obj, key) == value: return obj
+
+            return None
+
+# ------------------------------------------------------------------------
+# keys
+# ------------------------------------------------------------------------
+class cmds:
+    class fetch(co.to):
+        asset = 'fetch_asset'
+        clear = 'fetch_clear'
+
+    class vec(co.to):
+        toVec = 'vec_toVec'
+        clear = 'vec_clear'
+
+    class sim(co.to):
+        find = 'sim_find'
+
+class ks:
     title = "Immich-MediaKit"
+    cmd = cmds
 
-    class pgs:
-        fetch = 'fetch'
-        photoVec = 'photoVec'
-        settings = 'settings'
-        similar = 'similar'
-        viewGrid = 'viewGrid'
+    class pg(co.find):
+        fetch = co.title('fetch', 'FetchAssets', cmds.fetch.dict(), desc='Get photo asset from (Api/Psql) and save to local db')
+        vec = co.title('photoVec', 'ToVectors', cmds.vec.dict(), desc='Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector')
+        similar = co.title('similar', 'Similarity', cmds.sim.dict(), desc='Find similar photos based on image content. This uses AI-generated vector embeddings to find visually similar assets')
+        settings = co.title('settings', 'Settings', desc='')
+        viewGrid = co.title('viewGrid', 'ViewGrid', desc='')
+
 
     class db:
         thumbnail = 'thumbnail'
@@ -53,7 +96,7 @@ class Ks:
         api = 'API'
         dir = 'DIR'
 
-    class store:
+    class sto:
         init = 'store-init'
         now = 'store-now'
         tsk = 'store-tsk'
@@ -76,13 +119,50 @@ class Ks:
             "exifImageHeight": "Height",
             "fileSizeInByte": "File Size"
         }
-        thMarks = { 0: "0", 0.2: "0.2", 0.4: "0.4", 0.6: "0.6", 0.8: "0.8", 0.9: "0.9", 0.95: "0.95", 1: "1" }
+        thMarks = {0: "0", 0.2: "0.2", 0.4: "0.4", 0.6: "0.6", 0.8: "0.8", 0.9: "0.9", 0.95: "0.95", 1: "1"}
 
     class css:
         show = {"display": ""}
         hide = {"display": "none"}
 
 
-if not envs.mkitData.endswith('/'): envs.mkitData = envs.mkitData + '/'
+# ------------------------------------------------------------------------
+# helpers
+# ------------------------------------------------------------------------
+class url:
+    @staticmethod
+    def get_image_url(assetId, photoQ=ks.db.thumbnail):
+        return f"/api/image/{assetId}?quality={photoQ}"
+
+def pathFromRoot(path):
+    if os.path.isabs(path): return path
+    joined_path = os.path.join(pathRoot, path)
+    return os.path.normpath(joined_path)
+
+# ------------------------------------------------------------------------
+# envs
+# ------------------------------------------------------------------------
+class envs:
+    isDev = False if isDock else os.getenv('IsDev')
+    isDock = False if not isDock else True
+    qdrantUrl = 'http://qdrant:6333' if isDock else os.getenv('QDRANT_URL')
+    psqlHost = os.getenv('PSQL_HOST')
+    psqlPort = os.getenv('PSQL_PORT')
+    psqlDb = os.getenv('PSQL_DB')
+    psqlUser = os.getenv('PSQL_USER')
+    psqlPass = os.getenv('PSQL_PASS')
+    immichUrl = os.getenv('IMMICH_URL')
+    immichPath = os.getenv('IMMICH_PATH')
+    mkitPort = os.getenv('MKIT_PORT', '8086')
+
+    if os.getcwd().startswith(os.path.join(pathRoot, 'tests')):
+        mkitData = os.path.join(pathRoot, 'data/')
+    else:
+        mkitData = 'data/' if isDock else os.getenv('MKIT_DATA', os.path.join(pathRoot, 'data/'))
+        if not mkitData.endswith('/'): mkitData += '/'
+
+# ------------------------------------------------------------------------
+# const
+# ------------------------------------------------------------------------
 
 pathCache = envs.mkitData + 'cache/'

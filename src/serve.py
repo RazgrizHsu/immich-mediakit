@@ -3,7 +3,7 @@ from flask import send_file, request, make_response
 from flask_caching import Cache
 import hashlib
 
-from conf import envs, Ks, pathCache
+from conf import envs, ks, pathCache
 from util import log
 
 lg = log.get(__name__)
@@ -31,7 +31,7 @@ def regBy(app):
     @app.server.route('/api/img/<assetId>')
     def serve_image(assetId):
         try:
-            photoQ = request.args.get('q', Ks.db.thumbnail)
+            photoQ = request.args.get('q', ks.db.thumbnail)
 
             cache_key = f"{assetId}_{photoQ}"
             cache_hash = hashlib.md5(cache_key.encode()).hexdigest()
@@ -48,8 +48,8 @@ def regBy(app):
             row = cursor.fetchone()
 
             if row:
-                if photoQ == Ks.db.preview: path = row[1]
-                elif photoQ == Ks.db.fullsize: path = row[2]
+                if photoQ == ks.db.preview: path = row[1]
+                elif photoQ == ks.db.fullsize: path = row[2]
                 else:
                     path = row[0]
 

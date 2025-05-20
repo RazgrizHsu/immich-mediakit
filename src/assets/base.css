@@ -12,6 +12,8 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 @media (max-width: 768px) { .sidebar-column { margin-bottom: 20px; min-height: auto; } .notification-container { width: 90%; right: 5%; } .image-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } .duplicate-container { grid-template-columns: 1fr; } }
 
+.layout .R { padding: 0 15px 0 5px; }
+
 .txt-sm { font-size: 0.75rem; }
 
 .footer { margin-top: auto; border-top: 1px solid #333333; background-color: #212121; padding: 15px 0; text-align: center; width: 100%; color: #A0A0A0; margin-bottom: 0; box-sizing: border-box; position: relative; }

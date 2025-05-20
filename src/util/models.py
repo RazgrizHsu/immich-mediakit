@@ -1,12 +1,95 @@
+import uuid
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional
 from datetime import datetime
-
-from util.baseModel import BaseDictModel, Json
+from typing import Dict, List, Any, Optional
 
 from util import log
+from util.baseModel import BaseDictModel
+from conf import ks
 
 lg = log.get(__name__)
+
+@dataclass
+class Nfy(BaseDictModel):
+    msgs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
+    def _init__(self, msgs): self.msgs = msgs
+
+    def remove(self, nid):
+        if nid in self.msgs: del self.msgs[nid]
+
+    def info(self, msg, to=3000):
+        lg.info(msg)
+        self._add(msg, "info", to)
+
+    def success(self, msg, to=5000):
+        lg.info(msg)
+        self._add(msg, "success", to)
+
+    def warn(self, msg, to=8000):
+        lg.warning(msg)
+        self._add(msg, "warning", to)
+
+    def error(self, msg, to=0):
+        lg.error(msg)
+        self._add(msg, "danger", to)
+
+    def _add(self, msg, typ, to):
+        nid = str(uuid.uuid4())
+        self.msgs[nid] = {'message': msg, 'type': typ, 'timeout': to}
+
+
+@dataclass
+class Cmd(BaseDictModel):
+    id: Optional[str] = None
+    cmd: Optional[str] = None
+    args: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class Tsk(Cmd):
+    name: Optional[str] = None
+
+    def reset(self, withDone=True):
+        self.id = self.name = self.cmd = None
+        self.args = {}
+
+
+@dataclass
+class Mdl(Cmd):
+    msg: Optional[str] = None
+    ok: bool = False
+
+    def reset(self):
+        self.id = self.msg = self.cmd = None
+        self.ok = False
+        self.args = {}
+
+    def mkTsk(self):
+        tsk = Tsk()
+
+        tit = ks.pg.find(self.id)
+        if tit:
+            if not self.id in tit.cmds:
+                lg.error(f'the MDL.id[{self.id}] not in [{tit}]')
+                return None
+
+            cmds = tit.cmds.keys()
+            tsk.id = self.id
+            tsk.name = tit.name
+            tsk.cmd = self.cmd
+            tsk.args |= self.args
+            return tsk
+        else:
+            return None
+
+
+@dataclass
+class ProcessInfo(BaseDictModel):
+    total: int = 0
+    skip: int = 0
+    error: int = 0
+    done: int = 0
 
 
 @dataclass
@@ -16,102 +99,6 @@ class Usr(BaseDictModel):
     email: Optional[str] = None
     key: Optional[str] = None
 
-@dataclass
-class Now(BaseDictModel):
-    usrs: List[Usr] = field(default_factory=list)
-    usr: Optional[Usr] = None
-    useType: Optional[str] = None
-    photoQ: Optional[str] = None
-    cntPic: int = 0
-    cntVec: int = 0
-
-    sltIds: List[str] = field(default_factory=list)
-
-
-    def switchUsr(self, usrId):
-        if self.usrs:
-            # lg.info( f"[switch] usr[{self.usrs[0]}]({type(self.usrs[0])})" )
-            self.usr = next((u for u in self.usrs if u.id == usrId), None)
-
-
-@dataclass
-class AppState(BaseDictModel):
-    current_page: str = "home"
-    selected_items: List[str] = field(default_factory=list)
-    filters: Dict[str, Any] = field(default_factory=dict)
-    last_updated: datetime = field(default_factory=datetime.now)
-
-
-import uuid
-
-
-@dataclass
-class Nfy(BaseDictModel):
-    msgs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-
-    def _init__(self, msgs):
-        self.msgs = msgs
-
-    def remove(self, nid):
-        if nid in self.msgs: del self.msgs[nid]
-
-    def info(self, message, timeout=3000):
-        lg.info(message)
-        self._add(message, "info", timeout)
-
-    def success(self, message, timeout=5000):
-        lg.info(message)
-        self._add(message, "success", timeout)
-
-    def warn(self, message, timeout=8000):
-        lg.warning(message)
-        self._add(message, "warning", timeout)
-
-    def error(self, message, timeout=0):
-        lg.error(message)
-        self._add(message, "danger", timeout)
-
-    def _add(self, message, kind, timeout):
-        nid = str(uuid.uuid4())
-        self.msgs[nid] = {
-            'message': message,
-            'type': kind,
-            'timeout': timeout
-        }
-
-
-@dataclass
-class Tsk(BaseDictModel):
-    id: Optional[str] = None
-    name: Optional[str] = None
-    keyFn: Optional[str] = None
-    args: Dict[str, Any] = field(default_factory=dict)
-
-    def reset(self, withDone=True):
-        self.id = self.name = self.keyFn = None
-        self.args = {}
-
-@dataclass
-class Mdl(BaseDictModel):
-    id: Optional[str] = None
-    msg: Optional[str] = None
-    ok: bool = False
-
-    cmd: Optional[str] = None
-    args: Dict[str, Any] = field(default_factory=dict)
-
-    def reset(self):
-        self.id = self.msg = self.cmd = None
-        self.ok = False
-        self.args = {}
-
-
-@dataclass
-class ProcessInfo(BaseDictModel):
-    total: int = 0
-    skip: int = 0
-    error: int = 0
-    done: int = 0
 
 @dataclass
 class AssetExif(BaseDictModel):
@@ -154,13 +141,33 @@ class Asset(BaseDictModel):
 
     def getImagePath(self, photoQ=None):
         import os
-        from conf import Ks, envs
+        from conf import ks, envs
 
-        if photoQ == Ks.db.fullsize:
+        if photoQ == ks.db.fullsize:
             path = self.fullsize_path
-        elif photoQ == Ks.db.preview:
+        elif photoQ == ks.db.preview:
             path = self.preview_path
         else:
             path = self.thumbnail_path
 
-        return os.path.join( envs.immichPath, path )
+        return os.path.join(envs.immichPath, path)
+
+
+@dataclass
+class Now(BaseDictModel):
+    usrs: List[Usr] = field(default_factory=list)
+    usr: Optional[Usr] = None
+    useType: Optional[str] = None
+    photoQ: Optional[str] = None
+    cntPic: int = 0
+    cntVec: int = 0
+
+    selectIds: List[str] = field(default_factory=list)
+
+    assets: List[Asset] = field(default_factory=list)
+
+
+    def switchUsr(self, usrId):
+        if self.usrs:
+            # lg.info( f"[switch] usr[{self.usrs[0]}]({type(self.usrs[0])})" )
+            self.usr = next((u for u in self.usrs if u.id == usrId), None)

@@ -1,6 +1,6 @@
 from dsh import dbc, inp, out, getTriggerId
 from util import log, models
-from conf import Ks
+from conf import ks
 
 lg = log.get(__name__)
 
@@ -28,12 +28,12 @@ def regBy(app):
     #------------------------------------------------------------------------
     @app.callback(
         [
-            out(Ks.store.mdl, "data", allow_duplicate=True),
+            out(ks.sto.mdl, "data", allow_duplicate=True),
             out(k.id.div, "is_open"),
             out(k.id.txt, "children"),
         ],
         [
-            inp(Ks.store.mdl, "data"),
+            inp(ks.sto.mdl, "data"),
             inp(k.id.btnOk, "n_clicks"),
             inp(k.id.btnNo, "n_clicks"),
         ],

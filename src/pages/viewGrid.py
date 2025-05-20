@@ -1,14 +1,14 @@
 import db
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId
 from util import log, models
-from conf import Ks
+from conf import ks
 from ui.grid import createGrid
 
 lg = log.get(__name__)
 
 dash.register_page(
     __name__,
-    path=f'/{Ks.pgs.viewGrid}',
+    path=f'/{ks.pg.viewGrid}',
     title='Assets Grid',
     name='Assets Grid'
 )
@@ -218,7 +218,7 @@ def layout():
         out(K.div.noDataAlert, "style"),
         out(K.div.paginationStore, "data"),
     ],
-    inp(Ks.store.now, "data"),
+    inp(ks.sto.now, "data"),
     prevent_initial_call=False
 )
 def viewGrid_Init(dta_now):
@@ -326,7 +326,7 @@ def on_pagination_controls(
         inp(K.inp.searchKeyword, "value"),
         inp(K.inp.checkFavorites, "value"),
     ],
-    ste(Ks.store.now, "data"),
+    ste(ks.sto.now, "data"),
     prevent_initial_call=False
 )
 def viewGrid_Load(pag_data, userId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now):

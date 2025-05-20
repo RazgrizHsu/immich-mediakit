@@ -1,4 +1,4 @@
-from conf import Ks, envs
+from conf import ks, envs
 from dsh import dash, htm
 from util import log
 
@@ -6,7 +6,7 @@ lg = log.get(__name__)
 
 dash.register_page(
     __name__,
-    path=f'/{Ks.pgs.settings}',
+    path=f'/{ks.pg.settings}',
     title='System Settings',
     name='Settings'
 )
