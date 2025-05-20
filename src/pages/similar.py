@@ -2,7 +2,7 @@ import traceback
 from typing import Optional
 
 import db
-from conf import ks
+from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
 from util import log, models, task
 
@@ -23,7 +23,6 @@ class k:
     txtCntNo = 'txt-cnt-no'
     txtCntSel = 'txt-cnt-sel'
     slideTh = "inp-threshold-min"
-    mthSim = "inp-sim-mth"
 
     btnFind = "btn-find-sim"
     btnClear = "btn-clear-sim"
@@ -33,9 +32,8 @@ class k:
     grid = "div-grid-sim"
 
 
-# ========================================================================
+#========================================================================
 def layout(assetId=None, **kwargs):
-
     # return flask.redirect('/target-page') #auth?
 
     if assetId:
@@ -62,11 +60,11 @@ def layout(assetId=None, **kwargs):
                         dbc.CardBody([
                             dbc.Row([
                                 dbc.Col(htm.Small("Searched", className="d-inline-block me-2"), width=5),
-                                dbc.Col(dbc.Alert(f"0", color="info", className="py-1 px-2 mb-2 text-center")),
+                                dbc.Col(dbc.Alert(f"0", id=k.txtCntOk, color="info", className="py-1 px-2 mb-2 text-center")),
                             ]),
                             dbc.Row([
                                 dbc.Col(htm.Small("Unsearched", className="d-inline-block me-2"), width=5),
-                                dbc.Col(dbc.Alert(f"0", color="info", className="py-1 px-2 mb-2 text-center")),
+                                dbc.Col(dbc.Alert(f"0", id=k.txtCntNo, color="info", className="py-1 px-2 mb-2 text-center")),
                             ]),
                             dbc.Row([htm.Small("Shows vectorized data in the local db and whether similarity comparison has been performed with other assets", className="text-muted")])
                         ])
@@ -77,21 +75,21 @@ def layout(assetId=None, **kwargs):
                     dbc.Card([
                         dbc.CardHeader("Search Settings"),
                         dbc.CardBody([
-                            dbc.Row([
-                                dbc.Col([
-                                    dbc.Label("Similarity Method", className="txt-sm"),
-                                    dcc.Dropdown(
-                                        id=k.mthSim,
-                                        options=[
-                                            {"label": "Cosine Similarity", "value": "cosine"},
-                                            {"label": "Euclidean Distance", "value": "euclidean"}
-                                        ],
-                                        value="cosine",
-                                        clearable=False,
-                                        className="mb-3"
-                                    ),
-                                ]),
-                            ]),
+                            # dbc.Row([
+                            #     dbc.Col([
+                            #         dbc.Label("Similarity Method", className="txt-sm"),
+                            #         dcc.Dropdown(
+                            #             id=k.mthSim,
+                            #             options=[
+                            #                 {"value": ks.use.mth.cosine, "label": ks.use.mth.cosine.desc},
+                            #                 {"value": ks.use.mth.euclid, "label": ks.use.mth.euclid.desc}
+                            #             ],
+                            #             value="cosine",
+                            #             clearable=False,
+                            #             className="mb-3"
+                            #         ),
+                            #     ]),
+                            # ]),
 
                             dbc.Row([
                                 dbc.Col([
@@ -111,32 +109,21 @@ def layout(assetId=None, **kwargs):
                                     ])
                                 ]),
                             ]),
+
+                            dbc.Row([htm.Small("A threshold range sets both minimum and maximum similarity levels for matches. It helps you find things that are similar enough to what you want, without being too strict or too loose with your matching criteria. (Usually the default setting works just fine)", className="text-muted")])
                         ])
-                    ], className="mb-0")
+                    ], className="mb-0"),
                 ], width=8),
             ], className="mb-1"),
 
             dbc.Row([
                 dbc.Col([
-                    dbc.Button(
-                        "Find Similar",
-                        id=k.btnFind,
-                        color="primary",
-                        size="lg",
-                        className="w-100",
-                        disabled=True,
-                    ),
+                    dbc.Button("Find Similar", id=k.btnFind, color="primary", size="lg", className="w-100", disabled=True),
+                    htm.Small("note: if there are many pictures, it'll take a long time", className="text-muted ms-2"),
                 ], width=6),
 
                 dbc.Col([
-                    dbc.Button(
-                        "Clear Results",
-                        id=k.btnClear,
-                        color="danger",
-                        size="lg",
-                        className="w-100",
-                        disabled=True,
-                    ),
+                    dbc.Button("Clear Similar Status", id=k.btnClear, color="danger", size="lg", className="w-100", disabled=True),
                 ], width=6),
             ], className="mb-4"),
 
@@ -156,7 +143,6 @@ def layout(assetId=None, **kwargs):
                     ),
                 ], width=4),
             ], className="mt-4 mb-3", id="selected-photos-container", style={"display": ""}),
-
 
             # Results container with tabs
             dbc.Tabs([
@@ -183,7 +169,7 @@ def layout(assetId=None, **kwargs):
         ]),
     ])
 
-# ========================================================================
+#========================================================================
 # todo (think):
 # - when select assets equal 2, display pair compare view?
 #     card = gvs.create_pair_card(
@@ -193,13 +179,60 @@ def layout(assetId=None, **kwargs):
 #         index=i + 1,
 #         selected_images=selected_images
 #     )
-# ========================================================================
+#========================================================================
 
 
+#========================================================================
+# callbacks
+#========================================================================
+#
+# def mka( aid=0 ):
+#     ret = models.Asset.fromStore({ "id":f"{aid}" })
+#     return ret
+#
+# def mk( ass ):
+#     return gvs.create_photo_card(ass, f"lb")
+#
+# def createGV():
+#     ass = [
+#         mka(1), mka(2), mka(3), mka(4), mka(5), mka(6), mka(7),
+#     ]
+#     return gvs.createGrid( ass, mk, 260 )
 
-# ========================================================================
+
+#========================================================================
+# Update search status counters
+#========================================================================
+@callback(
+    [
+        out(k.txtCntNo, "children"),
+        out(k.txtCntOk, "children"),
+        out(k.btnFind, "disabled"),
+        out(k.btnClear, "disabled"),
+        out(ks.sto.nfy, "data", allow_duplicate=True),
+    ],
+    inp(ks.sto.now, "data"),
+    ste(ks.sto.nfy, "data"),
+    prevent_initial_call='initial_duplicate'
+)
+def similar_onStatus(dta_now, dat_nfy):
+    nfy = models.Nfy.fromStore(dat_nfy)
+
+    cntNo = db.pics.countSimOk(isOk=0)
+    cntOk = db.pics.countSimOk(isOk=1)
+
+    canFind = not cntNo >= 1
+    canCler = not cntOk >= 1
+
+    if cntNo <= 0:
+        nfy.info("Not have any vectors, please do generate vectors first")
+
+    return cntNo, cntOk, canFind, canCler, nfy.toStore()
+
+
+#========================================================================
 # trigger modal
-# ========================================================================
+#========================================================================
 @callback(
     [
         out(ks.sto.mdl, "data", allow_duplicate=True),
@@ -208,10 +241,10 @@ def layout(assetId=None, **kwargs):
     ],
     [
         inp(k.btnFind, "n_clicks"),
+        inp(k.btnClear, "n_clicks"),
     ],
     [
         ste(k.slideTh, "value"),
-        ste(k.mthSim, "value"),
         ste(ks.sto.now, "data"),
         ste(ks.sto.mdl, "data"),
         ste(ks.sto.tsk, "data"),
@@ -219,8 +252,8 @@ def layout(assetId=None, **kwargs):
     ],
     prevent_initial_call=True
 )
-def similar_RunModal(clk_fnd, thRange, mthSim, dta_now, dta_mdl, dta_tsk, dta_nfy):
-    if not clk_fnd: return noUpd, noUpd, noUpd
+def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
+    if not clk_fnd and not clk_clr: return noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
@@ -233,120 +266,112 @@ def similar_RunModal(clk_fnd, thRange, mthSim, dta_now, dta_mdl, dta_tsk, dta_nf
 
     lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
 
-    if now.cntVec <= 0:
-        nfy.error("No vector data to process")
-        return mdl.toStore(), nfy.toStore(), noUpd
+    if trgId == k.btnClear:
+        cntOk = db.pics.countSimOk(isOk=1)
+        if cntOk <= 0:
+            nfy.warn(f"[similar] DB does not contain any similarity records")
+            return noUpd, nfy.toStore(), noUpd
 
-    thMin, thMax = thRange
-
-    # 若有assetId
-    asset: Optional[models.Asset] = None
-
-    if db.dyn.dto.simId:
-        ass = db.pics.get(db.dyn.dto.simId)
-        if ass:
-            if ass.simOk != 1:
-                lg.info(f"[sim] use selected asset id[{ass.id}]")
-                asset = ass
-            else:
-                lg.warn(f"[sim] select asset simOk[{ass.simOk}] id[{ass.id}]")
-        else:
-            lg.warn(f"[sim] not found dst assetId[{db.dyn.dto.simId}]")
-
-    # find from db
-    if not asset:
-        ass = db.pics.getAnyNonSim()
-        if ass:
-            lg.info(f"[sim] found non-simOk assetId[{ass.id}]")
-            assId = ass.id
-
-    if not asset:
-        nfy.warn(f"[sim] not any asset to find..")
-    else:
         mdl.reset()
-        mdl.args = {'thMin': thMin, 'thMax': thMax}
         mdl.id = ks.pg.similar
-        mdl.cmd = ks.cmd.sim.find
-        mdl.msg = f"Begin finding similar with threshold[{thMin:.2f}-{thMax:.2f}] using {mthSim} method?"
+        mdl.cmd = ks.cmd.sim.clear
+        mdl.msg = [
+            f"Are you sure you want to delete all similarity records ({cntOk})?", htm.Br(),
+            "This operation cannot be undone.", htm.Br(),
+            "You may need to perform all similarity searches again."
+        ]
 
-    lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}] method[{mthSim}]")
+
+    elif trgId == k.btnFind:
+        if now.cntVec <= 0:
+            nfy.error("No vector data to process")
+            return mdl.toStore(), nfy.toStore(), noUpd
+
+        thMin, thMax = thRange
+        thMin = co.valid.float(thMin, 0.80)
+        thMax = co.valid.float(thMax, 0.99)
+
+        asset: Optional[models.Asset] = None
+
+        if db.dyn.dto.simId:
+            ass = db.pics.get(db.dyn.dto.simId)
+            if ass:
+                if ass.simOk != 1:
+                    lg.info(f"[sim] use selected asset id[{ass.id}]")
+                    asset = ass
+                else:
+                    lg.warn(f"[sim] select asset simOk[{ass.simOk}] id[{ass.id}]")
+            else:
+                lg.warn(f"[sim] not found dst assetId[{db.dyn.dto.simId}]")
+
+        # find from db
+        if not asset:
+            ass = db.pics.getAnyNonSim()
+            if ass:
+                asset = ass
+                lg.info(f"[sim] found non-simOk assetId[{ass.id}]")
+
+        if not asset:
+            nfy.warn(f"[sim] not any asset to find..")
+        else:
+            now.assets = [asset]
+
+            mdl.reset()
+            mdl.args = {'thMin': thMin, 'thMax': thMax}
+            mdl.id = ks.pg.similar
+            mdl.cmd = ks.cmd.sim.find
+            mdl.msg = [
+                f"Begin finding similar?", htm.Br(),
+                f"threshold[{thMin:.2f}-{thMax:.2f}]]",
+            ]
+
+    lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
     return mdl.toStore(), nfy.toStore(), now.toStore()
 
 
-# ========================================================================
+#========================================================================
 # task acts
-# ========================================================================
+#========================================================================
 def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.IFnProg):
     if tsk.id != ks.pg.similar:
         msg = f"[tsk] wrong triggerId[{tsk.id}]"
         lg.warn(msg)
         return nfy, now, msg
 
+    thMin, thMax = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99)
+
     try:
-        min_threshold = now.minThreshold if hasattr(now, 'minThreshold') else 0.9
-        max_threshold = now.maxThreshold if hasattr(now, 'maxThreshold') else 0.99
-        similarity_method = now.simMethod if hasattr(now, 'simMethod') else "cosine"
-        base_photo_id = now.basePhotoId if hasattr(now, 'basePhotoId') else None
+        asset = now.assets[0]
 
-        onUpdate(5, "5%", f"Starting search with thresholds [{min_threshold:.2f}-{max_threshold:.2f}], method: {similarity_method}")
+        onUpdate(1, "1%", f"preapre..")
 
-        asset_id = None
-
-        if base_photo_id:
-            lg.info(f"Using specified base photo id: {base_photo_id}")
-            asset_id = base_photo_id
-            onUpdate(10, "10%", f"Using specified base photo: {asset_id}")
-        else:
-            onUpdate(10, "10%", "Finding unprocessed asset")
-            conn = db.pics.getConn()
-            cursor = conn.cursor()
-            cursor.execute("SELECT id FROM assets WHERE isVectored = 1 AND simOk = 0 LIMIT 1")
-            row = cursor.fetchone()
-
-            if not row:
-                msg = "No unprocessed assets found"
-                nfy.warn(msg)
-                return nfy, now, msg
-
-            asset_id = row[0]
-
-        onUpdate(15, "15%", f"Processing asset {asset_id}")
-
-        asset = db.pics.get(asset_id)
         if not asset:
-            msg = f"Failed to get asset {asset_id}"
+            msg = f"[tsk] assert not in now"
+            nfy.error(msg)
+            return nfy, now, msg
+        if not isinstance(asset, models.Asset):
+            msg = f"[tsk] the asset not is AssetType type[{type(asset)}]"
             nfy.error(msg)
             return nfy, now, msg
 
-        onUpdate(30, "30%", f"Finding similar photos for {asset.originalFileName}")
-        similar_photos = db.vecs.find_similar_photos(
-            photo_id=asset_id,
-            min_threshold=min_threshold,
-            max_threshold=max_threshold,
-            limit=100,
-            similarity_method=similarity_method
-        )
+        onUpdate(5, "5%", f"Starting search with thresholds [{thMin:.2f}-{thMax:.2f}]")
 
-        similar_ids = [photo_id2 for photo_id1, photo_id2, score in similar_photos]
-        onUpdate(80, "80%", f"Found {len(similar_ids)} similar photos")
+        simInfos = db.vecs.findSimiliar(asset.id, thMin, thMax)
 
-        db.pics.setSimIds(asset_id, similar_ids)
+        simIds = [photo_id2 for photo_id1, photo_id2, score in simInfos]
+        onUpdate(80, "80%", f"Found {len(simIds)} similar photos")
 
-        if not base_photo_id:
-            conn = db.pics.getConn()
-            cursor = conn.cursor()
-            cursor.execute("UPDATE assets SET simOk = 1 WHERE id = ?", (asset_id,))
-            conn.commit()
+        db.pics.setSimIds(asset.id, simIds)
 
         onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
 
-        msg = f"Found {len(similar_ids)} similar photos for {asset.originalFileName}"
+        msg = f"Found {len(simIds)} similar photos for {asset.originalFileName}"
         nfy.success(msg)
 
-        # 在now中傳回照片id及相似結果，以供後續使用
-        now.lastSearchedId = asset_id
-        now.similarPhotoCount = len(similar_ids)
+        # select back all simIds assets
+        # db.pics.get()
+
 
         return nfy, now, msg
 
@@ -356,7 +381,7 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
         lg.error(traceback.format_exc())
         return nfy, now, msg
 
-# ========================================================================
+#========================================================================
 # Set up global functions
-# ========================================================================
-task.mapFns['similar_FindSimilar'] = similar_FindSimilar
+#========================================================================
+task.mapFns[ks.cmd.sim.find] = similar_FindSimilar
