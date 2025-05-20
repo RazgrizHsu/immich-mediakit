@@ -98,6 +98,111 @@ def clear():
 
 def hasData(): return count() > 0
 
+
+def count(usrId=None):
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+
+        sql = "Select Count(*) From assets"
+
+        if usrId:
+            sql += " Where ownerId = ?"
+            c.execute(sql, (usrId,))
+        else:
+            c.execute(sql)
+
+        cnt = c.fetchone()[0]
+        return cnt
+    except Exception as e:
+        lg.error(f"Failed to get asset count: {str(e)}")
+        return 0
+
+
+
+def get(assetId) -> Optional[models.Asset]:
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+        c.execute("Select * From assets Where id = ?", (assetId,))
+
+        row = c.fetchone()
+        if row is None: return None
+
+        asset = models.Asset.fromDB(c, row)
+        return asset
+    except Exception as e:
+        lg.error(f"Failed to get asset information: {str(e)}")
+        return None
+
+
+def getAll(count=0) -> list[models.Asset]:
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+
+        if not count:
+            sql = "Select * From assets"
+            c.execute(sql)
+        else:
+            sql = "Select * From assets LIMIT ?"
+            c.execute(sql, (count,))
+
+        rows = c.fetchall()
+        if not rows: return []
+
+        assets = [models.Asset.fromDB(c, row) for row in rows]
+        return assets
+    except Exception as e:
+        lg.error(f"Failed to get all asset information: {str(e)}")
+        return []
+
+
+def getPaged(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+
+        if usrId:
+            c.execute("Select Count(*) From assets Where ownerId = ?", (usrId,))
+        else:
+            c.execute("Select Count(*) From assets")
+
+        cnt = c.fetchone()[0]
+
+        offset = (page - 1) * per_page
+
+        if usrId:
+            c.execute('''
+                Select *
+                From assets
+                Where ownerId = ?
+                Order By autoId Desc
+                Limit ? Offset ?
+                ''', (usrId, per_page, offset))
+        else:
+            c.execute('''
+                Select *
+                From assets
+                Order By autoId Desc
+                Limit ? Offset ?
+                ''', (per_page, offset))
+
+        rows = c.fetchall()
+        if not rows: return [], cnt
+
+        assets = [models.Asset.fromDB(c, row) for row in rows]
+        return assets, cnt
+    except Exception as e:
+        lg.error(f"Failed to get paginated asset information: {str(e)}")
+        return [], 0
+
+
+
 def saveBy(asset: dict):
     try:
         if conn is None: raise RuntimeError('the db is not init')
@@ -148,7 +253,6 @@ def saveBy(asset: dict):
             updFields = []
             updValues = []
 
-            # Check existing path information
             c.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", (assetId,))
             paths = c.fetchone()
 
@@ -189,129 +293,6 @@ def saveBy(asset: dict):
         raise
 
 
-def get(assetId) -> Optional[models.Asset]:
-    try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-        c.execute("Select * From assets Where id = ?", (assetId,))
-
-        row = c.fetchone()
-        if row is None: return None
-
-        asset = models.Asset.fromDB(c, row)
-        return asset
-    except Exception as e:
-        lg.error(f"Failed to get asset information: {str(e)}")
-        return None
-
-
-def getAll(count=0) -> list[models.Asset]:
-    try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-
-        if not count:
-            sql = "Select * From assets"
-            c.execute(sql)
-        else:
-            sql = "Select * From assets LIMIT ?"
-            c.execute(sql, (count,))
-
-        rows = c.fetchall()
-        if not rows: return []
-
-        assets = [models.Asset.fromDB(c, row) for row in rows]
-        return assets
-    except Exception as e:
-        lg.error(f"Failed to get all asset information: {str(e)}")
-        return []
-
-
-def get_paginated_assets(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
-    try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-
-        if usrId:
-            c.execute("Select Count(*) From assets Where ownerId = ?", (usrId,))
-        else:
-            c.execute("Select Count(*) From assets")
-
-        cnt = c.fetchone()[0]
-
-        offset = (page - 1) * per_page
-
-        if usrId:
-            c.execute('''
-                Select *
-                From assets
-                Where ownerId = ?
-                Order By autoId Desc
-                Limit ? Offset ?
-                ''', (usrId, per_page, offset))
-        else:
-            c.execute('''
-                Select *
-                From assets
-                Order By autoId Desc
-                Limit ? Offset ?
-                ''', (per_page, offset))
-
-        rows = c.fetchall()
-        if not rows: return [], cnt
-
-        assets = [models.Asset.fromDB(c, row) for row in rows]
-        return assets, cnt
-    except Exception as e:
-        lg.error(f"Failed to get paginated asset information: {str(e)}")
-        return [], 0
-
-
-def count(usrId=None):
-    try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-
-        sql = "Select Count(*) From assets"
-
-        if usrId:
-            sql += " Where ownerId = ?"
-            c.execute(sql, (usrId,))
-        else:
-            c.execute(sql)
-
-        cnt = c.fetchone()[0]
-        return cnt
-    except Exception as e:
-        lg.error(f"Failed to get asset count: {str(e)}")
-        return 0
-
-
-def setSimIds(assetId: str, similarIds: List[str]):
-    try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-
-        c.execute("SELECT id FROM assets WHERE id = ?", (assetId,))
-        if not c.fetchone():
-            lg.error(f"Asset {assetId} not found")
-            return False
-
-        c.execute("UPDATE assets SET simIds = ? WHERE id = ?", (json.dumps(similarIds), assetId))
-        conn.commit()
-
-        lg.info(f"Updated simIds for asset {assetId}: {len(similarIds)} similar assets")
-        return True
-    except Exception as e:
-        lg.error(f"Failed to set similar IDs: {str(e)}")
-        lg.error(traceback.format_exc())
-        return False
-
 def deleteForUsr(usrId):
     import db.vecs as vecs
     try:
@@ -336,3 +317,59 @@ def deleteForUsr(usrId):
     except Exception as e:
         lg.error(f"Failed to delete user assets: {str(e)}")
         return False
+
+
+
+
+def setSimIds(assetId: str, similarIds: List[str]):
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+
+        c.execute("SELECT id FROM assets WHERE id = ?", (assetId,))
+        if not c.fetchone():
+            lg.error(f"Asset {assetId} not found")
+            return False
+
+        c.execute("UPDATE assets SET simIds = ? WHERE id = ?", (json.dumps(similarIds), assetId))
+        conn.commit()
+
+        lg.info(f"Updated simIds for asset {assetId}: {len(similarIds)} similar assets")
+        return True
+    except Exception as e:
+        lg.error(f"Failed to set similar IDs: {str(e)}")
+        lg.error(traceback.format_exc())
+        return False
+
+
+def clearSimIds():
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+        c.execute("UPDATE assets SET simOk = 0, simIds = '[]'")
+        conn.commit()
+
+        count = c.rowcount
+        lg.info(f"Cleared similarity results for {count} assets")
+        return True
+    except Exception as e:
+        lg.error(f"Failed to clear similarity results: {str(e)}")
+        lg.error(traceback.format_exc())
+        return False
+
+
+def countSimOk(isOk=0):
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM assets WHERE simOk = ?", (isOk,))
+        count = c.fetchone()[0]
+
+        return count
+    except Exception as e:
+        lg.error(f"Failed to count assets with simOk={isOk}: {str(e)}")
+        lg.error(traceback.format_exc())
+        return 0
