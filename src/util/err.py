@@ -1,9 +1,25 @@
 import functools
 import traceback
+from typing import Optional
 from dash import callback_context, no_update
 from util import log
 
 lg = log.get(__name__)
+
+class mkErr(RuntimeError):
+    def __init__(self, msg: str, orig: Optional[Exception] = None):
+        self.msg = msg
+        self.orig = orig
+
+        errMsg = f"{msg}" if not orig else f"{msg}: {str(orig)}"
+        super().__init__(errMsg)
+
+        lg.error(errMsg)
+        lg.error(traceback.format_exc())
+
+    @staticmethod
+    def wrap(msg: str, e: Exception): return mkErr(msg, e)
+
 
 def injectCallbacks(app):
 

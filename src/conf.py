@@ -22,15 +22,16 @@ class co:
             return {key: value for key, value in vars(cls).items() if not key.startswith('_') and not callable(value)}
 
 
-    class title(str):
+    class tit(str):
         name: str = ''
         desc: str = ''
         cmds: Dict[str, str] = None
 
-        def __new__(cls, v='', name='', cmds: Dict[str, str] = None, desc='') -> 'co.title':
+        def __new__(cls, v='', name='', cmds: Dict[str, str] = None, desc='') -> 'co.tit':
             me = super().__new__(cls, v)
             me.name = name
             me.cmds = cmds
+            me.desc = desc
             # noinspection PyTypeChecker
             return me
 
@@ -40,7 +41,7 @@ class co:
             for attr_name in dir(cls):
                 if attr_name.startswith('__') or callable(getattr(cls, attr_name)): continue
                 attr = getattr(cls, attr_name)
-                if isinstance(attr, co.title) and attr == key: return attr
+                if isinstance(attr, co.tit) and attr == key: return attr
             return None
 
         @classmethod
@@ -48,7 +49,7 @@ class co:
             for name in dir(cls):
                 if name.startswith('__') or callable(getattr(cls, name)): continue
                 obj = getattr(cls, name)
-                if isinstance(obj, co.title) and hasattr(obj, key):
+                if isinstance(obj, co.tit) and hasattr(obj, key):
                     if getattr(obj, key) == value: return obj
             return None
 
@@ -67,27 +68,27 @@ class co:
 # ------------------------------------------------------------------------
 class cmds:
     class fetch(co.to):
-        asset = 'fetch_asset'
-        clear = 'fetch_clear'
+        asset = co.tit('fetch_asset',desc='Fetch assets from remote')
+        clear = co.tit('fetch_clear',desc='Clear all assets and vectors')
 
     class vec(co.to):
-        toVec = 'vec_toVec'
-        clear = 'vec_clear'
+        toVec = co.tit('vec_toVec',desc='Generate vectors from assets')
+        clear = co.tit('vec_clear',desc='Clear all vectors')
 
     class sim(co.to):
-        find = 'sim_find'
-        clear = 'sim_clear'
+        find = co.tit('sim_find', desc='Find Similar vectors')
+        clear = co.tit('sim_clear', desc='Clear all similar results')
 
 class ks:
     title = "Immich-MediaKit"
     cmd = cmds
 
     class pg(co.find):
-        fetch = co.title('fetch', 'FetchAssets', cmds.fetch.dict(), desc='Get photo asset from (Api/Psql) and save to local db')
-        vec = co.title('photoVec', 'ToVectors', cmds.vec.dict(), desc='Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector')
-        similar = co.title('similar', 'Similarity', cmds.sim.dict(), desc='Find similar photos based on image content. This uses AI-generated vector embeddings to find visually similar assets')
-        settings = co.title('settings', 'Settings', desc='')
-        viewGrid = co.title('viewGrid', 'ViewGrid', desc='')
+        fetch = co.tit('fetch', 'FetchAssets', cmds.fetch.dict(), desc='Get photo asset from (Api/Psql) and save to local db')
+        vec = co.tit('photoVec', 'ToVectors', cmds.vec.dict(), desc='Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector')
+        similar = co.tit('similar', 'Similarity', cmds.sim.dict(), desc='Find similar photos based on image content. This uses AI-generated vector embeddings to find visually similar assets')
+        settings = co.tit('settings', 'Settings', desc='')
+        viewGrid = co.tit('viewGrid', 'ViewGrid', desc='')
 
 
     class db:
@@ -98,6 +99,11 @@ class ks:
     class use:
         api = 'API'
         dir = 'DIR'
+
+        class mth:
+            cosine = co.tit('cosine', 'Cosine Similarity')
+            euclid = co.tit('euclidean', 'Euclidean Distance')
+
 
     class sto:
         init = 'store-init'
@@ -123,6 +129,7 @@ class ks:
             "fileSizeInByte": "File Size"
         }
         thMarks = {0: "0", 0.2: "0.2", 0.4: "0.4", 0.6: "0.6", 0.8: "0.8", 0.9: "0.9", 0.95: "0.95", 1: "1"}
+
 
     class css:
         show = {"display": ""}

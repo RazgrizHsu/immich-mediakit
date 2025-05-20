@@ -117,7 +117,6 @@ def regBy(app):
         prevent_initial_call=True
     )
     def onTasking(onUpdate, dta_tsk, dta_nfy, dta_now):
-        # lg.info(f"[Task] Start execution... trigId[{trigId}] dta_tsk[{dta_tsk}]")
 
         tsk = models.Tsk.fromStore(dta_tsk)
         nfy = models.Nfy.fromStore(dta_nfy)
