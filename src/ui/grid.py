@@ -5,29 +5,23 @@ from ui.gridExif import createExifTooltip
 
 lg = log.get(__name__)
 
-def createPhotoGrid(photos: list[models.Asset]):
-    if not photos or len(photos) == 0:
+
+def createGrid(assets: list[models.Asset], minW: int = 250) -> htm.Div:
+    if not assets or len(assets) == 0:
         return htm.Div(
             dbc.Alert("No photos match your filter criteria", color="warning"),
             className="text-center mt-4"
         )
 
-    rows = []
-    row_photos = []
+    rows = [htm.Div(createPhotoCard(a), className="photo-card") for a in assets]
 
-    for i, photo in enumerate(photos):
-        row_photos.append(photo)
+    style = {
+        "display": "grid",
+        "grid-template-columns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+        "gap": "1rem"
+    }
 
-        if len(row_photos) == 4 or i == len(photos) - 1:
-            cols = []
-            for idx, p in enumerate(row_photos):
-                cols.append(dbc.Col(createPhotoCard(p), width=3, className="mb-4"))
-
-            rows.append(dbc.Row(cols, className="mb-2"))
-
-            row_photos = []
-
-    return htm.Div(rows)
+    return htm.Div(rows, style=style)
 
 
 def createPhotoCard(asset: models.Asset):

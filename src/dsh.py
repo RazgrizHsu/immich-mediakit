@@ -18,15 +18,15 @@ from dash import DiskcacheManager as dskMgr
 import os
 from uuid import uuid4
 
-import conf
+from conf import pathCache, pathFromRoot
 from util import log
 
 lg = log.get(__name__)
 
-os.makedirs(conf.pathCache, exist_ok=True)
+os.makedirs(pathCache, exist_ok=True)
 
 launch_uid = uuid4()
-cache = diskcache.Cache(conf.pathCache)
+cache = diskcache.Cache(pathCache)
 bgCallbackManager = dskMgr(
     cache,
     cache_by=[lambda: launch_uid],
@@ -40,3 +40,28 @@ def getTriggerId(ctx=None):
     # lg.info( f"[getTriggerId] tid[{ctx.triggered_id}] propid[{ctx.triggered[0]['prop_id']}] len[{len(ctx.triggered)}]" )
 
     return ctx.triggered[0]['prop_id'].split('.')[0]
+
+
+def registerScss():
+    import sass
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+
+    def compile_sass():
+        lg.info( "compile scss.." )
+        sass_dir = pathFromRoot('src/scss')
+        css_dir = pathFromRoot('src/assets')
+        sass.compile(dirname=(sass_dir, css_dir), output_style='compact')
+
+    class ScssHandler(FileSystemEventHandler):
+        def on_modified(self, event):
+            if event.src_path.endswith('.scss'): compile_sass()
+
+    os.makedirs(pathFromRoot('src/assets'), exist_ok=True)
+    os.makedirs(pathFromRoot('src/scss'), exist_ok=True)
+
+    compile_sass()
+
+    observer = Observer()
+    observer.schedule(ScssHandler(), pathFromRoot('src/scss'), recursive=True)
+    observer.start()
