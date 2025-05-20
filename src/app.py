@@ -71,22 +71,31 @@ if __name__ == "__main__":
     lg = log.get(__name__)
     try:
         lg.info("=======================================")
-        lg.info("Starting Dash application...")
+        lg.info(f"Starting Dash {'-DEBUG-'if conf.envs.isDev else ''}")
 
         if log.EnableLogFile: lg.info(f"Log file recording: {log.log_file}")
 
         lg.info("---------------------------------------")
+        if conf.envs.isDev:
+            import dsh
+            dsh.registerScss()
+            app.run_server(
+                debug=True,
+                host='0.0.0.0',
+                port=int(conf.envs.mkitPort),
+                dev_tools_ui=True,
+                dev_tools_props_check=True,
+                dev_tools_hot_reload=True,
+                dev_tools_silence_routes_logging=True,
+                dev_tools_serve_dev_bundles=True,
+            )
+        else:
+            app.run_server(
+                debug=False,
+                host='0.0.0.0',
+                port=int(conf.envs.mkitPort),
+            )
 
-        app.run_server(
-            debug=True,
-            host='0.0.0.0',
-            port=int(conf.envs.mkitPort),
-            dev_tools_ui=True,
-            dev_tools_props_check=True,
-            dev_tools_hot_reload=True,
-            dev_tools_silence_routes_logging=True,
-            dev_tools_serve_dev_bundles=True,
-        )
 
     finally:
         import db

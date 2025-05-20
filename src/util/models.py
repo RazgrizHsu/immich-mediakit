@@ -25,6 +25,8 @@ class Now(BaseDictModel):
     cntPic: int = 0
     cntVec: int = 0
 
+    sltIds: List[str] = field(default_factory=list)
+
 
     def switchUsr(self, usrId):
         if self.usrs:

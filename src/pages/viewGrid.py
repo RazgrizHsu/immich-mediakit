@@ -2,7 +2,7 @@ import db
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId
 from util import log, models
 from conf import Ks
-from ui.grid import createPhotoGrid
+from ui.grid import createGrid
 
 lg = log.get(__name__)
 
@@ -40,8 +40,10 @@ def layout():
         htm.H3("Assets", className="mb-4"),
 
         htm.Div([
-            htm.P(
-                "View and organize your photos in a grid layout. Use the filters and sorting options to customize your view.",
+            htm.P([
+                "View and organize your photos in a grid layout.", htm.Br(),
+                "Use the filters and sorting options to customize your view."
+            ],
                 className="mb-4"
             ),
 
@@ -347,7 +349,7 @@ def viewGrid_Load(pag_data, userId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta
     else:
         lg.info("No photos loaded")
 
-    grid = createPhotoGrid(photos)
+    grid = createGrid(photos)
 
     prev_disabled = pageIdx <= 1
     next_disabled = pageIdx >= total_pages
