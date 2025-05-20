@@ -1,15 +1,15 @@
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
 from util import log, models, task
 import db
-from conf import Ks
+from conf import ks
 
 lg = log.get(__name__)
 
 dash.register_page(
     __name__,
     path='/',
-    title='Source Fetch',
-    name='Source Fetch'
+    title=ks.pg.fetch.name,
+    name=ks.pg.fetch.name,
 )
 
 class K:
@@ -26,15 +26,11 @@ opts = [] #[{"label": "All Users", "value": ""}] # current no support
 #========================================================================
 def layout():
     return htm.Div([
-        htm.H3("Srouce Fetch", className="mb-4"),
+        htm.H3(ks.pg.fetch.name, className="mb-4"),
 
         htm.Div([
-            htm.P(
-                f"Get photo asset from (Api/Psql) and save to local db",
-                className="mb-4"
-            ),
+            htm.P( ks.pg.fetch.desc, className="mb-4" ),
 
-            # Settings area
             dbc.Card([
                 dbc.CardHeader("Settings"),
                 dbc.CardBody([
@@ -96,7 +92,7 @@ dis_hide = {"display": "none"}
         out(K.selectUsr, "value"),
     ],
     inp(K.pageInit, "data"),
-    ste(Ks.store.now, "data"),
+    ste(ks.sto.now, "data"),
     ste(K.selectUsr, "value"),
     ste(K.selectUsr, "options")
 )
@@ -122,15 +118,15 @@ def assets_Init(dta_pi, dta_now, selId, opts):
         out(K.btnFetch, "children"),
         out(K.btnFetch, "disabled"),
         out(K.btnClean, "disabled"),
-        out(Ks.store.now, "data", allow_duplicate=True),
-        out(Ks.store.nfy, "data", allow_duplicate=True)
+        out(ks.sto.now, "data", allow_duplicate=True),
+        out(ks.sto.nfy, "data", allow_duplicate=True)
     ],
     [
         inp(K.selectUsr, "value"),
-        inp(Ks.store.tsk, "data"),
+        inp(ks.sto.tsk, "data"),
     ],
-    ste(Ks.store.now, "data"),
-    ste(Ks.store.nfy, "data"),
+    ste(ks.sto.now, "data"),
+    ste(ks.sto.nfy, "data"),
     prevent_initial_call=True
 )
 def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
@@ -189,8 +185,8 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
 #------------------------------------------------------------------------
 @callback(
     [
-        out(Ks.store.mdl, "data", allow_duplicate=True),
-        out(Ks.store.nfy, "data", allow_duplicate=True)
+        out(ks.sto.mdl, "data", allow_duplicate=True),
+        out(ks.sto.nfy, "data", allow_duplicate=True)
     ],
     [
         inp(K.btnFetch, "n_clicks"),
@@ -198,14 +194,14 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
     ],
     [
         ste(K.selectUsr, "value"),
-        ste(Ks.store.now, "data"),
-        ste(Ks.store.mdl, "data"),
-        ste(Ks.store.tsk, "data"),
-        ste(Ks.store.nfy, "data"),
+        ste(ks.sto.now, "data"),
+        ste(ks.sto.mdl, "data"),
+        ste(ks.sto.tsk, "data"),
+        ste(ks.sto.nfy, "data"),
     ],
     prevent_initial_call=True
 )
-def assets_BtnRunModals(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
+def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
     if not nclk_fetch and not nclk_clean: return noUpd, noUpd
 
     now = models.Now.fromStore(dta_now)
@@ -218,13 +214,13 @@ def assets_BtnRunModals(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk
 
 
     if trgSrc == K.btnClean:
-        mdl.id = 'assets'
-        mdl.cmd = 'clear'
+        mdl.id = ks.pg.fetch
+        mdl.cmd = ks.cmd.fetch.clear
         mdl.msg = 'Start clearing all asset data'
 
     elif trgSrc == K.btnFetch:
-        mdl.id = 'assets'
-        mdl.cmd = 'fetch'
+        mdl.id = ks.pg.fetch
+        mdl.cmd = ks.cmd.fetch.asset
         if now.usr:
             cnt = db.psql.count( now.usr.id )
             mdl.msg = f"Start getting assets[{cnt}] for user [{now.usr.name}] ?"
@@ -241,7 +237,7 @@ def assets_BtnRunModals(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk
 
 
 #========================================================================
-# register & trigger actions
+# task acts
 #========================================================================
 from util.task import IFnProg
 
@@ -336,5 +332,5 @@ def onFetchClearAll(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
 #========================================================================
 # Set up global functions
 #========================================================================
-task.mapFns['fetch_assets_psql'] = onFetchAssets
-task.mapFns['fetch_assets_clear'] = onFetchClearAll
+task.mapFns[ks.cmd.fetch.asset] = onFetchAssets
+task.mapFns[ks.cmd.fetch.clear] = onFetchClearAll

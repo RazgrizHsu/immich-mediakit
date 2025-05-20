@@ -1,6 +1,6 @@
 from dsh import dash, htm, dcc, dbc, inp, out, ste, noUpd, getTriggerId
 from util import log
-from conf import Ks
+from conf import ks
 
 lg = log.get(__name__)
 
@@ -10,7 +10,7 @@ class k:
 	class img:
 		modal = "img-modal"
 		modalImg = "img-modal-content"
-		modalStore = Ks.store.mdlImg
+		modalStore = ks.sto.mdlImg
 		btnModeChg = "btn-img-mode-chg"
 
 	txtHAuto = "🔄 Auto Height"

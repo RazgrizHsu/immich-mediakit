@@ -1,4 +1,6 @@
-from conf import envs, Ks
+from gradio.route_utils import prepare_event_data
+
+from conf import envs, ks
 from dsh import htm, dbc, inp, out, ste
 from util import log, models
 from db import psql
@@ -30,28 +32,28 @@ def renderHeader():
         )),
         dbc.NavItem(dbc.NavLink(
             htm.Span(["🖼️ Assets"]),
-            href=f"/{Ks.pgs.viewGrid}",
+            href=f"/{ks.pg.viewGrid}",
             active="exact",
             id=K.nav.viewGrid,
             className="custom-nav-link"
         )),
         dbc.NavItem(dbc.NavLink(
             htm.Span(["🔄 Vectors"]),
-            href=f"/{Ks.pgs.photoVec}",
+            href=f"/{ks.pg.vec}",
             active="exact",
             id=K.nav.photoVec,
             className="custom-nav-link"
         )),
         dbc.NavItem(dbc.NavLink(
             htm.Span(["🔍 Similar"]),
-            href=f"/{Ks.pgs.similar}",
+            href=f"/{ks.pg.similar}",
             active="exact",
             id=K.nav.searchDups,
             className="custom-nav-link"
         )),
         dbc.NavItem(dbc.NavLink(
             htm.Span(["⚙️ Settings"]),
-            href=f"/{Ks.pgs.settings}",
+            href=f"/{ks.pg.settings}",
             active="exact",
             className="custom-nav-link"
         )),
@@ -63,7 +65,7 @@ def renderHeader():
                 dbc.Row(
                     [
                         dbc.Col(htm.Img(src="assets/logo.png", height="38px"), width="auto", className="px-2"),
-                        dbc.Col(dbc.NavbarBrand(f"{Ks.title}", className="ms-2")),
+                        dbc.Col(dbc.NavbarBrand(f"{ks.title}", className="ms-2")),
                     ],
                     align="center",
                     className="g-0",
@@ -95,7 +97,7 @@ def renderFooter():
             dbc.Row([
                 dbc.Col(
                     htm.Div([
-                        f"{Ks.title} © 2025 ",
+                        f"{ks.title} © 2025 ",
                         htm.A(" GitHub ", href="https://github.com/RazgrizHsu/immich-mediakit", target="_blank")
                     ], className="text-center text-sm"),
                     width=12
@@ -111,7 +113,7 @@ def renderFooter():
 def renderSideBar():
     return htm.Div(
         [
-            htm.H5(f"{Ks.title}", className="text-center mb-4"),
+            htm.H5(f"{ks.title}", className="text-center mb-4"),
 
             htm.Hr(),
 
@@ -136,7 +138,7 @@ def regBy(app):
         out(K.nav.photoVec, 'disabled'),
         out(K.nav.searchDups, 'disabled'),
         out(K.nav.viewGrid, 'disabled'),
-        inp(Ks.store.now, 'data')
+        inp(ks.sto.now, 'data')
     )
     def onUpdateMenus(dta_now):
         if not dta_now: return True, True, True
@@ -154,15 +156,24 @@ def regBy(app):
 
     #------------------------------------------------------------------------
     @app.callback(
-        out(K.div.sideState, "children"),
-        inp(Ks.store.now, "data"),
-        inp(Ks.store.init, "children")
+        [
+            out(K.div.sideState, "children"),
+            out(ks.sto.nfy, "data", allow_duplicate=True ),
+        ],
+        inp(ks.sto.init, "children"),
+        inp(ks.sto.now, "data"),
+        ste(ks.sto.nfy, "data" ),
+        prevent_initial_call=True
     )
-    def onUpdateSideBar(dta_now, _trigger):
+    def onUpdateSideBar(_trigger, dta_now, dta_nfy):
         now = models.Now.fromStore(dta_now)
+        nfy = models.Nfy.fromStore(dta_nfy)
 
         testIP = envs.immichPath if envs.immichPath else '--none--'
         testDA = psql.testAssetsPath()
+
+        if testDA and not testDA.startswith("OK"):
+            nfy.warn( f"[system] the direct access to IMMICH_PATH is Failed[ {testDA} ]" )
 
         htmCnts = htm.Div([
             dbc.Card([
@@ -225,7 +236,7 @@ def regBy(app):
             ], className="mb-4"),
         ])
 
-        return htmCnts
+        return htmCnts, nfy.toStore()
 
 
 #------------------------------------------------------------------------

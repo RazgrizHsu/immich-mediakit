@@ -1,6 +1,6 @@
 from dsh import out, inp, ste, noUpd, getTriggerId
 
-from conf import Ks
+from conf import ks
 from util import log, models
 
 lg = log.get(__name__)
@@ -8,16 +8,16 @@ lg = log.get(__name__)
 def regBy(app):
     @app.callback(
         [
-            out(Ks.store.mdl, "data", allow_duplicate=True),
-            out(Ks.store.tsk, "data", allow_duplicate=True),
-            out(Ks.store.nfy, "data", allow_duplicate=True),
+            out(ks.sto.mdl, "data", allow_duplicate=True),
+            out(ks.sto.tsk, "data", allow_duplicate=True),
+            out(ks.sto.nfy, "data", allow_duplicate=True),
         ],
         [
-            inp(Ks.store.mdl, "data"),
+            inp(ks.sto.mdl, "data"),
         ],
         [
-            ste(Ks.store.now, "data"),
-            ste(Ks.store.nfy, "data"),
+            ste(ks.sto.now, "data"),
+            ste(ks.sto.nfy, "data"),
         ],
         prevent_initial_call=True
     )
@@ -33,23 +33,23 @@ def regBy(app):
         nfy = models.Nfy.fromStore(dta_nfy)
         tsk = models.Tsk()
 
-        if mdl.id == 'assets':
+        if mdl.id == ks.pg.fetch:
             # lg.info(f"[assets] Triggered: mdl: id[{mdl.id}] cmd[{mdl.cmd}] msg[{mdl.msg}]")
 
-            tsk.id = 'assets'
+            mdl.msg
+
+            tsk.id = ks.pg.fetch
             tsk.name = 'FetchAssets'
-            if mdl.cmd == 'fetch':
-                tsk.keyFn = 'fetch_assets_psql'
-            else:
-                tsk.keyFn = 'fetch_assets_clear'
+            tsk.cmd = mdl.cmd
+
             mdl.reset()
             nfy.info("Starting task: FetchAssets")
 
-        if mdl.id == 'photovec' and mdl.ok:
+        if mdl.id == 'photovec':
             if mdl.cmd == 'process':
                 tsk.id = 'photovec'
                 tsk.name = 'Photo Vector Processing'
-                tsk.keyFn = 'photoVec_ToVec'
+                tsk.cmd = 'photoVec_ToVec'
 
                 mdl.reset()
                 nfy.info("Starting task: Photo Vector Processing")
@@ -57,9 +57,14 @@ def regBy(app):
             elif mdl.cmd == 'clear':
                 tsk.id = 'photoVec_Clear'
                 tsk.name = 'Clear Vectors'
-                tsk.keyFn = 'photoVec_Clear'
+                tsk.cmd = 'photoVec_Clear'
 
                 mdl.reset()
                 nfy.info("Starting task: Clear Vectors")
+
+        elif mdl.id == ks.pg.similar:
+            if mdl.cmd == 'process':
+                tsk.id = 'pgs_similar'
+                tsk.name = 'PGS Similar'
 
         return mdl.toStore(), tsk.toStore(), nfy.toStore()

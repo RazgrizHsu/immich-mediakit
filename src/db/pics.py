@@ -120,6 +120,21 @@ def count(usrId=None):
         return 0
 
 
+def getAnyNonSim() -> Optional[models.Asset]:
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+        c.execute("Select * From assets Where simOk!=1")
+
+        row = c.fetchone()
+        if row is None: return None
+
+        asset = models.Asset.fromDB(c, row)
+        return asset
+    except Exception as e:
+        lg.error(f"Failed to get asset information: {str(e)}")
+        return None
 
 def get(assetId) -> Optional[models.Asset]:
     try:

@@ -5,7 +5,7 @@ import time
 import psycopg2
 import psycopg2.extras
 
-from conf import Ks, envs
+from conf import ks, envs
 from util import log, models
 from util.task import IFnProg
 import imgs
@@ -319,8 +319,8 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
             assetId = asset['id']
             if assetId in dictFiles:
                 for typ, path in dictFiles[assetId].items():
-                    if typ == Ks.db.thumbnail: asset['thumbnail_path'] = fixPrefix(path)
-                    elif typ == Ks.db.preview: asset['preview_path'] = fixPrefix(path)
+                    if typ == ks.db.thumbnail: asset['thumbnail_path'] = fixPrefix(path)
+                    elif typ == ks.db.preview: asset['preview_path'] = fixPrefix(path)
 
             asset['fullsize_path'] = fixPrefix(asset.get('originalPath', ''))
 

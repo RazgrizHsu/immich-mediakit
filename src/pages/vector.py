@@ -1,5 +1,5 @@
 import db
-from conf import Ks
+from conf import ks
 from dsh import dash, htm, callback, dbc, inp, out, ste, getTriggerId, noUpd
 from util import log, models, task
 
@@ -7,9 +7,9 @@ lg = log.get(__name__)
 
 dash.register_page(
     __name__,
-    path=f'/{Ks.pgs.photoVec}',
-    title='Vectors',
-    name='Vectors'
+    path=f'/{ks.pg.vec}',
+    title=ks.pg.vec.name,
+    name=ks.pg.vec.name,
 )
 
 class K:
@@ -21,13 +21,10 @@ class K:
 #========================================================================
 def layout():
     return htm.Div([
-        htm.H3("Generate Vectors", className="mb-4"),
+        htm.H3(ks.pg.vec.name, className="mb-4"),
 
         htm.Div([
-            htm.P(
-                "Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector.",
-                className="mb-4"
-            ),
+            htm.P(ks.pg.vec.desc, className="mb-4"),
 
             dbc.Row([
                 dbc.Col([
@@ -40,11 +37,11 @@ def layout():
                                     dbc.Select(
                                         id=K.selectQ,
                                         options=[
-                                            {"label": "Thumbnail (Fast)", "value": Ks.db.thumbnail},
-                                            {"label": "Preview", "value": Ks.db.preview},
-                                            {"label": "FullSize (Slow)", "value": Ks.db.fullsize},
+                                            {"label": "Thumbnail (Fast)", "value": ks.db.thumbnail},
+                                            {"label": "Preview", "value": ks.db.preview},
+                                            {"label": "FullSize (Slow)", "value": ks.db.fullsize},
                                         ],
-                                        value=Ks.db.preview,
+                                        value=ks.db.preview,
                                         className="mb-3",
                                     ),
                                 ], width=12),
@@ -100,7 +97,7 @@ def layout():
         out(K.btnClear, "disabled"),
         out(K.selectQ, "disabled"),
     ],
-    inp(Ks.store.now, "data"),
+    inp(ks.sto.now, "data"),
     prevent_initial_call=False
 )
 def photoVec_OnInit(dta_now):
@@ -140,23 +137,23 @@ def photoVec_OnInit(dta_now):
         out(K.btnProcess, "disabled", allow_duplicate=True),
         out(K.btnClear, "disabled", allow_duplicate=True),
         out(K.selectQ, "disabled", allow_duplicate=True),
-        out(Ks.store.nfy, "data", allow_duplicate=True)
+        out(ks.sto.nfy, "data", allow_duplicate=True)
     ],
     [
         inp(K.btnProcess, "n_clicks"),
         inp(K.btnClear, "n_clicks"),
-        inp(Ks.store.tsk, "data"),
+        inp(ks.sto.tsk, "data"),
     ],
     [
-        ste(Ks.store.now, "data"),
-        ste(Ks.store.nfy, "data"),
+        ste(ks.sto.now, "data"),
+        ste(ks.sto.nfy, "data"),
     ],
     prevent_initial_call=True
 )
 def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     trgId = getTriggerId()
     if not trgId or (not nclk_proc and not nclk_clear): return noUpd, noUpd, noUpd, noUpd, noUpd
-    if trgId == Ks.store.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd, noUpd
+    if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd, noUpd
 
     tsk = models.Tsk.fromStore(dta_tsk)
     now = models.Now.fromStore(dta_now)
@@ -181,9 +178,9 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
 #------------------------------------------------------------------------
 @callback(
     [
-        out(Ks.store.mdl, "data", allow_duplicate=True),
-        out(Ks.store.nfy, "data", allow_duplicate=True),
-        out(Ks.store.now, "data", allow_duplicate=True),
+        out(ks.sto.mdl, "data", allow_duplicate=True),
+        out(ks.sto.nfy, "data", allow_duplicate=True),
+        out(ks.sto.now, "data", allow_duplicate=True),
     ],
     [
         inp(K.btnProcess, "n_clicks"),
@@ -191,26 +188,26 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     ],
     [
         ste(K.selectQ, "value"),
-        ste(Ks.store.now, "data"),
-        ste(Ks.store.mdl, "data"),
-        ste(Ks.store.tsk, "data"),
-        ste(Ks.store.nfy, "data"),
+        ste(ks.sto.now, "data"),
+        ste(ks.sto.mdl, "data"),
+        ste(ks.sto.tsk, "data"),
+        ste(ks.sto.nfy, "data"),
     ],
     prevent_initial_call=True
 )
-def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, dta_nfy):
+def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, dta_nfy):
 
     if not nclk_proc and not nclk_clear: return noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
-    if trgId == Ks.store.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd
+    if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd
 
     now = models.Now.fromStore(dta_now)
     mdl = models.Mdl.fromStore(dta_mdl)
     tsk = models.Tsk.fromStore(dta_tsk)
     nfy = models.Nfy.fromStore(dta_nfy)
 
-    if tsk.id: return noUpd, noUpd
+    if tsk.id: return noUpd, noUpd, noUpd
 
     lg.info( f"[photoVec] trig[{trgId}] clk[{nclk_proc}/{nclk_clear}] tsk[{tsk}]" )
 
@@ -219,8 +216,8 @@ def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_t
         if now.cntPic <= 0:
             nfy.error("No asset data to process")
         else:
-            mdl.id = 'photovec'
-            mdl.cmd = 'process'
+            mdl.id = ks.pg.vec
+            mdl.cmd = ks.cmd.vec.toVec
             mdl.msg = f"Begin processing photos[{now.cntPic}] with quality[{photoQ}] ?"
             now.photoQ = photoQ
 
@@ -229,8 +226,8 @@ def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_t
             nfy.error("No vector data to clear")
         else:
             nfy.info(f"[photoVec] Triggered: Clear all vectors")
-            mdl.id = 'photovec'
-            mdl.cmd = 'clear'
+            mdl.id = ks.pg.vec
+            mdl.cmd = ks.cmd.vec.clear
             mdl.msg = "Are you sure you want to clear all vectors?"
 
     return mdl.toStore(), nfy.toStore(), now.toStore()
@@ -238,7 +235,7 @@ def photoVec_BtnRunModals(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_t
 
 
 #========================================================================
-# register & trigger actions
+# task acts
 #========================================================================
 import imgs
 from util.task import IFnProg
@@ -247,7 +244,7 @@ def photoVec_ToVec(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
     msg = "[PhotoVec] Processing successful"
 
     try:
-        photoQ = now.photoQ if now.photoQ else Ks.db.thumbnail
+        photoQ = now.photoQ if now.photoQ else ks.db.thumbnail
 
         onUpdate(1, "1%", f"Initializing with photoQ[{photoQ}]")
 
@@ -317,5 +314,5 @@ def photoVec_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
 #========================================================================
 # Set up global functions
 #========================================================================
-task.mapFns['photoVec_ToVec'] = photoVec_ToVec
-task.mapFns['photoVec_Clear'] = photoVec_Clear
+task.mapFns[ks.cmd.vec.toVec] = photoVec_ToVec
+task.mapFns[ks.cmd.vec.clear] = photoVec_Clear

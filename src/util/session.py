@@ -3,7 +3,7 @@ from db import pics, psql, vecs
 from db.dyn import dto
 from dsh import htm, dcc
 from util import log, models
-from conf import Ks
+from conf import ks
 
 lg = log.get(__name__)
 
@@ -47,7 +47,7 @@ def render():
 
     now.useType = dto.useType
     if not now.photoQ:
-        now.photoQ = dto.photoQ = Ks.db.thumbnail
+        now.photoQ = dto.photoQ = ks.db.thumbnail
 
     now.cntPic = pics.count()
     now.cntVec = vecs.count()
@@ -55,12 +55,12 @@ def render():
     if not now.useType:
         now.useType = dto.useType = 'API'
 
-    mk(Ks.store.now, now.toStore())
+    mk(ks.sto.now, now.toStore())
 
-    mk(Ks.store.nfy, nfy.toStore())
-    mk(Ks.store.tsk, tsk.toStore())
-    mk(Ks.store.mdl, mdl.toStore())
+    mk(ks.sto.nfy, nfy.toStore())
+    mk(ks.sto.tsk, tsk.toStore())
+    mk(ks.sto.mdl, mdl.toStore())
 
-    items.append(htm.Div(id=Ks.store.init, children='init'))
+    items.append(htm.Div(id=ks.sto.init, children='init'))
 
     return htm.Div(items, style={'display': 'none'})

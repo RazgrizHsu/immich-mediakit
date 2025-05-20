@@ -1,6 +1,6 @@
 from dsh import dash, htm, dbc, out, inp, ste, ALL
 from util import log, models
-from conf import Ks
+from conf import ks
 
 lg = log.get(__name__)
 
@@ -30,7 +30,7 @@ def render():
 def regBy(app):
     @app.callback(
         out(k.divId, 'children'),
-        inp(Ks.store.nfy, 'data')
+        inp(ks.sto.nfy, 'data')
     )
     def update_notifications(dta_nfy):
         if not dta_nfy: return []
@@ -60,10 +60,10 @@ def regBy(app):
         return divs
 
     @app.callback(
-        out(Ks.store.nfy, 'data', allow_duplicate=True),
+        out(ks.sto.nfy, 'data', allow_duplicate=True),
         inp({'type': 'notify-alert', 'index': ALL}, 'is_open'),
         ste({'type': 'notify-alert', 'index': ALL}, 'id'),
-        ste(Ks.store.nfy, 'data'),
+        ste(ks.sto.nfy, 'data'),
         prevent_initial_call=True
     )
     def remove_notification(itemOpened, itemIds, dta_nfy):

@@ -281,14 +281,12 @@ class TestBaseDictModel(unittest.TestCase):
         tsk = Tsk(
             id="task1",
             name="Process task",
-            args={"model": "Now", "action": "update"}
         )
 
         mdl = Mdl(
             id="modal1",
             msg="Confirm delete?",
             cmd="delete",
-            args={"targetId": "1"}
         )
 
         data = {
@@ -313,7 +311,6 @@ class TestBaseDictModel(unittest.TestCase):
 
         tsk_restored.reset()
         self.assertIsNone(tsk_restored.id)
-        self.assertEqual(tsk_restored.args, {})
 
         mdl_restored.reset()
         self.assertIsNone(mdl_restored.id)
