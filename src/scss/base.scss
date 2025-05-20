@@ -55,8 +55,9 @@ body {
 	.L {
 		//border: red 1px solid;
 	}
+
 	.R {
-		padding: 0 15px 0 5px;
+		padding:0 15px 0 5px;
 	}
 }
 
@@ -444,6 +445,15 @@ span.tag {
 		display:    flex;
 		align-items:center;
 		gap:        8px;
+	}
+}
+
+.notify {
+	.alert {
+		box-shadow:0 0 3px 3px #FFFFFF66 !important;
+		margin: 20px;
+
+		text-shadow: 0 0 10px #1A1A1A
 	}
 }
 

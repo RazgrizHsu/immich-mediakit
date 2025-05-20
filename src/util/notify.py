@@ -20,10 +20,11 @@ def render():
             style={
                 'position': 'fixed',
                 'bottom': '20px',
-                'left': '20px',
-                'maxWidth': '300px',
+                'right': '20px',
+                'maxWidth': '500px',
                 'zIndex': '1000'
-            }
+            },
+            className="notify"
         )
     ])
 
@@ -53,6 +54,7 @@ def regBy(app):
                     duration=data['timeout'],
                     is_open=True,
                     fade=True,
+                    className="mb-2 mt-2 glow-light"
                 )
             )
 

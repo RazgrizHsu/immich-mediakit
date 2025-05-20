@@ -383,6 +383,8 @@ def countSimOk(isOk=0):
         c.execute("SELECT COUNT(*) FROM assets WHERE simOk = ?", (isOk,))
         count = c.fetchone()[0]
 
+        lg.info( f"[pics] count type[{isOk}] cnt[{count}]" )
+
         return count
     except Exception as e:
         lg.error(f"Failed to count assets with simOk={isOk}: {str(e)}")

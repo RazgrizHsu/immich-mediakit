@@ -14,8 +14,8 @@ class k:
 
 def render():
     return dbc.Modal([
-        dbc.ModalHeader("Operation Confirm"),
-        dbc.ModalBody("Are you sure you want to delete all acquired asset data? This will clear the local database.", id=k.id.txt),
+        dbc.ModalHeader("Confirm"),
+        dbc.ModalBody("", id=k.id.txt),
         dbc.ModalFooter([
             dbc.Button("Cancel", id=k.id.btnNo, className="ms-auto"),
             dbc.Button("Confirm", id=k.id.btnOk, color="danger"),

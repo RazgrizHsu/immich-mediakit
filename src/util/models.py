@@ -1,11 +1,10 @@
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Dict, List, Any, Optional
 
+from conf import ks
 from util import log
 from util.baseModel import BaseDictModel
-from conf import ks
 
 lg = log.get(__name__)
 
@@ -57,7 +56,7 @@ class Tsk(Cmd):
 
 @dataclass
 class Mdl(Cmd):
-    msg: Optional[str] = None
+    msg: Optional[str|List[Any]] = None
     ok: bool = False
 
     def reset(self):
