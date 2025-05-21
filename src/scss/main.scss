@@ -637,6 +637,15 @@ span.tag {
 
 					@include bg-gradient(var(--main-lig), var(--main-bs), var(--main-dk))
 				}
+				
+				&.disabled {
+					opacity:0.5;
+					cursor:not-allowed!important;
+					pointer-events:none;
+					background:#444444;
+					color:#999999;
+					border-color:#555555;
+				}
 			}
 		}
 
@@ -651,12 +660,12 @@ span.tag {
 	.body {
 		border:var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
 		min-height:100px;
-		padding:15px;
+		padding:15px 10px 15px 10px;
 
-		.item {
+		> div {
 			display:none;
 
-			&.active {
+			&.act {
 				display:block;
 				animation:fadeIn 0.3s ease;
 			}

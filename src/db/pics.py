@@ -61,7 +61,7 @@ def init():
                     jsonExif         TEXT Default '{}',
                     isVectored       INTEGER Default 0,
                     simOk            INTEGER Default 0,
-                    simIds           TEXT Default '[]'
+                    simInfos         TEXT Default '[]'
                 )
                 ''')
 
@@ -118,7 +118,7 @@ def count(usrId=None):
 
 
 
-def get(assetId) -> Optional[models.Asset]:
+def getById(assetId) -> Optional[models.Asset]:
     try:
         if conn is None: raise mkErr('the db is not init')
 
@@ -133,7 +133,7 @@ def get(assetId) -> Optional[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get asset information", e)
 
-def getBy(ids: List[str]) -> List[models.Asset]:
+def getAllByIds(ids: List[str]) -> List[models.Asset]:
     try:
         if conn is None: raise mkErr('the db is not init')
         if not ids: return []
@@ -173,7 +173,7 @@ def getAll(count=0) -> list[models.Asset]:
         raise mkErr("Failed to get all asset information", e)
 
 
-def getPaged(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
+def getPaged(pageIdx=1, pageSize=20, usrId=None) -> tuple[List[models.Asset], int]:
     try:
         if conn is None: raise mkErr('the db is not init')
 
@@ -186,7 +186,7 @@ def getPaged(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
 
         cnt = c.fetchone()[0]
 
-        offset = (page - 1) * per_page
+        offset = (pageIdx - 1) * pageSize
 
         if usrId:
             c.execute('''
@@ -195,14 +195,14 @@ def getPaged(page=1, per_page=20, usrId=None) -> tuple[List[models.Asset], int]:
                 Where ownerId = ?
                 Order By autoId Desc
                 Limit ? Offset ?
-                ''', (usrId, per_page, offset))
+                ''', (usrId, pageSize, offset))
         else:
             c.execute('''
                 Select *
                 From assets
                 Order By autoId Desc
                 Limit ? Offset ?
-                ''', (per_page, offset))
+                ''', (pageSize, offset))
 
         rows = c.fetchall()
         if not rows: return [], cnt
@@ -358,7 +358,7 @@ def getAnyNonSim() -> Optional[models.Asset]:
         raise mkErr("Failed to get asset information", e)
 
 
-def getAnySimUnfinish() -> Optional[models.Asset]:
+def getAnySimPending() -> Optional[models.Asset]:
     try:
         if conn is None: raise mkErr('the db is not init')
 
@@ -366,7 +366,7 @@ def getAnySimUnfinish() -> Optional[models.Asset]:
         c.execute("""
             SELECT * FROM assets 
             WHERE simOk = 0 
-            AND json_array_length(simIds) > 0
+            AND json_array_length(simInfos) > 0
         """)
 
         row = c.fetchone()
@@ -392,10 +392,10 @@ def setSimIds(assetId: str, infos: List[models.SimInfo]):
         if not c.fetchone(): raise RuntimeError(f"Asset {assetId} not found")
 
         simDicts = [sim.toDict() for sim in infos] if infos else []
-        c.execute("UPDATE assets SET simIds = ? WHERE id = ?", (json.dumps(simDicts), assetId))
+        c.execute("UPDATE assets SET simInfos = ? WHERE id = ?", (json.dumps(simDicts), assetId))
         conn.commit()
 
-        lg.info(f"Updated simIds for asset {assetId}: {len(infos)} similar assets")
+        lg.info(f"Updated simInfos for asset {assetId}: {len(infos)} similar assets")
         return True
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)
@@ -405,7 +405,7 @@ def clearSimIds():
         if conn is None: raise RuntimeError('the db is not init')
 
         c = conn.cursor()
-        c.execute("UPDATE assets SET simOk = 0, simIds = '[]'")
+        c.execute("UPDATE assets SET simOk = 0, simInfos = '[]'")
         conn.commit()
 
         count = c.rowcount
@@ -414,6 +414,26 @@ def clearSimIds():
     except Exception as e:
         raise mkErr("Failed to clear similarity results:", e)
 
+
+def countHasSimIds(isOk=0):
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+        sql = '''
+            SELECT COUNT(*) FROM assets 
+            WHERE simOk = ?
+            AND json_array_length(simInfos) > 0
+        '''
+        c.execute(sql, (isOk,))
+        row = c.fetchone()
+        count = row[0] if row else 0
+
+        lg.info(f"[pics] count have simInfos and type[{isOk}] cnt[{count}]")
+
+        return count
+    except Exception as e:
+        raise mkErr(f"Failed to count assets have simInfos with simOk={isOk}", e)
 
 def countSimOk(isOk=0):
     try:

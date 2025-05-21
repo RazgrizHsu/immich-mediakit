@@ -151,7 +151,7 @@ class Asset(BaseDictModel):
     jsonExif: Optional[AssetExif] = None
     isVectored: Optional[int] = 0
     simOk: Optional[int] = 0
-    simIds: List[SimInfo] = field(default_factory=list)
+    simInfos: List[SimInfo] = field(default_factory=list)
 
     # view only
     selected:Optional[bool] = False
@@ -169,6 +169,15 @@ class Asset(BaseDictModel):
 
         return os.path.join(envs.immichPath, path)
 
+@dataclass
+class PageSim(BaseDictModel):
+    avTabId: Optional[str] = None
+    disableTabIds: List[str] = field(default_factory=list)
+    isContinued: Optional[bool] = None
+
+@dataclass
+class Pages(BaseDictModel):
+    sim: PageSim = field(default_factory=PageSim)
 
 @dataclass
 class Now(BaseDictModel):
@@ -183,6 +192,7 @@ class Now(BaseDictModel):
 
     assets: List[Asset] = field(default_factory=list)
 
+    pages: Pages = field(default_factory=Pages)
 
     def switchUsr(self, usrId):
         if self.usrs:

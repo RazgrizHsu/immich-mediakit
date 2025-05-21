@@ -160,6 +160,14 @@ def testAssetsPath():
     return f"test failed"
 
 
+#------------------------------------------------------------------------
+# delete
+#
+# This function moves multiple assets to trash by updating their status to 'trashed' and setting deletedAt timestamp
+# Note: This implementation follows Immich's API flow which may change in future versions
+# follow delete flow
+# https://github.com/immich-app/immich/blob/main/server/src/services/asset.service.ts#L231
+#------------------------------------------------------------------------
 def delete(asset: models.Asset):
     cnn = None
     try:
@@ -170,8 +178,7 @@ def delete(asset: models.Asset):
         cursor = cnn.cursor()
         sql = """
         Update assets
-        Set "deletedAt" = Now(),
-            status = %s
+        Set "deletedAt" = Now(), status = %s
         Where id = %s
         """
         cursor.execute(sql, (ks.db.status.trashed, asset.id))
@@ -185,7 +192,6 @@ def delete(asset: models.Asset):
     finally:
         if cnn: cnn.close()
 
-
 def deleteBy(assetIds: List[str]):
     cnn = None
     try:
@@ -195,8 +201,7 @@ def deleteBy(assetIds: List[str]):
         cursor = cnn.cursor()
         sql = """
         Update assets
-        Set "deletedAt" = Now(),
-            status = %s
+        Set "deletedAt" = Now(), status = %s
         Where id In %s
         """
         cursor.execute(sql, (ks.db.status.trashed, tuple(assetIds)))
@@ -208,6 +213,36 @@ def deleteBy(assetIds: List[str]):
     except Exception as e:
         if cnn: cnn.rollback()
         raise mkErr(f"Failed to delete assets: {str(e)}", e)
+    finally:
+        if cnn: cnn.close()
+
+#------------------------------------------------------------------------
+# This function restores multiple assets from trash by updating their status back to 'active' and clearing deletedAt
+# Note: This implementation follows Immich's API flow which may change in future versions
+# restore flow
+# https://github.com/immich-app/immich/blob/main/server/src/controllers/trash.controller.ts
+#------------------------------------------------------------------------
+def restoreBy(assetIds: List[str]):
+    cnn = None
+    try:
+        if not assetIds or len(assetIds) <= 0: raise RuntimeError(f"can't restore assetIds empty {assetIds}")
+
+        cnn = mkConn()
+        cursor = cnn.cursor()
+        sql = """
+        Update assets
+        Set "deletedAt" = Null, status = %s
+        Where id In %s And status = %s
+        """
+        cursor.execute(sql, (ks.db.status.active, tuple(assetIds), ks.db.status.trashed))
+        affectedRows = cursor.rowcount
+        cnn.commit()
+        cursor.close()
+
+        return affectedRows
+    except Exception as e:
+        if cnn: cnn.rollback()
+        raise mkErr(f"Failed to restore assets: {str(e)}", e)
     finally:
         if cnn: cnn.close()
 

@@ -50,11 +50,11 @@ class TestBase(unittest.TestCase):
 
 
     def test_sim_nonFinish(self):
-        asset = db.pics.getAnySimUnfinish()
+        asset = db.pics.getAnySimPending()
 
         lg.info(f"asset: {asset}")
 
-        for idx, info in enumerate(asset.simIds):
+        for idx, info in enumerate(asset.simInfos):
             aid, score = info.toTuple()
             lg.info(f"  Similar pair {idx + 1}: ID[{aid}], score[{score:.6f}]")
 

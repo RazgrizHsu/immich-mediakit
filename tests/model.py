@@ -164,30 +164,30 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset_restored.originalFileName, "test.jpg")
 
         self.assertEqual(asset_restored.isVectored, 0)
-        self.assertEqual(asset_restored.simIds, [])
+        self.assertEqual(asset_restored.simInfos, [])
 
-    def test_asset_model_with_simIds(self):
+    def test_asset_model_with_simInfos(self):
         asset = Asset(
             id="test-asset",
             ownerId="user1",
             originalFileName="test.jpg",
-            simIds=[SimInfo('a', 0.5), SimInfo('b', 0.6)]
+            simInfos=[SimInfo('a', 0.5), SimInfo('b', 0.6)]
         )
 
         asset_dict = asset.toDict()
         self.assertEqual(asset_dict["id"], "test-asset")
         self.assertEqual(asset_dict["ownerId"], "user1")
-        self.assertEqual(len(asset_dict["simIds"]), 2)
-        self.assertEqual(asset_dict["simIds"][0]["id"], "a")
-        self.assertEqual(asset_dict["simIds"][1]["id"], "b")
+        self.assertEqual(len(asset_dict["simInfos"]), 2)
+        self.assertEqual(asset_dict["simInfos"][0]["id"], "a")
+        self.assertEqual(asset_dict["simInfos"][1]["id"], "b")
 
         asset_restored = Asset.fromStore(asset_dict)
         self.assertEqual(asset_restored.id, "test-asset")
         self.assertEqual(asset_restored.originalFileName, "test.jpg")
-        self.assertEqual(len(asset_restored.simIds), 2)
-        self.assertIsInstance(asset_restored.simIds[0], SimInfo)
-        self.assertEqual(asset_restored.simIds[0].id, "a")
-        self.assertEqual(asset_restored.simIds[0].score, 0.5)
+        self.assertEqual(len(asset_restored.simInfos), 2)
+        self.assertIsInstance(asset_restored.simInfos[0], SimInfo)
+        self.assertEqual(asset_restored.simInfos[0].id, "a")
+        self.assertEqual(asset_restored.simInfos[0].score, 0.5)
 
     def test_asset_exif_json_string_conversion(self):
         exif_json_string = '{"make":"Canon","model":"EOS 5D","fNumber":2.8,"iso":100,"focalLength":24.0}'
@@ -217,24 +217,24 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset.jsonExif.iso, 200)
         self.assertEqual(asset.jsonExif.focalLength, 70.0)
 
-    def test_asset_simIds_from_db(self):
-        mock_cursor = type('MockCursor', (), {'description': [('id',), ('simIds',)]})()
+    def test_asset_simInfos_from_db(self):
+        mock_cursor = type('MockCursor', (), {'description': [('id',), ('simInfos',)]})()
 
         row = ('test-asset', '[{"id":"id1","score":0.9},{"id":"id2","score":0.8},{"id":"id3","score":0.7}]')
         asset = Asset.fromDB(mock_cursor, row)
 
-        self.assertEqual(len(asset.simIds), 3)
-        self.assertIsInstance(asset.simIds[0], SimInfo)
-        self.assertEqual(asset.simIds[0].id, "id1")
-        self.assertEqual(asset.simIds[0].score, 0.9)
+        self.assertEqual(len(asset.simInfos), 3)
+        self.assertIsInstance(asset.simInfos[0], SimInfo)
+        self.assertEqual(asset.simInfos[0].id, "id1")
+        self.assertEqual(asset.simInfos[0].score, 0.9)
 
         row = ('test-asset', '[]')
         asset = Asset.fromDB(mock_cursor, row)
-        self.assertEqual(asset.simIds, [])
+        self.assertEqual(asset.simInfos, [])
 
         row = ('test-asset', None)
         asset = Asset.fromDB(mock_cursor, row)
-        self.assertEqual(asset.simIds, [])
+        self.assertEqual(asset.simInfos, [])
 
     def test_datetime_serialization(self):
         test_dt = datetime(2023, 1, 1, 12, 0, 0)
@@ -378,8 +378,8 @@ class TestBaseDictModel(unittest.TestCase):
                     if hasattr(asset.jsonExif, 'dateTimeOriginal') and asset.jsonExif.dateTimeOriginal:
                         self.assertIsInstance(asset.jsonExif.dateTimeOriginal, str)
 
-                self.assertIsInstance(asset.simIds, list)
-                for sim in asset.simIds:
+                self.assertIsInstance(asset.simInfos, list)
+                for sim in asset.simInfos:
                     if sim:
                         self.assertIsInstance(sim, SimInfo)
                         self.assertTrue(hasattr(sim, 'id'))
@@ -387,7 +387,7 @@ class TestBaseDictModel(unittest.TestCase):
         finally:
             pics.close()
 
-    def test_db_simIds_functionality(self):
+    def test_db_simInfos_functionality(self):
         try:
             pics.init()
             assets = pics.getAll(count=5)
@@ -396,8 +396,8 @@ class TestBaseDictModel(unittest.TestCase):
                 self.fail("No assets found in database")
 
             for ass in assets:
-                self.assertIsInstance(ass.simIds, list)
-                for sim in ass.simIds:
+                self.assertIsInstance(ass.simInfos, list)
+                for sim in ass.simInfos:
                     if sim:
                         self.assertIsInstance(sim, SimInfo)
                         self.assertTrue(hasattr(sim, 'id'))
@@ -416,7 +416,7 @@ class TestBaseDictModel(unittest.TestCase):
                 self.skipTest("No assets found in database")
 
             asset_id = assets[0].id
-            asset = pics.get(asset_id)
+            asset = pics.getById(asset_id)
 
             self.assertIsNotNone(asset)
             self.assertEqual(asset.id, asset_id)
@@ -435,9 +435,8 @@ class TestBaseDictModel(unittest.TestCase):
                 if hasattr(asset.jsonExif, 'dateTimeOriginal') and asset.jsonExif.dateTimeOriginal:
                     self.assertIsInstance(asset.jsonExif.dateTimeOriginal, str)
 
-            # 檢查simIds屬性存在且為列表
-            self.assertTrue(hasattr(asset, 'simIds'))
-            self.assertIsInstance(asset.simIds, list)
+            self.assertTrue(hasattr(asset, 'simInfos'))
+            self.assertIsInstance(asset.simInfos, list)
         finally:
             pics.close()
 
