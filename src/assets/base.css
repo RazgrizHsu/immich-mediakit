@@ -1,3 +1,4 @@
+@charset "UTF-8";
 html, body { margin: 0; padding: 0; }
 
 body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-color: #505050; color: #EFEFEF; min-height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
@@ -140,11 +141,35 @@ span.tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px;
   50% { transform: translateY(-3px); }
   100% { transform: translateY(0); } }
 
+.card.sim { border: dotted 3px #39393A; }
+
+.card.sim.checked { border: 3px solid var(--info-base); }
+
+.card.sim .grid { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
+
+.card.sim .grid > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
+
+.card.sim .grid > *:nth-child(2n) { justify-self: start; }
+
+.card.sim .grid2 { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
+
+.card.sim .grid2 > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
+
+.card.sim .grid2 > *:nth-child(2n) { justify-self: start; }
+
 .popover { background-color: #2D2D2D !important; border-color: var(--bs-border-color) !important; }
 
 .popover-header { background-color: #212121 !important; border-bottom-color: var(--bs-border-color) !important; color: #E0E0E0 !important; }
 
 .popover-body { color: #E0E0E0 !important; }
+
+.test { background: #0B66BC; color: #1A95C3; border: red 1px solid; }
+
+.tab-content { padding: 0 !important; /* 覆蓋預設的 10px padding */ border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+
+.taber > div:nth-child(1) { border: red 1px solid; }
+
+.taber > div:nth-child(2) { border: blue 1px solid; }
 
 .pagination .page-link { background-color: #2D3748; border-color: #4A5568; color: #E2E8F0; }
 

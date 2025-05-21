@@ -51,6 +51,7 @@ def layout(assetId=None, **kwargs):
             dbc.Col(htm.Small(f"{ks.pg.similar.desc}", className="text-muted"))
         ], className="mb-4"),
 
+
         htm.Div([
 
             dbc.Row([
@@ -144,25 +145,65 @@ def layout(assetId=None, **kwargs):
                 ], width=4),
             ], className="mt-4 mb-3", id="selected-photos-container", style={"display": ""}),
 
+
+            htm.Div([
+
+                # nav header
+                htm.Div([
+
+                    #left side
+                    htm.Div( [
+
+                        htm.Span("Menu1"),
+                        htm.Span("Menu2"),
+
+                    ] ),
+
+                    #right side
+                    htm.Div( [
+
+                        htm.Button( "btn1" )
+                    ]),
+
+                ]),
+
+                # content
+                htm.Div([
+
+                    htm.Div([ "1" ]),
+                    htm.Div([ "2" ]),
+                    htm.Div([ "3" ]),
+
+                ]),
+
+            ], className="taber"),
+
             # Results container with tabs
             dbc.Tabs([
                 dbc.Tab([
-                    htm.Div([
 
-                        dbc.Spinner(
-                            htm.Div(id=k.grid, className="mt-2"),
-                            color="primary",
-                            type="border",
-                            spinner_style={"width": "3rem", "height": "3rem"}
+                    dbc.Spinner(
+                        htm.Div(id=k.grid),
+                        color="primary",
+                        type="border",
+                        spinner_style={"width": "3rem", "height": "3rem"},
+                        show_initially=True
+                    ),
+
+                ], label="Assets", tab_id="0"),
+
+                dbc.Tab([
+
+                         dbc.Row([
+                            dbc.Col([
+                                dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
+                            ], className="d-flex justify-content-center mb-3")
+                        ],
+                            className="mt-2",
                         ),
 
-                        dbc.Row([
-                            dbc.Col([
-                                dbc.Pagination(id=k.pager, active_page=7, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
-                            ], className="d-flex justify-content-center mb-3")
-                        ]),
-                    ])
-                ], label="Assets", tab_id="0"),
+                ], label="Unfinish Records", tab_id="1"),
+
             ], active_tab="0"),
 
             dcc.Store(id=k.stoInitId, data=assetId)
@@ -219,7 +260,7 @@ def similar_onStatus(dta_now, dta_nfy):
     if now.assets and len(now.assets) > 1:
         lg.info( f"now.assets[{len(now.assets)}]" )
 
-        grid = gvs.createGrid( now.assets, gvs.create_photo_card )
+        grid = gvs.createGrid(now.assets, gvs.mkImgCardSim)
 
     return cntNo, cntOk, canFind, canCler, grid, nfy.toStore()
 
@@ -239,15 +280,12 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     now = models.Now.fromStore(dta_now)
     nfy = models.Nfy.fromStore(dta_nfy)
 
-    trgId = ctx.triggered_id
-    lg.info( f"[selected] trgId[{trgId}] id[{trgId.id}] {clks}" )
-    lg.info( f'[select] ->> {ctx.triggered_prop_ids}')
-
-    if trgId.id and now.assets and len(now.assets) > 1:
-        ass = next( a for a in now.assets if a.id == trgId.id )
+    if ctx.triggered and now.assets and len(now.assets) > 1:
+        trgId = ctx.triggered_id
+        ass = next((a for a in now.assets if a.id == trgId.id), None)
         if ass:
-            # ass.selected = newSelected
-            lg.info(f'[select] found: {ass.autoId}')
+            ass.selected = ctx.triggered[0]['value']
+            # lg.info(f'[select] found: {ass.autoId}, selected: {ass.selected}, trgId: {trgId}')
 
 
     return now.toStore()
@@ -383,8 +421,8 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
         infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
 
         for idx, info in enumerate(infos):
-            id, score = info.toTuple()
-            lg.info(f"  no.{idx + 1}: ID[{id}], score[{score:.6f}]")
+            aid, score = info.toTuple()
+            lg.info(f"  no.{idx + 1}: ID[{aid}], score[{score:.6f}]")
 
         simIds = [ i.id for i in infos]
 

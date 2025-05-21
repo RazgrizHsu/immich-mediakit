@@ -96,6 +96,11 @@ class ks:
         preview = 'preview'
         fullsize = 'original'
 
+        class status:
+            trashed = 'trashed'
+            active = 'active'
+            deleted = 'deleted'
+
     class use:
         api = 'API'
         dir = 'DIR'

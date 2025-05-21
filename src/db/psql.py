@@ -1,14 +1,15 @@
 import os
-from typing import Optional
-import traceback
 import time
+from typing import Optional, List
+
 import psycopg2
 import psycopg2.extras
 
+import imgs
 from conf import ks, envs
 from util import log, models
+from util.err import mkErr
 from util.task import IFnProg
-import imgs
 
 lg = log.get(__name__)
 
@@ -25,14 +26,13 @@ def init():
         lg.info("pillow-heif not available, skipping HEIC/HEIF support")
         return False
 
-    pgHost = envs.psqlHost
-    pgPort = envs.psqlPort
-    pgDB = envs.psqlDb
-    pgUser = envs.psqlUser
-    pgPass = envs.psqlPass
-    pgImgPath = envs.immichPath
+    host = envs.psqlHost
+    port = envs.psqlPort
+    db = envs.psqlDb
+    uid = envs.psqlUser
+    pw = envs.psqlPass
 
-    if not (pgHost is not None and pgPort is not None and pgDB is not None and pgUser is not None):
+    if not (host is not None and port is not None and db is not None and uid is not None):
         raise RuntimeError("PostgreSQL connection settings not initialized.")
 
     if conn:
@@ -47,19 +47,27 @@ def init():
             conn = None
             connected = False
 
-    try:
-        conn = psycopg2.connect(
-            host=pgHost,
-            port=pgPort,
-            database=pgDB,
-            user=pgUser,
-            password=pgPass
-        )
-        return conn
-    except Exception as e:
-        lg.error(f"Failed to connect to PostgreSQL: {str(e)}")
-        return None
+    conn = mkConn()
+    return conn
 
+
+def mkConn():
+    host = envs.psqlHost
+    port = envs.psqlPort
+    db = envs.psqlDb
+    uid = envs.psqlUser
+    pw = envs.psqlPass
+    try:
+        nc = psycopg2.connect(
+            host=host,
+            port=port,
+            database=db,
+            user=uid,
+            password=pw
+        )
+        return nc
+    except Exception as e:
+        raise mkErr(f"Failed to connect to PostgreSQL", e)
 
 def fetchUsers():
     try:
@@ -81,9 +89,37 @@ def fetchUsers():
         cursor.close()
         return users
     except Exception as e:
-        lg.error(f"Failed to fetch users: {str(e)}")
-        lg.info(traceback.format_exc())
-        return []
+        raise mkErr(f"Failed to fetch users", e)
+
+
+def count(usrId=None, assetType="IMAGE"):
+    try:
+        if not conn: raise RuntimeError("Failed to connect to psql")
+
+        cursor = conn.cursor()
+
+        # noinspection SqlConstantExpression
+        sql = "Select Count(*) From assets Where 1=1"
+        params = []
+
+        if assetType:
+            sql += " AND type = %s"
+            params.append(assetType)
+
+        if usrId:
+            sql += ' AND "ownerId" = %s'
+            params.append(usrId)
+
+        sql += " AND status = 'active'"
+
+        cursor.execute(sql, params)
+        count = cursor.fetchone()[0]
+        cursor.close()
+
+        return count
+    except Exception as e:
+        raise mkErr(f"Failed to count assets", e)
+
 
 # ------------------------------------------------------
 # 因為db裡的值會帶upload/ (經由web上傳的)
@@ -124,6 +160,58 @@ def testAssetsPath():
     return f"test failed"
 
 
+def delete(asset: models.Asset):
+    cnn = None
+    try:
+        if not asset or not asset.id: raise ValueError("Invalid asset or asset ID")
+
+        cnn = mkConn()
+
+        cursor = cnn.cursor()
+        sql = """
+        Update assets
+        Set "deletedAt" = Now(),
+            status = %s
+        Where id = %s
+        """
+        cursor.execute(sql, (ks.db.status.trashed, asset.id))
+        cnn.commit()
+        cursor.close()
+
+        return True
+    except Exception as e:
+        if cnn: cnn.rollback()
+        raise mkErr(f"Failed to delete asset: {str(e)}", e)
+    finally:
+        if cnn: cnn.close()
+
+
+def deleteBy(assetIds: List[str]):
+    cnn = None
+    try:
+        if not assetIds or len(assetIds) <= 0: raise RuntimeError(f"can't delete assetIds empty {assetIds}")
+
+        cnn = mkConn()
+        cursor = cnn.cursor()
+        sql = """
+        Update assets
+        Set "deletedAt" = Now(),
+            status = %s
+        Where id In %s
+        """
+        cursor.execute(sql, (ks.db.status.trashed, tuple(assetIds)))
+        affectedRows = cursor.rowcount
+        cnn.commit()
+        cursor.close()
+
+        return affectedRows
+    except Exception as e:
+        if cnn: cnn.rollback()
+        raise mkErr(f"Failed to delete assets: {str(e)}", e)
+    finally:
+        if cnn: cnn.close()
+
+
 from dataclasses import dataclass
 
 def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
@@ -136,7 +224,7 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         range: int
 
     # ------------------------------------------------------
-    # 進度計算與回報的嵌套函數
+    # report fn
     # ------------------------------------------------------
     def upd(sid, cnow, call, msg, force=False):
         if not onUpdate: return
@@ -160,12 +248,12 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         if not conn: raise RuntimeError("Failed to connect to psql")
 
         stages = {
-            "init": StageInfo("初始化", 0, 5),
-            "fetch": StageInfo("獲取資產", 5, 35),
-            "files": StageInfo("獲取檔案", 40, 40),
-            "exif": StageInfo("獲取EXIF", 80, 10),
-            "combine": StageInfo("合併數據", 90, 10),
-            "complete": StageInfo("完成", 100, 0)
+            "init": StageInfo("init", 0, 5),
+            "fetch": StageInfo("fetch db", 5, 35),
+            "files": StageInfo("fetch assetFiels", 40, 40),
+            "exif": StageInfo("fetch exif", 80, 10),
+            "combine": StageInfo("combine", 90, 10),
+            "complete": StageInfo("complete", 100, 0)
         }
 
         upd("init", 0, 1, "Start query...", True)
@@ -343,39 +431,5 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         return assets
     except Exception as e:
         msg = f"Failed to FetchAssets: {str(e)}"
-        lg.error(msg)
-        lg.error(traceback.format_exc())
-
         if onUpdate: onUpdate(100, "Erorr", msg)
-        raise
-
-
-def count(usrId=None, assetType="IMAGE"):
-    try:
-        if not conn: raise RuntimeError("Failed to connect to psql")
-
-        cursor = conn.cursor()
-
-        # noinspection SqlConstantExpression
-        sql = "Select Count(*) From assets Where 1=1"
-        params = []
-
-        if assetType:
-            sql += " AND type = %s"
-            params.append(assetType)
-
-        if usrId:
-            sql += ' AND "ownerId" = %s'
-            params.append(usrId)
-
-        sql += " AND status = 'active'"
-
-        cursor.execute(sql, params)
-        count = cursor.fetchone()[0]
-        cursor.close()
-
-        return count
-    except Exception as e:
-        lg.error(f"Failed to count assets: {str(e)}")
-        lg.info(traceback.format_exc())
-        return 0
+        raise mkErr(msg, e)

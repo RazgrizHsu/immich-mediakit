@@ -5,17 +5,15 @@ from conf import ks
 
 lg = log.get(__name__)
 
-def createExifTooltip(asset_id, exif_data):
-    if not exif_data:
-        return None
 
-    exif_table = []
+def mkExifGrid( dicExif:dict ):
+    table = []
 
     for key in ks.defs.exif.keys():
-        if key in exif_data and exif_data[key] is not None:
+        if key in dicExif and dicExif[key] is not None:
             display_key = ks.defs.exif.get(key, key)
 
-            value = exif_data[key]
+            value = dicExif[key]
             if key == "fileSizeInByte" and isinstance(value, (int, float)):
                 if value > 1024 * 1024:
                     display_value = f"{value / (1024 * 1024):.2f} MB"
@@ -30,28 +28,36 @@ def createExifTooltip(asset_id, exif_data):
             else:
                 display_value = str(value)
 
-            exif_table.append(
+            table.append(
                 htm.Tr([
                     htm.Td(display_key, style={"fontWeight": "bold", "padding": "2px 8px"}),
                     htm.Td(display_value, style={"padding": "2px 8px"})
                 ])
             )
 
-    for key, value in exif_data.items():
+    for key, value in dicExif.items():
         if key not in ks.defs.exif and value is not None:
-            exif_table.append(
+            table.append(
                 htm.Tr([
                     htm.Td(key, style={"fontWeight": "bold", "padding": "2px 8px"}),
                     htm.Td(str(value), style={"padding": "2px 8px"})
                 ])
             )
 
-    if len(exif_table) > 0:
+    return table
+
+
+def mkTipExif(assId, dicExif: dict):
+    if not dicExif: return None
+
+    table = mkExifGrid(dicExif)
+
+    if len(table) > 0:
         return dbc.Tooltip(
             htm.Div([
                 htm.H6("EXIF Information", className="mb-2"),
                 htm.Table(
-                    htm.Tbody(exif_table),
+                    htm.Tbody(table),
                     className="table-sm table-striped",
                     style={
                         "backgroundColor": "white",
@@ -61,7 +67,7 @@ def createExifTooltip(asset_id, exif_data):
                     }
                 )
             ], style={"maxWidth": "400px", "maxHeight": "400px", "overflow": "auto"}),
-            target={"type": "exif-badge", "index": asset_id},
+            target={"type": "exif-badge", "index": assId},
             placement="auto",
             style={"backgroundColor": "rgba(0,0,0,0.9)", "color": "white", "maxWidth": "450px"},
             className="tooltip-exif-info",

@@ -117,20 +117,6 @@ def count(usrId=None):
         raise mkErr("Failed to get asset count", e)
 
 
-def getAnyNonSim() -> Optional[models.Asset]:
-    try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-        c.execute("Select * From assets Where simOk!=1")
-
-        row = c.fetchone()
-        if row is None: return None
-
-        asset = models.Asset.fromDB(c, row)
-        return asset
-    except Exception as e:
-        raise mkErr("Failed to get asset information", e)
 
 def get(assetId) -> Optional[models.Asset]:
     try:
@@ -350,6 +336,47 @@ def deleteForUsr(usrId):
         return True
     except Exception as e:
         raise mkErr("Failed to delete user assets", e)
+
+
+#------------------------------------------------------------------------
+# sim
+#------------------------------------------------------------------------
+
+def getAnyNonSim() -> Optional[models.Asset]:
+    try:
+        if conn is None: raise mkErr('the db is not init')
+
+        c = conn.cursor()
+        c.execute("Select * From assets Where simOk!=1")
+
+        row = c.fetchone()
+        if row is None: return None
+
+        asset = models.Asset.fromDB(c, row)
+        return asset
+    except Exception as e:
+        raise mkErr("Failed to get asset information", e)
+
+
+def getAnySimUnfinish() -> Optional[models.Asset]:
+    try:
+        if conn is None: raise mkErr('the db is not init')
+
+        c = conn.cursor()
+        c.execute("""
+            SELECT * FROM assets 
+            WHERE simOk = 0 
+            AND json_array_length(simIds) > 0
+        """)
+
+        row = c.fetchone()
+        if row is None: return None
+
+        asset = models.Asset.fromDB(c, row)
+        return asset
+    except Exception as e:
+        raise mkErr("Failed to get assets with unprocessed similar items", e)
+
 
 def setSimIds(assetId: str, infos: List[models.SimInfo]):
     if not infos or len(infos) <= 0:
