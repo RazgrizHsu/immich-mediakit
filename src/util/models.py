@@ -101,9 +101,7 @@ class ProcessInfo(BaseDictModel):
 class SimInfo(BaseDictModel):
     id: Optional[str] = None
     score: Optional[float] = None
-
-    #dynamic only
-    self = False
+    isSelf: Optional[bool] = False
 
 
 @dataclass

@@ -8,8 +8,7 @@ lg = log.get(__name__)
 dash.register_page(
     __name__,
     path='/',
-    title=ks.pg.fetch.name,
-    name=ks.pg.fetch.name,
+    title=f"{ks.title}: " + ks.pg.fetch.name,
 )
 
 class K:

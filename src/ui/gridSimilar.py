@@ -24,14 +24,22 @@ lg = log.get(__name__)
 #     return htm.Div(rows)
 
 
-def createGrid(assets: list[models.Asset], mkCol, minW: int = 250) -> htm.Div:
+def createGrid(assets: list[models.Asset], minW: int = 250, onEmpty=None):
     if not assets or len(assets) == 0:
+        if onEmpty:
+            if isinstance(onEmpty, str):
+                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
+            else:
+                return onEmpty
+
         return htm.Div(
-            dbc.Alert("No photos match your filter criteria", color="warning"),
-            className="text-center mt-4"
+            dbc.Alert("--------", color="warning"),
+            className="text-center"
         )
 
-    rows = [htm.Div(mkCol(a), className="photo-card") for a in assets]
+    rootSimInfos = assets[0].simInfos
+
+    rows = [htm.Div(mkImgCardSim(a, rootSimInfos), className="photo-card") for a in assets]
 
     style = {
         "display": "grid",
@@ -131,30 +139,41 @@ def create_base_photo_card(photo: models.Asset):
     )
 
 
-def mkImgCardSim(ass: models.Asset):
+def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
     if not ass: return htm.Div("Photo not found")
 
-    image_src = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
+    imgSrc = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
 
     assId = ass.id
     fnm = ass.originalFileName
     dtc = ass.fileCreatedAt
 
     checked = ass.selected
-
     cssIds = "checked" if checked else ""
+
+
+    info = next( i for i in simInfos if i.id == ass.id )
+    lg.info( f"[imgCard] id[{assId}] infos[{len(simInfos)}] get[{info}]" )
+
+
 
     return dbc.Card([
         dbc.CardHeader([
-
-            dbc.Checkbox(
-                label="select", value=checked,
-                id={"type": "cbx-select", "id": assId},
-            ),
+            dbc.Row([
+                dbc.Col(
+                    dbc.Checkbox(
+                        label="select", value=checked,
+                        id={"type": "cbx-select", "id": assId},
+                    )
+                ),
+                dbc.Col([
+                    htm.Span("score: "), htm.Span(f"{info.score:.3f}", className="tag lg")
+                ], className="d-flex justify-content-end")
+            ])
 
         ], className=""),
         dbc.CardImg(
-            src=image_src,
+            src=imgSrc,
             top=True,
             style={"height": "200px", "objectFit": "contain"}
         ),

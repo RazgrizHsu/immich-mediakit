@@ -5,6 +5,8 @@ html, body { margin: 0; padding: 0; }
 
 body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-color: #505050; color: #EFEFEF; min-height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
 
+span { vertical-align: middle; }
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 
 ::-webkit-scrollbar-track { background: #1A1A1A; }
@@ -98,11 +100,11 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .img-pop .modal-body { flex: none; }
 
-span.tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px; background: #2D4A69; border-radius: 5px; font-size: 12px; vertical-align: middle; }
-
-.tag { background: #8A0100; padding: 3px 5px 2px 5px; }
+.tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px; background: #2D4A69; border-radius: 5px; font-size: 12px; vertical-align: middle; }
 
 .tag.ok { background: #78C22A; }
+
+.tag.lg { font-size: 15px; }
 
 .photo-card img:hover { opacity: 1; transform: scale(1.02); transition: all 0.3s ease; cursor: pointer; box-shadow: 0 0 10px white; }
 
@@ -185,7 +187,7 @@ span.tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px;
 
 .taber .head .acts { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 
-.taber .body { border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color); min-height: 100px; padding: 15px 10px 15px 10px; }
+.taber .body { border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color); padding: 15px 10px 15px 10px; }
 
 .taber .body > div { display: none; }
 

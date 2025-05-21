@@ -218,8 +218,10 @@ def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> l
         #lg.info(f"[vecs] search results( {len(rst)} ):")
         for i, hit in enumerate(rst):
             #lg.info(f"    no.{i + 1}: ID[{hit.id}], score[{hit.score:.6f}] self[{hit.id == assId}]")
-            if hit.score <= thMax and hit.id != assId:
-                infos.append(models.SimInfo(hit.id, hit.score))
+
+            if hit.score <= thMax or hit.id == assId: #always add self
+                isSelf = hit.id == assId
+                infos.append(models.SimInfo(hit.id, hit.score, isSelf))
 
         return infos
     except Exception as e:

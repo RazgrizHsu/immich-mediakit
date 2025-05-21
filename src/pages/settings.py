@@ -7,8 +7,7 @@ lg = log.get(__name__)
 dash.register_page(
     __name__,
     path=f'/{ks.pg.settings}',
-    title='System Settings',
-    name='Settings'
+    title=f"{ks.title}: " + 'System Settings',
 )
 
 #========================================================================
