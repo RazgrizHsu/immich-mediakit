@@ -1,7 +1,7 @@
 import dash.html as htm
 import dash_bootstrap_components as dbc
 from util import log, models
-from ui.gridExif import createExifTooltip
+from ui.gridExif import mkTipExif
 
 lg = log.get(__name__)
 
@@ -32,16 +32,12 @@ def createPhotoCard(asset: models.Asset):
     assId = asset.id
     hasEx = asset.jsonExif is not None
 
-    if asset.id:
-        image_src = f"/api/img/{asset.id}"
-    else:
-        image_src = "assets/noimg.png"
+    image_src = f"/api/img/{asset.id}" if asset.id else "assets/noimg.png"
 
-    exif_tooltip = None
+    tipExif = None
     if hasEx and asset.jsonExif is not None:
         try:
-            exif_data = asset.jsonExif.toDict()
-            exif_tooltip = createExifTooltip(assId, exif_data)
+            tipExif = mkTipExif(assId, asset.jsonExif.toDict())
         except Exception as e:
             lg.error(f"Error processing EXIF data: {e}")
 
@@ -81,6 +77,6 @@ def createPhotoCard(asset: models.Asset):
                     "❤️", color="danger", className="ms-1"
                 ) if isFav else htm.Span(),
             ], className="d-flex flex-wrap"),
-            exif_tooltip
+            tipExif
         ], className="p-2")
     ], className="h-100 photo-card")

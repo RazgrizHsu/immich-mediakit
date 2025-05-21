@@ -131,27 +131,24 @@ def create_base_photo_card(photo: models.Asset):
     )
 
 
-def create_photo_card(asset: models.Asset):
-    if not asset: return htm.Div("Photo not found")
+def mkImgCardSim(ass: models.Asset):
+    if not ass: return htm.Div("Photo not found")
 
-    if asset.id:
-        image_src = f"/api/img/{asset.id}"
-    else:
-        image_src = "assets/noimg.png"
+    image_src = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
 
-    assId = asset.id
-    fnm = asset.originalFileName
-    dtc = asset.fileCreatedAt
+    assId = ass.id
+    fnm = ass.originalFileName
+    dtc = ass.fileCreatedAt
 
-    selected = asset.selected
+    checked = ass.selected
 
-    card_style = {"border": "3px solid #28a745"} if selected else {}
+    cssIds = "checked" if checked else ""
 
     return dbc.Card([
         dbc.CardHeader([
 
             dbc.Checkbox(
-                label="select", value=selected,
+                label="select", value=checked,
                 id={"type": "cbx-select", "id": assId},
             ),
 
@@ -162,22 +159,18 @@ def create_photo_card(asset: models.Asset):
             style={"height": "200px", "objectFit": "contain"}
         ),
         dbc.CardBody([
-            htm.H5(
-                fnm,
-                className="card-title text-truncate",
-                title=fnm,
-                style={"fontSize": "0.9rem"}
-            ),
-            htm.P(
-                f"ID: {assId[:8]}...",
-                className="card-text small",
-                style={"fontSize": "0.8rem"}
-            ),
-            htm.P(
-                dtc,
-                className="card-text small",
-                style={"fontSize": "0.8rem"}
-            ),
+            dbc.Row([
+                htm.Span("id"), htm.Span(f"{ass.id}", className="badge bg-success text-truncate"),
+                htm.Span("autoId"), htm.Span(f"{ass.autoId}", className="badge bg-success"),
+
+            ], class_name="grid"),
+
+            dbc.Row([
+                htm.Span("fileName"), htm.Span(f"{ass.originalFileName}", className="text-truncate"),
+                htm.Span("createAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
+
+            ], class_name="grid2"),
+
             htm.Div([
                 dbc.Button(
                     "Details",
@@ -187,4 +180,4 @@ def create_photo_card(asset: models.Asset):
                 )
             ], className="d-flex justify-content-between align-items-center"),
         ], className="p-2")
-    ], className="h-100", style=card_style)
+    ], className=f"h-100 sim {cssIds}")

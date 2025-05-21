@@ -154,7 +154,7 @@ class Asset(BaseDictModel):
     simIds: List[SimInfo] = field(default_factory=list)
 
     # view only
-    selected = False
+    selected:Optional[bool] = False
 
     def getImagePath(self, photoQ=None):
         import os

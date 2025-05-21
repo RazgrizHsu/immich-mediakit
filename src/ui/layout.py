@@ -124,9 +124,6 @@ def renderSideBar():
             # 	dbc.Col([htm.Div(id="div-test")], width=6),
             # 	dbc.Col([dbc.Button("test", id="btn-test", className="w-100")], width=6),
             # ], className="mb-4"),
-
-
-            htm.Hr(),
         ],
         className="bg-dark p-3 h-100 border rounded"
     )
