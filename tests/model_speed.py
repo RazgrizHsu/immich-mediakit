@@ -1,11 +1,11 @@
-import sys
-import os
-import time
-import logging
-import sqlite3
 import json
+import logging
+import os
+import sqlite3
+import sys
+import time
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Optional
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
@@ -22,6 +22,7 @@ class SimpleAsset(BaseDictModel):
     fileModifiedAt: str
     isFavorite: int = 0
     isVectored: int = 0
+    simOk: int = 0
     ownerId: str = ""
     deviceId: str = ""
     type: str = ""
@@ -59,6 +60,7 @@ class ComplexAsset(BaseDictModel):
     isArchived: int = 0
 
 
+# noinspection SqlResolve
 def setup_simple_test_db(num_records: int = 1000) -> sqlite3.Connection:
     conn = sqlite3.connect(':memory:')
     cursor = conn.cursor()
@@ -76,14 +78,15 @@ def setup_simple_test_db(num_records: int = 1000) -> sqlite3.Connection:
 		isVisible INTEGER,
 		isArchived INTEGER,
 		libraryId TEXT,
-		isVectored INTEGER
+		isVectored INTEGER,
+		simOk INTEGER
 	)
 	''')
 
     for i in range(num_records):
         cursor.execute('''
 		Insert Into simple_assets Values (
-			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		)
 		''', (
             f"id-{i}",
@@ -97,7 +100,8 @@ def setup_simple_test_db(num_records: int = 1000) -> sqlite3.Connection:
             1,
             0,
             "lib1",
-            i % 3
+            i % 3,
+            i % 2
         ))
 
     conn.commit()
@@ -153,11 +157,9 @@ def setup_complex_test_db(num_records: int = 1000) -> sqlite3.Connection:
             }
         }
 
-        cursor.execute('''
-		Insert Into complex_assets Values (
-			?, ?, ?, ?, ?, ?, ?, ?, ?
-		)
-		''', (
+        # noinspection SqlResolve
+        sql = "Insert Into complex_assets Values ( ?, ?, ?, ?, ?, ?, ?, ?, ? )"
+        cursor.execute( sql, (
             f"id-{i}",
             f"complex_image_{i}.jpg",
             f"2023-01-{(i % 28) + 1:02d}",
@@ -173,10 +175,15 @@ def setup_complex_test_db(num_records: int = 1000) -> sqlite3.Connection:
     return conn
 
 
-def method1_simple_dict_zip(cursor: sqlite3.Cursor) -> List[Dict[str, Any]]:
+# noinspection SqlResolve
+sql_select_complex_assets = "Select * From complex_assets"
+# noinspection SqlResolve
+sql_select_simple_assets = "Select * From simple_assets"
+
+def method1_simple_dict_zip(cursor: sqlite3.Cursor):
     start_time = time.time()
 
-    cursor.execute("Select * From simple_assets")
+    cursor.execute(sql_select_simple_assets)
 
     columns = [col[0] for col in cursor.description]
     result = []
@@ -191,11 +198,10 @@ def method1_simple_dict_zip(cursor: sqlite3.Cursor) -> List[Dict[str, Any]]:
 
     return result, execution_time
 
-
-def method2_simple_base_dict_model(cursor: sqlite3.Cursor) -> List[SimpleAsset]:
+def method2_simple_base_dict_model(cursor: sqlite3.Cursor):
     start_time = time.time()
 
-    cursor.execute("Select * From simple_assets")
+    cursor.execute(sql_select_simple_assets)
 
     result = []
     for row in cursor.fetchall():
@@ -209,10 +215,10 @@ def method2_simple_base_dict_model(cursor: sqlite3.Cursor) -> List[SimpleAsset]:
     return result, execution_time
 
 
-def method3_complex_dict_zip(cursor: sqlite3.Cursor) -> List[Dict[str, Any]]:
+def method3_complex_dict_zip(cursor: sqlite3.Cursor):
     start_time = time.time()
 
-    cursor.execute("Select * From complex_assets")
+    cursor.execute(sql_select_complex_assets)
 
     columns = [col[0] for col in cursor.description]
     result = []
@@ -222,7 +228,7 @@ def method3_complex_dict_zip(cursor: sqlite3.Cursor) -> List[Dict[str, Any]]:
 
         json_fields = ['owner', 'tags', 'locations', 'metadata']
         for field in json_fields:
-            if field in asset and asset[field]:
+            if field in asset and asset.get(field):
                 try:
                     asset[field] = json.loads(asset[field])
                 except:
@@ -237,10 +243,10 @@ def method3_complex_dict_zip(cursor: sqlite3.Cursor) -> List[Dict[str, Any]]:
     return result, execution_time
 
 
-def method4_complex_base_dict_model(cursor: sqlite3.Cursor) -> List[ComplexAsset]:
+def method4_complex_base_dict_model(cursor: sqlite3.Cursor):
     start_time = time.time()
 
-    cursor.execute("Select * From complex_assets")
+    cursor.execute(sql_select_complex_assets)
 
     columns = [col[0] for col in cursor.description]
     result = []
@@ -250,7 +256,7 @@ def method4_complex_base_dict_model(cursor: sqlite3.Cursor) -> List[ComplexAsset
 
         json_fields = ['owner', 'tags', 'locations', 'metadata']
         for field in json_fields:
-            if field in data and data[field]:
+            if field in data and data.get(field):
                 try:
                     data[field] = json.loads(data[field])
                 except:

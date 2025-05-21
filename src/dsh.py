@@ -47,20 +47,24 @@ def registerScss():
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
 
-    def compile_sass():
-        lg.info( "compile scss.." )
+    def build():
         sass_dir = pathFromRoot('src/scss')
         css_dir = pathFromRoot('src/assets')
-        sass.compile(dirname=(sass_dir, css_dir), output_style='compact')
+        try:
+            sass.compile(dirname=(sass_dir, css_dir), output_style='compact')
+        except Exception as e:
+            lg.error( f"[scss] compile error: {e}" )
 
     class ScssHandler(FileSystemEventHandler):
         def on_modified(self, event):
-            if event.src_path.endswith('.scss'): compile_sass()
+            if event.src_path.endswith('.scss'):
+                build()
+                lg.info( f"[scss] build: {event.src_path}" )
 
     os.makedirs(pathFromRoot('src/assets'), exist_ok=True)
     os.makedirs(pathFromRoot('src/scss'), exist_ok=True)
 
-    compile_sass()
+    build()
 
     observer = Observer()
     observer.schedule(ScssHandler(), pathFromRoot('src/scss'), recursive=True)

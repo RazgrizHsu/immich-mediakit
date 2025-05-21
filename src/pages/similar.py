@@ -26,8 +26,9 @@ class k:
 
     btnFind = "btn-find-sim"
     btnClear = "btn-clear-sim"
-    btnDel = "btn-delete-selected"
+    btnDelChks = "btn-delete-checkeds"
 
+    taber = 'sim-taber'
     pager = "div-pager"
     grid = "div-grid-sim"
 
@@ -128,71 +129,43 @@ def layout(assetId=None, **kwargs):
                 ], width=6),
             ], className="mb-4"),
 
-            dbc.Row([
-                dbc.Col([
-                    htm.Div(id=k.txtCntSel, className="h4 mb-3"),
-                ], width=8),
-
-                dbc.Col([
-                    dbc.Button(
-                        "Delete Selected",
-                        id=k.btnDel,
-                        color="danger",
-                        size="md",
-                        className="w-100",
-                        disabled=True,
-                    ),
-                ], width=4),
-            ], className="mt-4 mb-3", id="selected-photos-container", style={"display": ""}),
-
-
+            #------------------------------------------------------------------------
+            # Tabs
+            #------------------------------------------------------------------------
             htm.Div([
 
                 # nav header
                 htm.Div([
 
                     #left side
-                    htm.Div( [
-
-                        htm.Span("Menu1"),
-                        htm.Span("Menu2"),
-
-                    ] ),
+                    htm.Div([
+                        htm.Div("選項 1", className="act", id="tab-1"),
+                        htm.Div("選項 2", className="", id="tab-2"),
+                        htm.Div("選項 3", className="", id="tab-3"),
+                    ], className="nav"),
 
                     #right side
-                    htm.Div( [
+                    htm.Div([
+                        htm.Button("操作按鈕", className="btn"),
+                        dbc.Button( "Delete", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True, )
+                    ], className="acts"),
 
-                        htm.Button( "btn1" )
-                    ]),
-
-                ]),
+                ], className="head"),
 
                 # content
                 htm.Div([
+                    htm.Div([
 
-                    htm.Div([ "1" ]),
-                    htm.Div([ "2" ]),
-                    htm.Div([ "3" ]),
+                        dbc.Spinner(
+                            htm.Div(id=k.grid),
+                            color="primary",
+                            type="border",
+                            spinner_style={"width": "3rem", "height": "3rem"},
+                            show_initially=True
+                        ),
 
-                ]),
-
-            ], className="taber"),
-
-            # Results container with tabs
-            dbc.Tabs([
-                dbc.Tab([
-
-                    dbc.Spinner(
-                        htm.Div(id=k.grid),
-                        color="primary",
-                        type="border",
-                        spinner_style={"width": "3rem", "height": "3rem"},
-                        show_initially=True
-                    ),
-
-                ], label="Assets", tab_id="0"),
-
-                dbc.Tab([
+                    ], id="content-1", className="item active"),
+                    htm.Div([
 
                          dbc.Row([
                             dbc.Col([
@@ -202,9 +175,13 @@ def layout(assetId=None, **kwargs):
                             className="mt-2",
                         ),
 
-                ], label="Unfinish Records", tab_id="1"),
+                    ], id="content-2", className="item"),
+                    htm.Div([
 
-            ], active_tab="0"),
+                    ], id="content-3", className="item"),
+                ], className="body"),
+
+            ], className="taber", id=k.taber),
 
             dcc.Store(id=k.stoInitId, data=assetId)
         ]),
@@ -226,6 +203,18 @@ def layout(assetId=None, **kwargs):
 #========================================================================
 # callbacks
 #========================================================================
+
+#------------------------------------------------------------------------
+# Update status counters
+#------------------------------------------------------------------------
+@callback(
+    out( k.taber, "children"),
+    inp( k.taber, "children"),
+)
+def sim_taber( children ):
+
+    lg.info( "test" )
+    return children
 
 #------------------------------------------------------------------------
 # Update status counters
