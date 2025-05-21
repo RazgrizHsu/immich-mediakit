@@ -181,13 +181,15 @@ span.tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px;
 
 .taber .head .nav > div.act { background: #3772FF; color: white; font-weight: 500; background-image: linear-gradient(to bottom, var(--main-lig), var(--main-bs) 50%, var(--main-dk)); }
 
+.taber .head .nav > div.disabled { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; background: #444444; color: #999999; border-color: #555555; }
+
 .taber .head .acts { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 
-.taber .body { border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color); min-height: 100px; padding: 15px; }
+.taber .body { border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color); min-height: 100px; padding: 15px 10px 15px 10px; }
 
-.taber .body .item { display: none; }
+.taber .body > div { display: none; }
 
-.taber .body .item.active { display: block; animation: fadeIn 0.3s ease; }
+.taber .body > div.act { display: block; animation: fadeIn 0.3s ease; }
 
 @keyframes fadeIn { from { opacity: 0; }
   to { opacity: 1; } }

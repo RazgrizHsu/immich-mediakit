@@ -19,12 +19,14 @@ dash.register_page(
 class k:
     stoInitId = "store-init-id"
 
+    txtCntRs = 'txt-cnt-records'
     txtCntOk = 'txt-cnt-ok'
     txtCntNo = 'txt-cnt-no'
     txtCntSel = 'txt-cnt-sel'
     slideTh = "inp-threshold-min"
 
     btnFind = "btn-find-sim"
+    btnContinue = "btn-continue-sim"
     btnClear = "btn-clear-sim"
     btnDelChks = "btn-delete-checkeds"
 
@@ -40,7 +42,7 @@ def layout(assetId=None, **kwargs):
     if assetId:
         lg.info(f"[sim] from url assetId[{assetId}]")
 
-        ass = db.pics.get(assetId)
+        ass = db.pics.getById(assetId)
         if ass and db.dyn.dto.simId != assetId:
             db.dyn.dto.simId = assetId
             lg.info(f"[sim] set current assetId[{assetId}]")
@@ -58,14 +60,18 @@ def layout(assetId=None, **kwargs):
             dbc.Row([
                 dbc.Col([
                     dbc.Card([
-                        dbc.CardHeader("System Search Status"),
+                        dbc.CardHeader("System Similary Records"),
                         dbc.CardBody([
                             dbc.Row([
-                                dbc.Col(htm.Small("Searched", className="d-inline-block me-2"), width=5),
+                                dbc.Col(htm.Small("Resolved", className="d-inline-block me-2"), width=6),
                                 dbc.Col(dbc.Alert(f"0", id=k.txtCntOk, color="info", className="py-1 px-2 mb-2 text-center")),
                             ]),
                             dbc.Row([
-                                dbc.Col(htm.Small("Unsearched", className="d-inline-block me-2"), width=5),
+                                dbc.Col(htm.Small("Pending Resolution", className="d-inline-block me-2"), width=6),
+                                dbc.Col(dbc.Alert(f"0", id=k.txtCntRs, color="info", className="py-1 px-2 mb-2 text-center")),
+                            ]),
+                            dbc.Row([
+                                dbc.Col(htm.Small("Not Yet Searched", className="d-inline-block me-2"), width=6),
                                 dbc.Col(dbc.Alert(f"0", id=k.txtCntNo, color="info", className="py-1 px-2 mb-2 text-center")),
                             ]),
                             dbc.Row([htm.Small("Shows vectorized data in the local db and whether similarity comparison has been performed with other assets", className="text-muted")])
@@ -120,14 +126,24 @@ def layout(assetId=None, **kwargs):
 
             dbc.Row([
                 dbc.Col([
-                    dbc.Button("Find Similar", id=k.btnFind, color="primary", size="lg", className="w-100", disabled=True),
-                    htm.Small("note: if there are many pictures, it'll take a long time", className="text-muted ms-2"),
-                ], width=6),
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Button("Find Similar", id=k.btnFind, color="primary", size="lg", className="w-100", disabled=True),
+                            htm.Small("if there are many pics, it'll take a long time", className="text-muted ms-2"),
+                        ], width=6),
+                        dbc.Col([
+                            dbc.Button("Continue Last", id=k.btnContinue, color="primary", size="lg", className="w-100", disabled=True),
+                            htm.Small("", className="text-muted ms-2"),
+                        ], width=6),
+                    ]),
+                ], width=9),
 
                 dbc.Col([
-                    dbc.Button("Clear Similar Status", id=k.btnClear, color="danger", size="lg", className="w-100", disabled=True),
-                ], width=6),
-            ], className="mb-4"),
+                    dbc.Button("Clear All Records", id=k.btnClear, color="danger", size="lg", className="w-100", disabled=True),
+                ], width=3),
+            ], className=""),
+
+            htm.Hr(className="mt-4 mb-4"),
 
             #------------------------------------------------------------------------
             # Tabs
@@ -139,15 +155,14 @@ def layout(assetId=None, **kwargs):
 
                     #left side
                     htm.Div([
-                        htm.Div("選項 1", className="act", id="tab-1"),
-                        htm.Div("選項 2", className="", id="tab-2"),
-                        htm.Div("選項 3", className="", id="tab-3"),
+                        htm.Div("current", className="act", id={"type": "tab", "id": "tab-1"}, n_clicks=0),
+                        htm.Div("history", className="", id={"type": "tab", "id": "tab-2"}, n_clicks=0),
+                        htm.Div("test", className="disabled", id={"type": "tab", "id": "tab-3"}, n_clicks=0),
                     ], className="nav"),
 
                     #right side
                     htm.Div([
-                        htm.Button("操作按鈕", className="btn"),
-                        dbc.Button( "Delete", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True, )
+                        dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True, )
                     ], className="acts"),
 
                 ], className="head"),
@@ -156,6 +171,7 @@ def layout(assetId=None, **kwargs):
                 htm.Div([
                     htm.Div([
 
+                        "content-1",
                         dbc.Spinner(
                             htm.Div(id=k.grid),
                             color="primary",
@@ -164,10 +180,10 @@ def layout(assetId=None, **kwargs):
                             show_initially=True
                         ),
 
-                    ], id="content-1", className="item active"),
+                    ], id="content-1", className="act"),
                     htm.Div([
 
-                         dbc.Row([
+                        dbc.Row([
                             dbc.Col([
                                 dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
                             ], className="d-flex justify-content-center mb-3")
@@ -175,10 +191,12 @@ def layout(assetId=None, **kwargs):
                             className="mt-2",
                         ),
 
-                    ], id="content-2", className="item"),
+                    ], id="content-2", className=""),
                     htm.Div([
 
-                    ], id="content-3", className="item"),
+                        "content-3"
+
+                    ], id="content-3", className=""),
                 ], className="body"),
 
             ], className="taber", id=k.taber),
@@ -205,27 +223,77 @@ def layout(assetId=None, **kwargs):
 #========================================================================
 
 #------------------------------------------------------------------------
-# Update status counters
+# taber change
 #------------------------------------------------------------------------
 @callback(
-    out( k.taber, "children"),
-    inp( k.taber, "children"),
+    out(k.taber, "children"),
+    [
+        inp({"type": "tab", "id": ALL}, "n_clicks"),
+        inp(k.taber, "children"),
+    ],
+    prevent_initial_call=True
 )
-def sim_taber( children ):
+def sim_taber(clks, items):
+    if not ctx.triggered_id: return items
 
-    lg.info( "test" )
-    return children
+    if isinstance(ctx.triggered_id, dict) and ctx.triggered_id.get("type") == "tab":
+        dstTabId = ctx.triggered_id.get("id")
+
+        trigTab = None
+        for i, click in enumerate(clks):
+            if clks[i] and clks[i] > 0:
+                trigTab = i
+                break
+
+        lg.info(f"[taber] change tab: {dstTabId}")
+        head = None
+        body = None
+        for i, child in enumerate(items):
+            if isinstance(child, dict) and child.get("props", {}).get("className") == "head": head = i
+            elif isinstance(child, dict) and child.get("props", {}).get("className") == "body": body = i
+
+        if head is not None and body is not None:
+            nav_div = items[head]["props"]["children"][0]
+
+            if trigTab is not None:
+                clickedTab = nav_div["props"]["children"][trigTab]
+                if "disabled" in clickedTab.get("props", {}).get("className", ""):
+                    lg.warn(f"[taber] ignore disabled tab id[{dstTabId}]")
+                    return items
+
+            for i, tab in enumerate(nav_div["props"]["children"]):
+                tabId = tab.get("props", {}).get("id", {}).get("id", "")
+
+                if "disabled" in tab.get("props", {}).get("className", ""): continue
+
+                if tabId == dstTabId:
+                    nav_div["props"]["children"][i]["props"]["className"] = "act"
+                else:
+                    nav_div["props"]["children"][i]["props"]["className"] = ""
+
+            divBody = items[body]
+            for i, content in enumerate(divBody["props"]["children"]):
+                bodyId = content.get("props", {}).get("id", "")
+                if bodyId == f"content-{dstTabId.split('-')[1]}":
+                    divBody["props"]["children"][i]["props"]["className"] = "act"
+                else:
+                    divBody["props"]["children"][i]["props"]["className"] = ""
+
+    return items
 
 #------------------------------------------------------------------------
 # Update status counters
 #------------------------------------------------------------------------
 from ui import gridSimilar as gvs
+
 @callback(
     [
         out(k.txtCntNo, "children"),
+        out(k.txtCntRs, "children"),
         out(k.txtCntOk, "children"),
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
+        out(k.btnContinue, "disabled"),
         out(k.grid, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
     ],
@@ -239,19 +307,25 @@ def similar_onStatus(dta_now, dta_nfy):
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
-    canFind = not cntNo >= 1
-    canCler = not cntOk >= 1
+    cntRs = db.pics.countHasSimIds()
+    disFind = cntNo <= 0
+    disCler = cntOk <= 0
+    disCont = cntRs <= 0
     grid = []
 
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
+    lg.info( f"now.pages.sim: {now.pages.sim}" )
+    if now.pages.sim.isContinued:
+        disCont = True
+
     if now.assets and len(now.assets) > 1:
-        lg.info( f"now.assets[{len(now.assets)}]" )
+        lg.info(f"now.assets[{len(now.assets)}]")
 
         grid = gvs.createGrid(now.assets, gvs.mkImgCardSim)
 
-    return cntNo, cntOk, canFind, canCler, grid, nfy.toStore()
+    return cntNo, cntRs, cntOk, disFind, disCler, disCont, grid, nfy.toStore()
 
 
 #------------------------------------------------------------------------
@@ -265,7 +339,6 @@ def similar_onStatus(dta_now, dta_nfy):
     prevent_initial_call=True
 )
 def update_selected_photos(clks, dta_now, dta_nfy):
-
     now = models.Now.fromStore(dta_now)
     nfy = models.Nfy.fromStore(dta_nfy)
 
@@ -275,7 +348,6 @@ def update_selected_photos(clks, dta_now, dta_nfy):
         if ass:
             ass.selected = ctx.triggered[0]['value']
             # lg.info(f'[select] found: {ass.autoId}, selected: {ass.selected}, trgId: {trgId}')
-
 
     return now.toStore()
 
@@ -292,6 +364,7 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     [
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
+        inp(k.btnContinue, "n_clicks"),
     ],
     [
         ste(k.slideTh, "value"),
@@ -302,8 +375,8 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     ],
     prevent_initial_call=True
 )
-def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
-    if not clk_fnd and not clk_clr: return noUpd, noUpd, noUpd
+def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
+    if not clk_fnd and not clk_clr and not clk_con: return noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
@@ -331,6 +404,17 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
             "You may need to perform all similarity searches again."
         ]
 
+    if trgId == k.btnContinue:
+        nfy.info( "clicked continue!" )
+
+        ass = db.pics.getAnySimPending()
+        if ass:
+            #now.pages.sim.isContinued = True
+            ids = [si.id for si in ass.simInfos]
+            lg.info( f"ids[{ids}] ass.simInfos[{ass.simInfos}]" )
+            # assets = db.pics.getBy(
+
+
 
     elif trgId == k.btnFind:
         if now.cntVec <= 0:
@@ -344,7 +428,7 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
         asset: Optional[models.Asset] = None
 
         if db.dyn.dto.simId:
-            ass = db.pics.get(db.dyn.dto.simId)
+            ass = db.pics.getById(db.dyn.dto.simId)
             if ass:
                 if ass.simOk != 1:
                     lg.info(f"[sim] use selected asset id[{ass.id}]")
@@ -413,13 +497,13 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
             aid, score = info.toTuple()
             lg.info(f"  no.{idx + 1}: ID[{aid}], score[{score:.6f}]")
 
-        simIds = [ i.id for i in infos]
+        simIds = [i.id for i in infos]
 
         onUpdate(80, "80%", f"Found {len(simIds)} similar photos")
 
         db.pics.setSimIds(asset.id, infos)
 
-        assets = db.pics.getBy( simIds )
+        assets = db.pics.getAllByIds(simIds)
 
         now.assets.extend(assets)
 
@@ -427,8 +511,6 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
 
         msg = f"Found {len(simIds)} similar photos for {asset.originalFileName}"
         nfy.success(msg)
-
-
 
         return nfy, now, msg
 
