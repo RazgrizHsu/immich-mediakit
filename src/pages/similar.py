@@ -10,29 +10,28 @@ lg = log.get(__name__)
 
 dash.register_page(
     __name__,
-    title=ks.pg.similar.name,
-    name=ks.pg.similar.name,
     path=f'/{ks.pg.similar}',
     path_template=f'/{ks.pg.similar}/<assetId>',
+    title=f"{ks.title}: " + ks.pg.similar.name,
 )
 
 class k:
     stoInitId = "store-init-id"
 
-    txtCntRs = 'txt-cnt-records'
-    txtCntOk = 'txt-cnt-ok'
-    txtCntNo = 'txt-cnt-no'
-    txtCntSel = 'txt-cnt-sel'
-    slideTh = "inp-threshold-min"
+    txtCntRs = 'sim-txt-cnt-records'
+    txtCntOk = 'sim-txt-cnt-ok'
+    txtCntNo = 'sim-txt-cnt-no'
+    txtCntSel = 'sim-txt-cnt-sel'
+    slideTh = "sim-inp-threshold"
 
-    btnFind = "btn-find-sim"
-    btnContinue = "btn-continue-sim"
-    btnClear = "btn-clear-sim"
-    btnDelChks = "btn-delete-checkeds"
+    btnFind = "sim-btn-find"
+    btnResume = "sim-btn-resume"
+    btnClear = "sim-btn-clear"
+    btnDelChks = "sim-btn-delete-checkeds"
 
     taber = 'sim-taber'
-    pager = "div-pager"
-    grid = "div-grid-sim"
+    pager = "sim-pager"
+    grid = "sim-grid"
 
 
 #========================================================================
@@ -132,7 +131,7 @@ def layout(assetId=None, **kwargs):
                             htm.Small("if there are many pics, it'll take a long time", className="text-muted ms-2"),
                         ], width=6),
                         dbc.Col([
-                            dbc.Button("Continue Last", id=k.btnContinue, color="primary", size="lg", className="w-100", disabled=True),
+                            dbc.Button("Resume", id=k.btnResume, color="primary", size="lg", className="w-100", disabled=True),
                             htm.Small("", className="text-muted ms-2"),
                         ], width=6),
                     ]),
@@ -156,8 +155,8 @@ def layout(assetId=None, **kwargs):
                     #left side
                     htm.Div([
                         htm.Div("current", className="act", id={"type": "tab", "id": "tab-1"}, n_clicks=0),
-                        htm.Div("history", className="", id={"type": "tab", "id": "tab-2"}, n_clicks=0),
-                        htm.Div("test", className="disabled", id={"type": "tab", "id": "tab-3"}, n_clicks=0),
+                        htm.Div("history", className="disabled", id={"type": "tab", "id": "tab-2"}, n_clicks=0),
+                        htm.Div("------", className="disabled", id={"type": "tab", "id": "tab-3"}, n_clicks=0),
                     ], className="nav"),
 
                     #right side
@@ -171,7 +170,6 @@ def layout(assetId=None, **kwargs):
                 htm.Div([
                     htm.Div([
 
-                        "content-1",
                         dbc.Spinner(
                             htm.Div(id=k.grid),
                             color="primary",
@@ -293,7 +291,7 @@ from ui import gridSimilar as gvs
         out(k.txtCntOk, "children"),
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
-        out(k.btnContinue, "disabled"),
+        out(k.btnResume, "disabled"),
         out(k.grid, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
     ],
@@ -316,14 +314,13 @@ def similar_onStatus(dta_now, dta_nfy):
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    lg.info( f"now.pages.sim: {now.pages.sim}" )
+    lg.info(f"now.pages.sim: {now.pages.sim}")
     if now.pages.sim.isContinued:
         disCont = True
 
-    if now.assets and len(now.assets) > 1:
-        lg.info(f"now.assets[{len(now.assets)}]")
-
-        grid = gvs.createGrid(now.assets, gvs.mkImgCardSim)
+    grid = gvs.createGrid(now.assets, onEmpty=[
+        dbc.Alert( "Please find the similar images..", color="secondary", className="text-center" ),
+    ])
 
     return cntNo, cntRs, cntOk, disFind, disCler, disCont, grid, nfy.toStore()
 
@@ -364,7 +361,7 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     [
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
-        inp(k.btnContinue, "n_clicks"),
+        inp(k.btnResume, "n_clicks"),
     ],
     [
         ste(k.slideTh, "value"),
@@ -404,16 +401,18 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
             "You may need to perform all similarity searches again."
         ]
 
-    if trgId == k.btnContinue:
-        nfy.info( "clicked continue!" )
+    if trgId == k.btnResume:
+        nfy.info("Loading pending similar groups...")
 
         ass = db.pics.getAnySimPending()
         if ass:
-            #now.pages.sim.isContinued = True
-            ids = [si.id for si in ass.simInfos]
-            lg.info( f"ids[{ids}] ass.simInfos[{ass.simInfos}]" )
-            # assets = db.pics.getBy(
+            simIds = [si.id for si in ass.simInfos]
+            lg.info(f"Found pending group with {len(simIds)} similar images")
 
+            assets = db.pics.getAllByIds(simIds)
+            if assets:
+                now.pages.sim.isContinued = True
+                now.assets = [ass] + assets
 
 
     elif trgId == k.btnFind:
@@ -476,9 +475,13 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
     thMin, thMax = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99)
 
     try:
-        asset = now.assets[0]
+        if not now.assets or len(now.assets) <= 0 or len(now.assets) >= 2:
+            raise RuntimeError(f"invalid now.assets: {now.assets}")
 
-        onUpdate(1, "1%", f"preapre..")
+        assets = now.assets
+        asset = assets[0]
+
+        onUpdate(1, "1%", f"prepare..")
 
         if not asset:
             msg = f"[tsk] assert not in now"
@@ -491,25 +494,82 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
 
         onUpdate(5, "5%", f"Starting search with thresholds [{thMin:.2f}-{thMax:.2f}]")
 
+        # less will contains self
         infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
 
+        # todo: 如果資料只包含自已
+        #   - 如果是無引導id, 應該自動尋找下一筆
+        #   - 如果是有引導id, 應該告知找不到相似圖片
+
+
+        asset.simInfos = infos
+
         for idx, info in enumerate(infos):
-            aid, score = info.toTuple()
-            lg.info(f"  no.{idx + 1}: ID[{aid}], score[{score:.6f}]")
-
-        simIds = [i.id for i in infos]
-
-        onUpdate(80, "80%", f"Found {len(simIds)} similar photos")
+            if info.isSelf:
+                lg.info(f"  no.{idx + 1}: ID[{info.id}] (self), score[{info.score:.6f}]")
+            else:
+                lg.info(f"  no.{idx + 1}: ID[{info.id}], score[{info.score:.6f}]")
 
         db.pics.setSimIds(asset.id, infos)
 
-        assets = db.pics.getAllByIds(simIds)
+        simIds = [i.id for i in infos if not i.isSelf]
+        doneIds = {asset.id}
 
-        now.assets.extend(assets)
+        pgBse = 10.0
+        pgMax = 90.0
+
+        pgAll = len(simIds)
+        if pgAll == 0:
+            db.pics.setSimIds(asset.id, infos, isOk=1)
+            onUpdate(100, "100%", f"No similar photos found for {asset.originalFileName}")
+            msg = f"No similar photos found for {asset.originalFileName}"
+            nfy.info(msg)
+            return nfy, now, msg
+
+        cntDone = 0
+
+        # looping find all childs
+        while simIds:
+            simId = simIds.pop(0)
+            if simId in doneIds: continue
+
+            doneIds.add(simId)
+            cntDone += 1
+
+            prog = pgBse + (pgMax - pgBse) * (cntDone / pgAll)
+            prog = min(prog, pgMax)
+            onUpdate(prog, f"{prog:.0f}%", f"Processing similar photo {cntDone}/{pgAll}")
+
+            try:
+                lg.info(f"[sim] search child id[{simId}]")
+                cInfos = db.vecs.findSimiliar(simId, thMin, thMax)
+
+                db.pics.setSimIds(simId, cInfos)
+
+                ass = db.pics.getById(simId)
+                assets.append(ass)
+
+                for info in cInfos:
+                    if not info.isSelf and info.id not in doneIds:
+                        simIds.append(info.id)
+                        pgAll += 1
+            except Exception as ce:
+                lg.warning(f"Error processing similar image {simId}: {ce}")
+                continue
+
+        onUpdate(95, "95%", f"Finalizing similar photo relationships")
+
+        now.assets = assets
 
         onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
 
-        msg = f"Found {len(simIds)} similar photos for {asset.originalFileName}"
+        cntInfos = len(infos)
+        cntAll = len(doneIds)
+        msg = [f"Found {len(infos)} similar photos for {asset.originalFileName}"]
+
+        if cntAll > cntInfos:
+            msg.extend([htm.Br(), f"include ({cntAll - cntInfos}) asset extra tree in similar tree."])
+
         nfy.success(msg)
 
         return nfy, now, msg

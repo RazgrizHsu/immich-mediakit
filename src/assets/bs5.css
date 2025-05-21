@@ -14,6 +14,8 @@ a:hover { color: #3772FF; }
 
 .nav-tabs .nav-link.active { background-color: #2D2D2D !important; border-color: var(--bs-border-color) var(--bs-border-color) #2D2D2D !important; color: #E0E0E0 !important; }
 
+.form-check, .form-label { margin-bottom: auto; }
+
 .form-control, .form-select, .form-check-input, input, select, textarea { background-color: #484848 !important; border: var(--bs-border-width) var(--bs-border-style) #666666 !important; color: #FFFFFF !important; }
 
 .form-control:focus, .form-select:focus, .form-check-input:focus, input:focus, select:focus, textarea:focus { background-color: #484848 !important; color: #FFFFFF !important; border-color: #3772FF !important; box-shadow: 0 0 0 0.25rem rgba(55, 114, 255, 0.25) !important; }
@@ -196,7 +198,7 @@ select:disabled { opacity: 0.6; box-shadow: none !important; border: #9C9C9C 2px
 
 .badge-dark { color: white; background-color: var(--dark-bs); }
 
-.alert { position: relative; padding: 0.75rem 1.25rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: var(--bs-border-radius); }
+.alert { position: relative; padding: 0.75rem 1.25rem; margin-bottom: 0rem; border: 1px solid transparent; border-radius: var(--bs-border-radius); }
 
 .alert-primary { color: white; background-image: linear-gradient(to bottom, var(--main-lig), var(--main-bs) 50%, var(--main-dk)); border-color: color-mix(in srgb, var(--main-dk) 90%, black); }
 

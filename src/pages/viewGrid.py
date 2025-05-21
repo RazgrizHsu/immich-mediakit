@@ -9,8 +9,7 @@ lg = log.get(__name__)
 dash.register_page(
     __name__,
     path=f'/{ks.pg.viewGrid}',
-    title='Assets Grid',
-    name='Assets Grid'
+    title=f"{ks.title}: " + 'Assets Grid',
 )
 
 class K:

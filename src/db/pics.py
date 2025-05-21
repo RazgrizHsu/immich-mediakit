@@ -117,13 +117,12 @@ def count(usrId=None):
         raise mkErr("Failed to get asset count", e)
 
 
-
-def getById(assetId) -> Optional[models.Asset]:
+def getById(assId) -> Optional[models.Asset]:
     try:
         if conn is None: raise mkErr('the db is not init')
 
         c = conn.cursor()
-        c.execute("Select * From assets Where id = ?", (assetId,))
+        c.execute("Select * From assets Where id = ?", (assId,))
 
         row = c.fetchone()
         if row is None: return None
@@ -232,8 +231,8 @@ def saveBy(asset: dict):
 
         c = conn.cursor()
 
-        assetId = asset.get('id')
-        if not assetId: return False
+        assId = asset.get('id')
+        if not assId: return False
 
         exifInfo = asset.get('exifInfo', {})
         jsonExif = None
@@ -244,7 +243,7 @@ def saveBy(asset: dict):
             except Exception as e:
                 raise mkErr("[pics.save] Error converting EXIF to JSON", e)
 
-        c.execute("Select autoId, id From assets Where id = ?", (assetId,))
+        c.execute("Select autoId, id From assets Where id = ?", (assId,))
         row = c.fetchone()
 
         if row is None:
@@ -254,7 +253,7 @@ def saveBy(asset: dict):
                 libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
                 Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                assetId,
+                assId,
                 asset.get('ownerId'),
                 asset.get('deviceId'),
                 asset.get('type'),
@@ -276,7 +275,7 @@ def saveBy(asset: dict):
             updFields = []
             updValues = []
 
-            c.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", (assetId,))
+            c.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", (assId,))
             paths = c.fetchone()
 
             # If thumbnail path is provided and existing path is empty
@@ -297,7 +296,7 @@ def saveBy(asset: dict):
 
             # Check EXIF updates
             if jsonExif:
-                c.execute("Select jsonExif From assets Where id = ?", (assetId,))
+                c.execute("Select jsonExif From assets Where id = ?", (assId,))
                 existing_exif = c.fetchone()
                 if not existing_exif or not existing_exif[0]:
                     updFields.append("jsonExif = ?")
@@ -305,7 +304,7 @@ def saveBy(asset: dict):
 
             if updFields:
                 update_query = f"UPDATE assets SET {', '.join(updFields)} WHERE id = ?"
-                updValues.append(assetId)
+                updValues.append(assId)
                 c.execute(update_query, updValues)
 
         conn.commit()
@@ -322,25 +321,25 @@ def deleteForUsr(usrId):
         c = conn.cursor()
 
         c.execute("Select id From assets Where ownerId = ?", (usrId,))
-        assetIds = [row[0] for row in c.fetchall()]
+        assIds = [row[0] for row in c.fetchall()]
 
-        lg.info(f"[pics] delete pics[{len(assetIds)}] for usrId[{usrId}]")
+        lg.info(f"[pics] delete pics[{len(assIds)}] for usrId[{usrId}]")
 
         c.execute("Delete From assets Where ownerId = ?", (usrId,))
 
         conn.commit()
 
         lg.info(f"[pics] delete vectors for usrId[{usrId}]")
-        for assId in assetIds: vecs.deleteBy(assId)
+        for assId in assIds: vecs.deleteBy(assId)
 
         return True
     except Exception as e:
         raise mkErr("Failed to delete user assets", e)
 
 
-#------------------------------------------------------------------------
+#========================================================================
 # sim
-#------------------------------------------------------------------------
+#========================================================================
 
 def getAnyNonSim() -> Optional[models.Asset]:
     try:
@@ -357,16 +356,103 @@ def getAnyNonSim() -> Optional[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get asset information", e)
 
-
-def getAnySimPending() -> Optional[models.Asset]:
+#----------------------------------------------------------------
+# find root nodes
+#----------------------------------------------------------------
+def getSimRootNodes(simOk=0) -> List[models.Asset]:
     try:
         if conn is None: raise mkErr('the db is not init')
 
         c = conn.cursor()
         c.execute("""
+            SELECT a.* FROM assets a
+            WHERE a.simOk = ?
+            AND json_array_length(a.simInfos) > 0
+            AND NOT EXISTS (
+                SELECT 1 FROM assets b
+                WHERE b.id != a.id
+                AND b.simOk = ?
+                AND EXISTS (
+                    SELECT 1 FROM json_each(b.simInfos) si
+                    WHERE json_extract(si.value, '$.id') = a.id
+                    AND json_extract(si.value, '$.isSelf') = 0
+                )
+            )
+        """, (simOk, simOk,))
+
+        rows = c.fetchall()
+        if not rows: return []
+
+        assets = [models.Asset.fromDB(c, row) for row in rows]
+        return assets
+    except Exception as e:
+        raise mkErr("Failed to get similar root nodes", e)
+
+
+def getSimGroup(rootId: str) -> List[models.Asset]:
+    try:
+        if conn is None: raise mkErr('the db is not init')
+
+        c = conn.cursor()
+        c.execute("SELECT * FROM assets WHERE id = ?", (rootId,))
+        row = c.fetchone()
+        if row is None:
+            lg.warn(f"Root asset {rootId} not found")
+            return []
+
+        rootAsset = models.Asset.fromDB(c, row)
+        rst = [rootAsset]
+
+        if not rootAsset.simInfos or len(rootAsset.simInfos) <= 1: return rst
+
+        simIds = [info.id for info in rootAsset.simInfos]
+        if not simIds: return [rootAsset]
+
+        placeholders = ','.join(['?' for _ in simIds])
+        c.execute(f"SELECT * FROM assets WHERE id IN ({placeholders})", simIds)
+
+        rows = c.fetchall()
+
+        assets = [models.Asset.fromDB(c, row) for row in rows]
+        rst.extend(assets)
+
+        return assets
+    except Exception as e:
+        raise mkErr(f"Failed to get similar group for root {rootId}", e)
+
+
+# simOk mean that already resolve by user
+def getAnySimPending() -> Optional[models.Asset]:
+    try:
+        if conn is None: raise mkErr('the db is not init')
+
+        c = conn.cursor()
+
+        c.execute("""
+            UPDATE assets 
+            SET simOk = 1
+            WHERE simOk = 0
+            AND json_array_length(simInfos) = 1
+            AND EXISTS (
+                SELECT 1 FROM json_each(simInfos) si
+                WHERE json_extract(si.value, '$.isSelf') = 1
+            )
+        """)
+
+        c.execute("""
+            UPDATE assets 
+            SET simOk = 1
+            WHERE simOk = 0
+            AND json_array_length(simInfos) = 0
+        """)
+
+        conn.commit()
+
+        c.execute("""
             SELECT * FROM assets 
             WHERE simOk = 0 
             AND json_array_length(simInfos) > 0
+            LIMIT 1
         """)
 
         row = c.fetchone()
@@ -378,9 +464,27 @@ def getAnySimPending() -> Optional[models.Asset]:
         raise mkErr("Failed to get assets with unprocessed similar items", e)
 
 
-def setSimIds(assetId: str, infos: List[models.SimInfo]):
+def setSimOk(assId: str, isOk: int = 0):
+    try:
+        if conn is None: raise RuntimeError('the db is not init')
+
+        c = conn.cursor()
+
+        c.execute("SELECT id FROM assets WHERE id = ?", (assId,))
+        if not c.fetchone(): raise RuntimeError(f"Asset {assId} not found")
+
+        c.execute("UPDATE assets SET simOk = ? WHERE id = ?", (isOk, assId))
+        conn.commit()
+
+        lg.info(f"Updated asset {assId}, simOk[{isOk}]")
+        return True
+    except Exception as e:
+        raise mkErr(f"Failed to set simOK[{isOk}] assId[{assId}]", e)
+
+
+def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
     if not infos or len(infos) <= 0:
-        lg.warn(f"Can't setSimIds id[{assetId}] by [{type(infos)}], {tracebk.format_exc()}")
+        lg.warn(f"Can't setSimIds id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
         return
 
     try:
@@ -388,14 +492,15 @@ def setSimIds(assetId: str, infos: List[models.SimInfo]):
 
         c = conn.cursor()
 
-        c.execute("SELECT id FROM assets WHERE id = ?", (assetId,))
-        if not c.fetchone(): raise RuntimeError(f"Asset {assetId} not found")
+        c.execute("SELECT id FROM assets WHERE id = ?", (assId,))
+        if not c.fetchone(): raise RuntimeError(f"Asset {assId} not found")
 
         simDicts = [sim.toDict() for sim in infos] if infos else []
-        c.execute("UPDATE assets SET simInfos = ? WHERE id = ?", (json.dumps(simDicts), assetId))
+        c.execute("UPDATE assets SET simInfos = ?, simOk = ? WHERE id = ?",
+                  (json.dumps(simDicts), isOk, assId))
         conn.commit()
 
-        lg.info(f"Updated simInfos for asset {assetId}: {len(infos)} similar assets")
+        lg.info(f"Updated simInfos for asset {assId}: {len(infos)} similar assets, simOk[{isOk}]")
         return True
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)
@@ -433,7 +538,7 @@ def countHasSimIds(isOk=0):
 
         return count
     except Exception as e:
-        raise mkErr(f"Failed to count assets have simInfos with simOk={isOk}", e)
+        raise mkErr(f"Failed to count assets have simInfos with simOk[{isOk}]", e)
 
 def countSimOk(isOk=0):
     try:
@@ -447,4 +552,4 @@ def countSimOk(isOk=0):
 
         return count
     except Exception as e:
-        raise mkErr(f"Failed to count assets with simOk={isOk}", e)
+        raise mkErr(f"Failed to count assets with simOk[{isOk}]", e)
