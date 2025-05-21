@@ -19,8 +19,8 @@ def render():
             id=k.divId,
             style={
                 'position': 'fixed',
-                'bottom': '20px',
-                'right': '20px',
+                'bottom': '38px',
+                'right': '38px',
                 'maxWidth': '500px',
                 'zIndex': '1000'
             },

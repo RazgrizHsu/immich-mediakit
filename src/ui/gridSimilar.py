@@ -24,8 +24,9 @@ lg = log.get(__name__)
 #     return htm.Div(rows)
 
 
-def createGrid(assets: list[models.Asset], minW: int = 250, onEmpty=None):
+def createGrid(assets: list[models.Asset], rootId: str, minW: int = 250, onEmpty=None):
     if not assets or len(assets) == 0:
+        lg.info( "[sim-grid] return empty grid" )
         if onEmpty:
             if isinstance(onEmpty, str):
                 return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
@@ -37,15 +38,17 @@ def createGrid(assets: list[models.Asset], minW: int = 250, onEmpty=None):
             className="text-center"
         )
 
-    rootSimInfos = assets[0].simInfos
+    rootSI = next((a.simInfos for a in assets if a.id == rootId), None)
 
-    rows = [htm.Div(mkImgCardSim(a, rootSimInfos), className="photo-card") for a in assets]
+    rows = [htm.Div(mkImgCardSim(a, rootSI), className="photo-card") for a in assets]
 
     style = {
         "display": "grid",
         "grid-template-columns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
         "gap": "1rem"
     }
+
+    lg.info( f"[sim-grid] create with rows[{len(assets)}] return rows[{len(rows)}]" )
 
     return htm.Div(rows, style=style)
 
@@ -151,11 +154,15 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
     checked = ass.selected
     cssIds = "checked" if checked else ""
 
-    simInfo = next(i for i in simInfos if i.id == ass.id) if simInfos else models.SimInfo()
-    #lg.info( f"[imgCard] id[{assId}] infos[{len(simInfos)}] get[{info}]" )
+    si = next((i for i in simInfos if i.id == ass.id), None)
 
-    #lg.info( f"[imgCard] id[{assId}] exif: {ass.jsonExif}" )
-    exif = ass.jsonExif
+    if not si:
+        return dbc.Alert(f"Photo assetId[{assId}] SimNotFound not found", color="danger")
+
+    exi = ass.jsonExif
+
+    imgW = exi.exifImageWidth
+    imgH = exi.exifImageHeight
 
     return dbc.Card([
         dbc.CardHeader([
@@ -167,7 +174,7 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
                     )
                 ),
                 dbc.Col([
-                    htm.Span("score: "), htm.Span(f"{simInfo.score:.3f}", className="tag lg")
+                    htm.Span("score: "), htm.Span(f"{si.score:.6f}", className="tag lg ms-1")
                 ], className="d-flex justify-content-end")
             ])
 
@@ -175,12 +182,14 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
         htm.Div([
             htm.Img(
                 src=imgSrc,
-                id={ "type":"img-pop", "index":assId }, n_clicks=0,
+                id={"type": "img-pop", "index": assId}, n_clicks=0,
                 className="card-img"
             ),
             htm.Div([
-                htm.Span(f"{ass.autoId}", className="badge bg-primary me-1"),
-                htm.Span(f"{ass.autoId}", className="badge bg-primary"),
+                htm.Span(f"autoId: {ass.autoId}", className="badge"),
+            ]),
+            htm.Div([
+                htm.Span(f"{imgW} x {imgH}", className="badge bg-primary"),
             ])
         ], className="img"),
         dbc.CardBody([

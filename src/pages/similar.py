@@ -306,21 +306,27 @@ def similar_onStatus(dta_now, dta_nfy):
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
     cntRs = db.pics.countHasSimIds()
-    disFind = cntNo <= 0
-    disCler = cntOk <= 0
+    disFind = cntNo <= 0 or (cntRs >= cntNo)
+    disCler = cntOk <= 0 and cntRs <= 0
     disCont = cntRs <= 0
+
+    cntAssets = len(now.pg.sim.assets) if now.pg.sim.assets else -1
+
+    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now.pg.sim.assets[{cntAssets}]")
+
     grid = []
 
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    lg.info(f"now.pages.sim: {now.pages.sim}")
-    if now.pages.sim.isContinued:
+    if now.pg.sim.isContinued:
         disCont = True
 
-    grid = gvs.createGrid(now.assets, onEmpty=[
-        dbc.Alert( "Please find the similar images..", color="secondary", className="text-center" ),
+    grid = gvs.createGrid(now.pg.sim.assets, now.pg.sim.assId, onEmpty=[
+        dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
+
+    lg.info(f"[sim:status] 2- cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now.pg.sim.assets[{cntAssets}]")
 
     return cntNo, cntRs, cntOk, disFind, disCler, disCont, grid, nfy.toStore()
 
@@ -339,9 +345,9 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     now = models.Now.fromStore(dta_now)
     nfy = models.Nfy.fromStore(dta_nfy)
 
-    if ctx.triggered and now.assets and len(now.assets) > 1:
+    if ctx.triggered and now.pg.sim.assets and len(now.pg.sim.assets) > 1:
         trgId = ctx.triggered_id
-        ass = next((a for a in now.assets if a.id == trgId.id), None)
+        ass = next((a for a in now.pg.sim.assets if a.id == trgId.id), None)
         if ass:
             ass.selected = ctx.triggered[0]['value']
             # lg.info(f'[select] found: {ass.autoId}, selected: {ass.selected}, trgId: {trgId}')
@@ -388,7 +394,8 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
 
     if trgId == k.btnClear:
         cntOk = db.pics.countSimOk(isOk=1)
-        if cntOk <= 0:
+        cntRs = db.pics.countHasSimIds()
+        if cntOk <= 0 and cntRs <= 0:
             nfy.warn(f"[similar] DB does not contain any similarity records")
             return noUpd, nfy.toStore(), noUpd
 
@@ -396,23 +403,19 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
         mdl.id = ks.pg.similar
         mdl.cmd = ks.cmd.sim.clear
         mdl.msg = [
-            f"Are you sure you want to delete all similarity records ({cntOk})?", htm.Br(),
-            "This operation cannot be undone.", htm.Br(),
+            f"Are you sure you want to delete all records?", htm.Br(),
+            f"include reslove({cntOk}) and resume({cntRs})", htm.Br(),
+            htm.B("This operation cannot be undone"), htm.Br(),
             "You may need to perform all similarity searches again."
         ]
 
     if trgId == k.btnResume:
-        nfy.info("Loading pending similar groups...")
-
-        ass = db.pics.getAnySimPending()
-        if ass:
-            simIds = [si.id for si in ass.simInfos]
-            lg.info(f"Found pending group with {len(simIds)} similar images")
-
-            assets = db.pics.getAllByIds(simIds)
-            if assets:
-                now.pages.sim.isContinued = True
-                now.assets = assets
+        assets = db.pics.getAnySimPending()
+        if assets:
+            now.pg.sim.isContinued = True
+            now.pg.sim.assId = assets[0].id
+            now.pg.sim.assets = assets
+            nfy.info(f"Loading pending groups, id[{now.pg.sim.assId}] with {len(assets)} similar images")
 
 
     elif trgId == k.btnFind:
@@ -447,7 +450,7 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
         else:
-            now.assets = [asset]
+            now.pg.sim.assets = [asset]
 
             mdl.reset()
             mdl.args = {'thMin': thMin, 'thMax': thMax}
@@ -466,7 +469,51 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
 #========================================================================
 # task acts
 #========================================================================
-def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.IFnProg):
+def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.IFnProg):
+    if tsk.id != ks.pg.similar:
+        msg = f"[tsk] wrong triggerId[{tsk.id}]"
+        lg.warn(msg)
+        return nfy, now, msg
+
+    try:
+        onUpdate(10, "10%", "Preparing to clear similarity records...")
+
+        cntOk = db.pics.countSimOk(isOk=1)
+        cntRs = db.pics.countHasSimIds()
+
+        if cntOk <= 0 and cntRs <= 0:
+            msg = "No similarity records to clear"
+            lg.info(msg)
+            nfy.info(msg)
+            return nfy, now, msg
+
+        onUpdate(30, "30%", "Clearing similarity records from database...")
+
+        db.pics.clearSimIds()
+
+        onUpdate(90, "90%", "Updating dynamic data...")
+
+        if hasattr(db.dyn.dto, 'simId'): db.dyn.dto.simId = None
+        now.pg.sim.isContinued = False
+        now.pg.sim.assets = []
+        now.pg.sim.assId = None
+
+        onUpdate(100, "100%", "Clear completed")
+
+        msg = f"Successfully cleared {cntOk + cntRs} similarity records"
+        lg.info(f"[sim_Clear] {msg}")
+        nfy.success(msg)
+
+        return nfy, now, msg
+
+    except Exception as e:
+        msg = f"Failed to clear similarity records: {str(e)}"
+        lg.error(f"[sim_Clear] {msg}")
+        lg.error(traceback.format_exc())
+        nfy.error(msg)
+        return nfy, now, msg
+
+def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.IFnProg):
     if tsk.id != ks.pg.similar:
         msg = f"[tsk] wrong triggerId[{tsk.id}]"
         lg.warn(msg)
@@ -475,32 +522,26 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
     thMin, thMax = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99)
 
     try:
-        if not now.assets or len(now.assets) <= 0 or len(now.assets) >= 2:
-            raise RuntimeError(f"invalid now.assets: {now.assets}")
-
-        assets = now.assets
-        asset = assets[0]
-
-        onUpdate(1, "1%", f"prepare..")
-
-        if not asset:
-            msg = f"[tsk] assert not in now"
-            nfy.error(msg)
-            return nfy, now, msg
-        if not isinstance(asset, models.Asset):
-            msg = f"[tsk] the asset not is AssetType type[{type(asset)}]"
-            nfy.error(msg)
-            return nfy, now, msg
-
-        onUpdate(5, "5%", f"Starting search with thresholds [{thMin:.2f}-{thMax:.2f}]")
-
-        # less will contains self
-        infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
+        if not now.pg.sim.assets or len(now.pg.sim.assets) <= 0 or len(now.pg.sim.assets) >= 2:
+            raise RuntimeError(f"invalid now.pg.sim.assets: {now.pg.sim.assets}")
 
         # todo: 如果資料只包含自已
         #   - 如果是無引導id, 應該自動尋找下一筆
         #   - 如果是有引導id, 應該告知找不到相似圖片
 
+        asset = now.pg.sim.assets[0]
+
+        onUpdate(1, "1%", f"prepare..")
+
+        if not asset:
+            raise RuntimeError(f"[tsk] assert not in now")
+        if not isinstance(asset, models.Asset):
+            raise RuntimeError(f"[tsk] the asset not is AssetType type[{type(asset)}]")
+
+        onUpdate(5, "5%", f"Starting search with thresholds [{thMin:.2f}-{thMax:.2f}]")
+
+        # less will contains self
+        infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
 
         asset.simInfos = infos
 
@@ -547,7 +588,6 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
                 db.pics.setSimIds(simId, cInfos)
 
                 ass = db.pics.getById(simId)
-                assets.append(ass)
 
                 for info in cInfos:
                     if not info.isSelf and info.id not in doneIds:
@@ -559,7 +599,9 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
 
         onUpdate(95, "95%", f"Finalizing similar photo relationships")
 
-        now.assets = assets
+        now.pg.sim.assId = asset.id
+        now.pg.sim.assets = db.pics.getSimGroup(asset.id)
+        now.pg.sim.isContinued = False
 
         onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
 
@@ -580,7 +622,9 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
         lg.error(traceback.format_exc())
         return nfy, now, msg
 
+
 #========================================================================
 # Set up global functions
 #========================================================================
-task.mapFns[ks.cmd.sim.find] = similar_FindSimilar
+task.mapFns[ks.cmd.sim.find] = sim_FindSimilar
+task.mapFns[ks.cmd.sim.clear] = sim_Clear

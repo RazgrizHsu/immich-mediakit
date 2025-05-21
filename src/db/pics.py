@@ -389,16 +389,16 @@ def getSimRootNodes(simOk=0) -> List[models.Asset]:
         raise mkErr("Failed to get similar root nodes", e)
 
 
-def getSimGroup(rootId: str) -> List[models.Asset]:
+def getSimGroup(assId: str) -> Optional[List[models.Asset]]:
     try:
         if conn is None: raise mkErr('the db is not init')
 
         c = conn.cursor()
-        c.execute("SELECT * FROM assets WHERE id = ?", (rootId,))
+        c.execute("SELECT * FROM assets WHERE id = ?", (assId,))
         row = c.fetchone()
         if row is None:
-            lg.warn(f"Root asset {rootId} not found")
-            return []
+            lg.warn(f"Root asset {assId} not found")
+            return None
 
         rootAsset = models.Asset.fromDB(c, row)
         rst = [rootAsset]
@@ -414,15 +414,25 @@ def getSimGroup(rootId: str) -> List[models.Asset]:
         rows = c.fetchall()
 
         assets = [models.Asset.fromDB(c, row) for row in rows]
-        rst.extend(assets)
 
-        return assets
+        # 建立 id 到 asset 的映射
+        assetMap = {asset.id: asset for asset in assets}
+
+        # 依照 rootAsset.simInfos 的 score 排序 (大到小)
+        sortedAssets = []
+        for simInfo in sorted(rootAsset.simInfos, key=lambda x: x.score or 0, reverse=True):
+            if simInfo.id in assetMap:
+                sortedAssets.append(assetMap[simInfo.id])
+
+        rst.extend(sortedAssets)
+
+        return sortedAssets
     except Exception as e:
-        raise mkErr(f"Failed to get similar group for root {rootId}", e)
+        raise mkErr(f"Failed to get similar group for root {assId}", e)
 
 
 # simOk mean that already resolve by user
-def getAnySimPending() -> Optional[models.Asset]:
+def getAnySimPending() -> Optional[List[models.Asset]]:
     try:
         if conn is None: raise mkErr('the db is not init')
 
@@ -449,17 +459,16 @@ def getAnySimPending() -> Optional[models.Asset]:
         conn.commit()
 
         c.execute("""
-            SELECT * FROM assets 
+            SELECT id FROM assets 
             WHERE simOk = 0 
             AND json_array_length(simInfos) > 0
             LIMIT 1
         """)
 
-        row = c.fetchone()
-        if row is None: return None
+        assId = c.fetchone()[0]
 
-        asset = models.Asset.fromDB(c, row)
-        return asset
+        return getSimGroup(assId)
+
     except Exception as e:
         raise mkErr("Failed to get assets with unprocessed similar items", e)
 
