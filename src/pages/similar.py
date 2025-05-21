@@ -3,7 +3,7 @@ from typing import Optional
 
 import db
 from conf import ks, co
-from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
+from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
 from util import log, models, task
 
 lg = log.get(__name__)
@@ -149,18 +149,18 @@ def layout(assetId=None, **kwargs):
                 dbc.Tab([
                     htm.Div([
 
-                        dbc.Row([
-                            dbc.Col([
-                                dbc.Pagination(id=k.pager, active_page=7, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
-                            ], className="d-flex justify-content-center mb-3")
-                        ]),
-
                         dbc.Spinner(
                             htm.Div(id=k.grid, className="mt-2"),
                             color="primary",
                             type="border",
                             spinner_style={"width": "3rem", "height": "3rem"}
-                        )
+                        ),
+
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Pagination(id=k.pager, active_page=7, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
+                            ], className="d-flex justify-content-center mb-3")
+                        ]),
                     ])
                 ], label="Assets", tab_id="0"),
             ], active_tab="0"),
@@ -185,49 +185,72 @@ def layout(assetId=None, **kwargs):
 #========================================================================
 # callbacks
 #========================================================================
-#
-# def mka( aid=0 ):
-#     ret = models.Asset.fromStore({ "id":f"{aid}" })
-#     return ret
-#
-# def mk( ass ):
-#     return gvs.create_photo_card(ass, f"lb")
-#
-# def createGV():
-#     ass = [
-#         mka(1), mka(2), mka(3), mka(4), mka(5), mka(6), mka(7),
-#     ]
-#     return gvs.createGrid( ass, mk, 260 )
 
-
-#========================================================================
-# Update search status counters
-#========================================================================
+#------------------------------------------------------------------------
+# Update status counters
+#------------------------------------------------------------------------
+from ui import gridSimilar as gvs
 @callback(
     [
         out(k.txtCntNo, "children"),
         out(k.txtCntOk, "children"),
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
+        out(k.grid, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
     ],
     inp(ks.sto.now, "data"),
     ste(ks.sto.nfy, "data"),
     prevent_initial_call='initial_duplicate'
 )
-def similar_onStatus(dta_now, dat_nfy):
-    nfy = models.Nfy.fromStore(dat_nfy)
+def similar_onStatus(dta_now, dta_nfy):
+    now = models.Now.fromStore(dta_now)
+    nfy = models.Nfy.fromStore(dta_nfy)
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
-
     canFind = not cntNo >= 1
     canCler = not cntOk >= 1
+    grid = []
 
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    return cntNo, cntOk, canFind, canCler, nfy.toStore()
+    if now.assets and len(now.assets) > 1:
+        lg.info( f"now.assets[{len(now.assets)}]" )
+
+        grid = gvs.createGrid( now.assets, gvs.create_photo_card )
+
+    return cntNo, cntOk, canFind, canCler, grid, nfy.toStore()
+
+
+#------------------------------------------------------------------------
+# Update status counters
+#------------------------------------------------------------------------
+@callback(
+    out(ks.sto.now, "data"),
+    inp({"type": "cbx-select", "id": ALL}, "value"),
+    ste(ks.sto.now, "data"),
+    ste(ks.sto.nfy, "data"),
+    prevent_initial_call=True
+)
+def update_selected_photos(clks, dta_now, dta_nfy):
+
+    now = models.Now.fromStore(dta_now)
+    nfy = models.Nfy.fromStore(dta_nfy)
+
+    trgId = ctx.triggered_id
+    lg.info( f"[selected] trgId[{trgId}] id[{trgId.id}] {clks}" )
+    lg.info( f'[select] ->> {ctx.triggered_prop_ids}')
+
+    if trgId.id and now.assets and len(now.assets) > 1:
+        ass = next( a for a in now.assets if a.id == trgId.id )
+        if ass:
+            # ass.selected = newSelected
+            lg.info(f'[select] found: {ass.autoId}')
+
+
+    return now.toStore()
 
 
 #========================================================================
@@ -357,20 +380,27 @@ def similar_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpd
 
         onUpdate(5, "5%", f"Starting search with thresholds [{thMin:.2f}-{thMax:.2f}]")
 
-        simInfos = db.vecs.findSimiliar(asset.id, thMin, thMax)
+        infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
 
-        simIds = [photo_id2 for photo_id1, photo_id2, score in simInfos]
+        for idx, info in enumerate(infos):
+            id, score = info.toTuple()
+            lg.info(f"  no.{idx + 1}: ID[{id}], score[{score:.6f}]")
+
+        simIds = [ i.id for i in infos]
+
         onUpdate(80, "80%", f"Found {len(simIds)} similar photos")
 
-        db.pics.setSimIds(asset.id, simIds)
+        db.pics.setSimIds(asset.id, infos)
+
+        assets = db.pics.getBy( simIds )
+
+        now.assets.extend(assets)
 
         onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
 
         msg = f"Found {len(simIds)} similar photos for {asset.originalFileName}"
         nfy.success(msg)
 
-        # select back all simIds assets
-        # db.pics.get()
 
 
         return nfy, now, msg

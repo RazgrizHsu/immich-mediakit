@@ -159,7 +159,10 @@ def save(photo_id, vector):
         raise mkErr(f"Error saving vector for photo {photo_id}", e)
 
 
-def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> list[models.SimilarInfo]:
+#------------------------------------------------------------------------
+# only return different id
+#------------------------------------------------------------------------
+def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> list[models.SimInfo]:
     try:
         if conn is None:
             lg.info("Qdrant connection not initialized")
@@ -210,31 +213,13 @@ def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> l
 
         rst = conn.search(collection_name=keyColl, query_vector=vector, limit=limit, score_threshold=thMin, with_payload=True)
 
-        lg.info(f"[vecs] search results( {len(rst)} ):")
+        infos: list[models.SimInfo] = []
+
+        #lg.info(f"[vecs] search results( {len(rst)} ):")
         for i, hit in enumerate(rst):
-            lg.info(f"    no.{i + 1}: ID[{hit.id}], score[{hit.score:.6f}] self[{hit.id == assId}]")
-
-        infos: list[models.SimilarInfo] = []
-        for hit in rst:
-            if hit.id != assId and hit.score <= thMax:
-                #------------------------------------------------------------------------------------------------
-                # This code compares IDs to ensure consistent ordering of similar image pairs.
-                #   By always placing the smaller ID first (ida) and larger ID second (idb):
-                #
-                #   1. Prevents duplicate pairs - avoids storing both (A,B) and (B,A)
-                #   2. Creates consistent results regardless of search direction
-                #   3. Simplifies database operations by maintaining a canonical representation
-                #
-                #   Example: For photos 100 and 200, only stores (100,200) instead of both (100,200) and (200,100).
-                #------------------------------------------------------------------------------------------------
-                if assId < hit.id:
-                    infos.append(models.SimilarInfo(assId, hit.id, hit.score))
-                else:
-                    infos.append(models.SimilarInfo(hit.id, assId, hit.score))
-
-        lg.info(f"Number of similar photos after filtering: {len(infos)}")
-        for i, (id1, id2, score) in enumerate(infos):
-            lg.info(f"  Similar pair {i + 1}: ID1={id1}, ID2={id2}, similarity score={score:.6f}")
+            #lg.info(f"    no.{i + 1}: ID[{hit.id}], score[{hit.score:.6f}] self[{hit.id == assId}]")
+            if hit.score <= thMax and hit.id != assId:
+                infos.append(models.SimInfo(hit.id, hit.score))
 
         return infos
     except Exception as e:

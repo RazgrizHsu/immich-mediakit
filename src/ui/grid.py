@@ -26,11 +26,11 @@ def createGrid(assets: list[models.Asset], minW: int = 250) -> htm.Div:
 
 def createPhotoCard(asset: models.Asset):
     hasVec = asset.isVectored == 1
-    filename = asset.originalFileName or '---'
-    created_date = asset.fileCreatedAt or 'Unknown date'
-    is_favorite = asset.isFavorite == 1
-    img_index = asset.id
-    has_exif = asset.jsonExif is not None
+    fnm = asset.originalFileName or '---'
+    dtc = asset.fileCreatedAt or 'Unknown date'
+    isFav = asset.isFavorite == 1
+    assId = asset.id
+    hasEx = asset.jsonExif is not None
 
     if asset.id:
         image_src = f"/api/img/{asset.id}"
@@ -38,10 +38,10 @@ def createPhotoCard(asset: models.Asset):
         image_src = "assets/noimg.png"
 
     exif_tooltip = None
-    if has_exif and asset.jsonExif is not None:
+    if hasEx and asset.jsonExif is not None:
         try:
             exif_data = asset.jsonExif.toDict()
-            exif_tooltip = createExifTooltip(img_index, exif_data)
+            exif_tooltip = createExifTooltip(assId, exif_data)
         except Exception as e:
             lg.error(f"Error processing EXIF data: {e}")
 
@@ -52,16 +52,16 @@ def createPhotoCard(asset: models.Asset):
                 top=True,
                 style={"height": "160px", "objectFit": "cover", "cursor": "pointer"},
             )
-        ], id={"type": "img-pop", "index": img_index}, n_clicks=0),
+        ], id={"type": "img-pop", "index": assId}, n_clicks=0),
         dbc.CardBody([
             htm.H6(
-                filename,
+                fnm,
                 className="text-truncate",
-                title=filename,
+                title=fnm,
                 style={"fontSize": "0.9rem"}
             ),
             htm.P(
-                created_date,
+                dtc,
                 className="small",
                 style={"fontSize": "0.8rem"}
             ),
@@ -75,11 +75,11 @@ def createPhotoCard(asset: models.Asset):
                     "EXIF",
                     color="info",
                     className="me-1 exif-badge",
-                    id={"type": "exif-badge", "index": img_index}
-                ) if has_exif else htm.Span(),
+                    id={"type": "exif-badge", "index": assId}
+                ) if hasEx else htm.Span(),
                 dbc.Badge(
                     "❤️", color="danger", className="ms-1"
-                ) if is_favorite else htm.Span(),
+                ) if isFav else htm.Span(),
             ], className="d-flex flex-wrap"),
             exif_tooltip
         ], className="p-2")

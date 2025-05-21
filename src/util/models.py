@@ -98,10 +98,12 @@ class ProcessInfo(BaseDictModel):
     done: int = 0
 
 @dataclass
-class SimilarInfo(BaseDictModel):
-    ida: Optional[str] = None
-    idb: Optional[str] = None
+class SimInfo(BaseDictModel):
+    id: Optional[str] = None
     score: Optional[float] = None
+
+    #dynamic only
+    self = False
 
 
 @dataclass
@@ -138,18 +140,21 @@ class Asset(BaseDictModel):
     originalFileName: Optional[str] = None
     fileCreatedAt: Optional[str] = None
     fileModifiedAt: Optional[str] = None
-    isFavorite: Optional[int] = None
-    isVisible: Optional[int] = None
-    isArchived: Optional[int] = None
+    isFavorite: Optional[int] = 0
+    isVisible: Optional[int] = 0
+    isArchived: Optional[int] = 0
     libraryId: Optional[str] = None
     localDateTime: Optional[str] = None
     thumbnail_path: Optional[str] = None
     preview_path: Optional[str] = None
     fullsize_path: Optional[str] = None
     jsonExif: Optional[AssetExif] = None
-    isVectored: int = 0
-    simOk: int = 0
-    simIds: List[str] = field(default_factory=list)
+    isVectored: Optional[int] = 0
+    simOk: Optional[int] = 0
+    simIds: List[SimInfo] = field(default_factory=list)
+
+    # view only
+    selected = False
 
     def getImagePath(self, photoQ=None):
         import os

@@ -1,9 +1,9 @@
 import inspect
 import json
 import sqlite3
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, astuple
 from datetime import datetime
-from typing import Dict, Any, Optional, Type, TypeVar, Union, get_type_hints, get_origin, get_args
+from typing import Dict, Any, Optional, Type, Tuple, TypeVar, Union, get_type_hints, get_origin, get_args
 
 from util import log
 
@@ -45,6 +45,9 @@ class BaseDictModel:
 
     # noinspection PyTypeChecker
     def toDict(self) -> Dict[str, Any]: return asdict(self)
+
+    # noinspection PyTypeChecker
+    def toTuple(self) -> Tuple[Any, ...]: return astuple(self)
 
     def toJson(self) -> str: return json.dumps(self.toDict(), default=self.jsonSerializer, ensure_ascii=False)
 
@@ -173,7 +176,7 @@ class BaseDictModel:
             origin = get_origin(hint_type)
 
             if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or
-                    (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
+                                         (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
                 processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
             else:
                 processed_data[key] = val
@@ -214,8 +217,14 @@ class BaseDictModel:
             hint_type = type_hints[key]
             origin = get_origin(hint_type)
 
-            if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or
-                    (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
+            if (key in complex_fields
+                or
+                (
+                    isinstance(val, str) and cls._is_model_subclass(hint_type)
+                    or
+                    (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))
+                )
+            ):
                 processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
             else:
                 processed_data[key] = val
@@ -228,5 +237,3 @@ class BaseDictModel:
                 return cls(**filtered_data)
             except:
                 raise e
-
-        return cls(**processed_data)
