@@ -127,9 +127,16 @@ def regBy(app):
 
         lg.info(f"[Task] Start.. id[{tsk.id}] name[{tsk.name}] keyFn[{tsk.cmd}]")
 
-        fn = mapFns[tsk.cmd]
+        fn = mapFns.get(tsk.cmd)
+
         msg = None
         pct = 0
+
+        if not fn:
+            msg = f"[Task] mapFns cmd[{tsk.name}] not found"
+            nfy.error(msg)
+            return msg, pct, tsk.toStore(), nfy.toStore(), now.toStore()
+
 
         def onUpd(percent, label, msg):
             lg.info(f"[Task] id[{tsk.id}] progress: {percent}% - {label} - {msg}")

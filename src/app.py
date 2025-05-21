@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 debug=True,
                 host='0.0.0.0',
                 port=int(conf.envs.mkitPort),
-                dev_tools_ui=True,
+                dev_tools_ui=False,
                 dev_tools_props_check=True,
                 dev_tools_hot_reload=True,
                 dev_tools_silence_routes_logging=True,

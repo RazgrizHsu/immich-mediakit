@@ -193,6 +193,11 @@ class PageSim(BaseDictModel):
     disableTabIds: List[str] = field(default_factory=list)
     isContinued: Optional[bool] = None
 
+    assId: Optional[str] = None
+    assets: List[Asset] = field(default_factory=list)
+
+    selectIds: List[str] = field(default_factory=list)
+
 @dataclass
 class Pages(BaseDictModel):
     sim: PageSim = field(default_factory=PageSim)
@@ -206,11 +211,7 @@ class Now(BaseDictModel):
     cntPic: int = 0
     cntVec: int = 0
 
-    selectIds: List[str] = field(default_factory=list)
-
-    assets: List[Asset] = field(default_factory=list)
-
-    pages: Pages = field(default_factory=Pages)
+    pg: Pages = field(default_factory=Pages)
 
     def switchUsr(self, usrId):
         if self.usrs:

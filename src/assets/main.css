@@ -153,7 +153,9 @@ span { vertical-align: middle; }
 
 .card.sim .img img { object-fit: contain; height: 180px; cursor: pointer !important; }
 
-.card.sim .img div { position: absolute; bottom: 5px; left: 5px; }
+.card.sim .img > div:nth-child(2) { position: absolute; bottom: 5px; left: 5px; display: flex; justify-content: start; }
+
+.card.sim .img > div { position: absolute; bottom: 5px; right: 5px; display: flex; justify-content: end; }
 
 .card.sim .grid { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
 

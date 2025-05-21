@@ -537,10 +537,21 @@ span {
 		}
 
 		//floating on img left-bottom
-		div {
+		> div:nth-child(2) {
 			position: absolute;
 			bottom: 5px;
 			left: 5px;
+			//border: blue 1px solid;
+			display: flex;
+			justify-content:start;
+		}
+		> div {
+			position: absolute;
+			bottom: 5px;
+			right: 5px;
+			//border: red 1px solid;
+			display: flex;
+			justify-content:end;
 		}
 
 	}
