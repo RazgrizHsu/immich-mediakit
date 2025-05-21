@@ -151,11 +151,11 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
     checked = ass.selected
     cssIds = "checked" if checked else ""
 
+    simInfo = next(i for i in simInfos if i.id == ass.id) if simInfos else models.SimInfo()
+    #lg.info( f"[imgCard] id[{assId}] infos[{len(simInfos)}] get[{info}]" )
 
-    info = next( i for i in simInfos if i.id == ass.id )
-    lg.info( f"[imgCard] id[{assId}] infos[{len(simInfos)}] get[{info}]" )
-
-
+    #lg.info( f"[imgCard] id[{assId}] exif: {ass.jsonExif}" )
+    exif = ass.jsonExif
 
     return dbc.Card([
         dbc.CardHeader([
@@ -167,16 +167,22 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
                     )
                 ),
                 dbc.Col([
-                    htm.Span("score: "), htm.Span(f"{info.score:.3f}", className="tag lg")
+                    htm.Span("score: "), htm.Span(f"{simInfo.score:.3f}", className="tag lg")
                 ], className="d-flex justify-content-end")
             ])
 
         ], className=""),
-        dbc.CardImg(
-            src=imgSrc,
-            top=True,
-            style={"height": "200px", "objectFit": "contain"}
-        ),
+        htm.Div([
+            htm.Img(
+                src=imgSrc,
+                id={ "type":"img-pop", "index":assId }, n_clicks=0,
+                className="card-img"
+            ),
+            htm.Div([
+                htm.Span(f"{ass.autoId}", className="badge bg-primary me-1"),
+                htm.Span(f"{ass.autoId}", className="badge bg-primary"),
+            ])
+        ], className="img"),
         dbc.CardBody([
             dbc.Row([
                 htm.Span("id"), htm.Span(f"{ass.id}", className="badge bg-success text-truncate"),

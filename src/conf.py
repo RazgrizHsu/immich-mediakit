@@ -131,7 +131,25 @@ class ks:
             "iso": "ISO",
             "exifImageWidth": "Width",
             "exifImageHeight": "Height",
-            "fileSizeInByte": "File Size"
+            "fileSizeInByte": "File Size",
+            "orientation": "Orientation",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "city": "City",
+            "state": "State",
+            "country": "Country",
+            "description": "Description",
+            "fps": "Frame Rate",
+            "livePhotoCID": "Live Photo CID",
+            "timeZone": "Time Zone",
+            "projectionType": "Projection Type",
+            "profileDescription": "Profile Description",
+            "colorspace": "Color Space",
+            "bitsPerSample": "Bits Per Sample",
+            "autoStackId": "Auto Stack ID",
+            "rating": "Rating",
+            "updatedAt": "Updated At",
+            "updateId": "Update ID"
         }
         thMarks = {0: "0", 0.2: "0.2", 0.4: "0.4", 0.6: "0.6", 0.8: "0.8", 0.9: "0.9", 0.95: "0.95", 1: "1"}
 

@@ -412,7 +412,7 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
             assets = db.pics.getAllByIds(simIds)
             if assets:
                 now.pages.sim.isContinued = True
-                now.assets = [ass] + assets
+                now.assets = assets
 
 
     elif trgId == k.btnFind:
