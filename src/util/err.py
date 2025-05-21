@@ -1,5 +1,5 @@
 import functools
-import traceback
+import traceback as tracebk
 from typing import Optional
 from dash import callback_context, no_update
 from util import log
@@ -15,7 +15,7 @@ class mkErr(RuntimeError):
         super().__init__(errMsg)
 
         lg.error(errMsg)
-        lg.error(traceback.format_exc())
+        lg.error(tracebk.format_exc())
 
     @staticmethod
     def wrap(msg: str, e: Exception): return mkErr(msg, e)
@@ -38,7 +38,7 @@ def injectCallbacks(app):
                     trigger = ctx.triggered[0] if ctx.triggered else "Unknown trigger source"
 
                     error_msg = f"[CallBack] ERR: {str(e)}"
-                    stack_trace = traceback.format_exc()
+                    stack_trace = tracebk.format_exc()
                     lg.error(f"{error_msg}\nTrigger source: {trigger}\n{stack_trace}")
 
 

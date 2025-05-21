@@ -6,7 +6,7 @@ from typing import Optional, List
 from conf import envs
 from util import log, models
 from util.baseModel import BaseDictModel
-from util.err import mkErr
+from util.err import mkErr, tracebk
 
 lg = log.get(__name__)
 conn: Optional[sqlite3.dbapi2.Connection] = None
@@ -351,7 +351,11 @@ def deleteForUsr(usrId):
     except Exception as e:
         raise mkErr("Failed to delete user assets", e)
 
-def setSimIds(assetId: str, similarIds: List[str]):
+def setSimIds(assetId: str, infos: List[models.SimInfo]):
+    if not infos or len(infos) <= 0:
+        lg.warn(f"Can't setSimIds id[{assetId}] by [{type(infos)}], {tracebk.format_exc()}")
+        return
+
     try:
         if conn is None: raise RuntimeError('the db is not init')
 
@@ -360,10 +364,11 @@ def setSimIds(assetId: str, similarIds: List[str]):
         c.execute("SELECT id FROM assets WHERE id = ?", (assetId,))
         if not c.fetchone(): raise RuntimeError(f"Asset {assetId} not found")
 
-        c.execute("UPDATE assets SET simIds = ? WHERE id = ?", (json.dumps(similarIds), assetId))
+        simDicts = [sim.toDict() for sim in infos] if infos else []
+        c.execute("UPDATE assets SET simIds = ? WHERE id = ?", (json.dumps(simDicts), assetId))
         conn.commit()
 
-        lg.info(f"Updated simIds for asset {assetId}: {len(similarIds)} similar assets")
+        lg.info(f"Updated simIds for asset {assetId}: {len(infos)} similar assets")
         return True
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)

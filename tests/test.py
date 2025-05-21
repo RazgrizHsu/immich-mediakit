@@ -1,26 +1,25 @@
 #!/usr/bin/env python
-import json
 import os
 import sys
 import unittest
-from datetime import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from util.models import Now, Usr, Nfy, Tsk, Mdl, Asset, AssetExif
-from util.baseModel import Json
-from util import log
+from util import log, models
 from conf import ks, co
+import db
 
 lg = log.get(__name__)
 
+
+db.init()
 
 class TestBase(unittest.TestCase):
     def test_base(self):
         lg.info( "ok" )
 
     def test_code(self):
-        mdl = Mdl()
+        mdl = models.Mdl()
 
         mdl.id = ks.pg.fetch
         mdl.cmd = ks.cmd.fetch.asset
@@ -50,6 +49,26 @@ class TestBase(unittest.TestCase):
             b = 2
 
         lg.info( f"a.to: { a.dict() }" )
+
+    def test_sim(self):
+
+        asset = db.pics.getAnyNonSim()
+        lg.info( f"asset: {asset}" )
+
+        infos = db.vecs.findSimiliar(asset.id, 0.8, 1.0)
+
+        simIds = [ i.id for i in infos]
+
+        lg.info( f"Found {len(simIds)} similar, ids: {simIds}" )
+
+
+        # select back all simIds assets
+        # db.pics.get()
+
+        for idx, info in enumerate(infos):
+            id, score = info.toTuple()
+            lg.info(f"  Similar pair {idx + 1}: ID[{id}], score[{score:.6f}]")
+
 
 
 
