@@ -149,6 +149,12 @@ span { vertical-align: middle; }
 
 .card.sim.checked { border: 3px solid var(--info-bs); }
 
+.card.sim .img { position: relative; }
+
+.card.sim .img img { object-fit: contain; height: 180px; cursor: pointer !important; }
+
+.card.sim .img div { position: absolute; bottom: 5px; left: 5px; }
+
 .card.sim .grid { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
 
 .card.sim .grid > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }

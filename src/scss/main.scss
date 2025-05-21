@@ -508,7 +508,9 @@ span {
 }
 
 
-//similar
+//========================================================================
+// similar
+//========================================================================
 .card.sim {
 
 	$show-borders:false;
@@ -522,6 +524,25 @@ span {
 
 	&.checked {
 		border:3px solid var(--info-bs);
+	}
+
+	.img {
+
+		position: relative;
+
+		img {
+			object-fit:contain;
+			height: 180px;
+			cursor: pointer!important;
+		}
+
+		//floating on img left-bottom
+		div {
+			position: absolute;
+			bottom: 5px;
+			left: 5px;
+		}
+
 	}
 
 	.grid {

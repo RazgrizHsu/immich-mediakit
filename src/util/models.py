@@ -116,17 +116,37 @@ class Usr(BaseDictModel):
 class AssetExif(BaseDictModel):
     make: Optional[str] = None
     model: Optional[str] = None
-    orientation: Optional[int] = None
-    exposureTime: Optional[str] = None
+    exifImageWidth: Optional[int] = None
+    exifImageHeight: Optional[int] = None
+    fileSizeInByte: Optional[int] = None
+    orientation: Optional[str] = None
+    dateTimeOriginal: Optional[str] = None
+    modifyDate: Optional[str] = None
+    lensModel: Optional[str] = None
     fNumber: Optional[float] = None
     focalLength: Optional[float] = None
     iso: Optional[int] = None
-    width: Optional[int] = None
-    height: Optional[int] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    dateTimeOriginal: Optional[str] = None
-    lensModel: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    description: Optional[str] = None
+    fps: Optional[float] = None
+    exposureTime: Optional[str] = None
+    livePhotoCID: Optional[str] = None
+    timeZone: Optional[str] = None
+    projectionType: Optional[str] = None
+    profileDescription: Optional[str] = None
+    colorspace: Optional[str] = None
+    bitsPerSample: Optional[int] = None
+    autoStackId: Optional[str] = None
+    rating: Optional[int] = None
+    updatedAt: Optional[str] = None
+    updateId: Optional[str] = None
+
+    def toAvDict(self):
+        return {k: v for k, v in self.toDict().items() if v is not None}
 
 @dataclass
 class Asset(BaseDictModel):
