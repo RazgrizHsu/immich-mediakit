@@ -15,7 +15,10 @@ app = dash.Dash(
     __name__,
     title=conf.ks.title,
     external_stylesheets=[dbc.themes.DARKLY],
-    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+        {"rel": "icon", "type": "image/x-icon", "href": "/assets/favicon.ico"}
+    ],
     suppress_callback_exceptions=True,
     use_pages=True,
     pages_folder="pages",
