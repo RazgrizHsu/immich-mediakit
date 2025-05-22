@@ -199,4 +199,4 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: IFnProg = None) -> m
         return pi
 
     except Exception as e:
-        raise mkErr("Failed to close database connection", e)
+        raise mkErr("Failed to generate vectors for assets", e)

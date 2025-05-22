@@ -1,8 +1,9 @@
+import os
 import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional
 
-from conf import ks
+from conf import ks, envs
 from util import log
 from util.baseModel import BaseDictModel
 
@@ -175,8 +176,6 @@ class Asset(BaseDictModel):
     selected:Optional[bool] = False
 
     def getImagePath(self, photoQ=None):
-        import os
-        from conf import ks, envs
 
         if photoQ == ks.db.fullsize:
             path = self.fullsize_path
@@ -184,6 +183,10 @@ class Asset(BaseDictModel):
             path = self.preview_path
         else:
             path = self.thumbnail_path
+
+        if not path: path = self.thumbnail_path
+
+        if not path: raise RuntimeError( f"the thumbnail path is empty, assetId[{self.id}]" )
 
         return os.path.join(envs.immichPath, path)
 
@@ -197,6 +200,12 @@ class PageSim(BaseDictModel):
     assets: List[Asset] = field(default_factory=list)
 
     selectIds: List[str] = field(default_factory=list)
+
+    def reset(self):
+        self.avTabId = self.isContinued = self.assId = None
+        self.assets = []
+        self.selectIds = []
+        self.disableTabIds = []
 
 @dataclass
 class Pages(BaseDictModel):

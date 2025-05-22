@@ -44,7 +44,7 @@ def layout(assetId=None, **kwargs):
         ass = db.pics.getById(assetId)
         if ass and db.dyn.dto.simId != assetId:
             db.dyn.dto.simId = assetId
-            lg.info(f"[sim] set current assetId[{assetId}]")
+            lg.info(f"[sim] =============>>>> set current assetId[{assetId}]")
 
     return htm.Div([
 
@@ -314,6 +314,9 @@ def similar_onStatus(dta_now, dta_nfy):
 
     lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now.pg.sim.assets[{cntAssets}]")
 
+    if cntAssets >= 1:
+        lg.info( f"[sim:status] assets: {now.pg.sim.assets[0]}" )
+
     grid = []
 
     if cntNo <= 0:
@@ -325,8 +328,6 @@ def similar_onStatus(dta_now, dta_nfy):
     grid = gvs.createGrid(now.pg.sim.assets, now.pg.sim.assId, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
-
-    lg.info(f"[sim:status] 2- cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now.pg.sim.assets[{cntAssets}]")
 
     return cntNo, cntRs, cntOk, disFind, disCler, disCont, grid, nfy.toStore()
 
@@ -421,6 +422,7 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
     elif trgId == k.btnFind:
         if now.cntVec <= 0:
             nfy.error("No vector data to process")
+            now.pg.sim.reset()
             return mdl.toStore(), nfy.toStore(), noUpd
 
         thMin, thMax = thRange
@@ -447,10 +449,12 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
                 asset = ass
                 lg.info(f"[sim] found non-simOk assetId[{ass.id}]")
 
+
+        now.pg.sim.reset()
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
         else:
-            now.pg.sim.assets = [asset]
+            now.pg.sim.assId = asset.id
 
             mdl.reset()
             mdl.args = {'thMin': thMin, 'thMax': thMax}
@@ -460,6 +464,7 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
                 f"Begin finding similar?", htm.Br(),
                 f"threshold[{thMin:.2f}-{thMax:.2f}]]",
             ]
+
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
@@ -513,6 +518,8 @@ def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.
         nfy.error(msg)
         return nfy, now, msg
 
+
+
 def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.IFnProg):
     if tsk.id != ks.pg.similar:
         msg = f"[tsk] wrong triggerId[{tsk.id}]"
@@ -522,21 +529,21 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
     thMin, thMax = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99)
 
     try:
-        if not now.pg.sim.assets or len(now.pg.sim.assets) <= 0 or len(now.pg.sim.assets) >= 2:
-            raise RuntimeError(f"invalid now.pg.sim.assets: {now.pg.sim.assets}")
-
         # todo: 如果資料只包含自已
         #   - 如果是無引導id, 應該自動尋找下一筆
         #   - 如果是有引導id, 應該告知找不到相似圖片
 
-        asset = now.pg.sim.assets[0]
+        assetId = now.pg.sim.assId
+        if not assetId:
+            raise RuntimeError(f"[tsk] sim.assId is empty")
+
 
         onUpdate(1, "1%", f"prepare..")
 
+        asset = db.pics.getById(assetId)
+
         if not asset:
-            raise RuntimeError(f"[tsk] assert not in now")
-        if not isinstance(asset, models.Asset):
-            raise RuntimeError(f"[tsk] the asset not is AssetType type[{type(asset)}]")
+            raise RuntimeError(f"[tsk] not found assetId[{assetId}]")
 
         onUpdate(5, "5%", f"Starting search with thresholds [{thMin:.2f}-{thMax:.2f}]")
 
@@ -562,6 +569,9 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         pgAll = len(simIds)
         if pgAll == 0:
             db.pics.setSimIds(asset.id, infos, isOk=1)
+
+            now.pg.sim.reset()
+
             onUpdate(100, "100%", f"No similar photos found for {asset.originalFileName}")
             msg = f"No similar photos found for {asset.originalFileName}"
             nfy.info(msg)
@@ -620,6 +630,7 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         msg = f"Similar photo search failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
+        now.pg.sim.reset()
         return nfy, now, msg
 
 
