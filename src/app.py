@@ -3,8 +3,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from dsh import dash, htm, dcc, dbc
-from dsh import bgCallbackManager
+from dsh import dash, htm, dcc, dbc, bgMgr
 from util import log, notify, session, task, err, modal, modalImg
 from ui import layout
 import conf, db
@@ -22,7 +21,7 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
     use_pages=True,
     pages_folder="pages",
-    background_callback_manager=bgCallbackManager,
+    background_callback_manager=bgMgr,
 )
 
 err.injectCallbacks(app)
