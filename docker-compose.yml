@@ -19,6 +19,7 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - qdrant
+      - redis
     healthcheck:
       test: sh -c "curl -f http://localhost:${MKIT_PORT:-8086}/ || exit 1"
       interval: 30s
@@ -34,3 +35,13 @@ services:
       - ${QDRANT_PORT:-6333}:6333
     volumes:
       - ${MKIT_DATA}/qdrant:/qdrant/storage
+
+  redis:
+    container_name: immich-mediakit-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - ${REDIS_PORT:-6379}:6379
+    volumes:
+      - ${MKIT_DATA}/redis:/data
+    command: redis-server --save 60 1 --loglevel warning
