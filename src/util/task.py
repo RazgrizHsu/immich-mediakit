@@ -46,7 +46,7 @@ def render():
     ],
         id=k.div,
         style={'display': 'none'},
-        className="mb-4 card cardbody p-3 border"
+        className="ms-4 me-4 mb-4 card cardbody p-3 border"
     )
 
 

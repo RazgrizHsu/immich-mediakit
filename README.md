@@ -19,15 +19,24 @@ enabling advanced management capabilities through AI-powered similarity detectio
 - **Filtering and Batch**: Browse photo library with filtering options and perform batch operations
 - **Web-Based UI**: User-friendly dashboard for all operations
 
+
+## preivew
+
+<p align="center">
+<img src="docs/intro.jpg" alt="preview" />
+</p>
+
+
 ## Implementation Status
 
 - [x] Fetch Immich assets
 - [x] Process photos to generate feature vectors using ResNet152
 - [x] Store vectors in Qdrant for similarity comparison
-- [ ] Display photo library with filtering and deletion features
-- [ ] Find duplicate/similar photos with adjustable threshold
-    - [ ] Provide configurable threshold settings for similarity search
-    - [ ] Implement single-group duplicate comparison similar to Immich
+- [x] Display photo library with filtering
+  - [ ] deletion
+- [x] Find similar photos with adjustable threshold
+  - [x] Provide configurable threshold settings for similarity search
+  - [x] Implement single-group duplicate comparison similar to Immich
 - [ ] Set up batch processing rules for duplicate management
     - [ ] Backup about-to-be-deleted images
     - [ ] Organize backups by groups in local folders

@@ -120,29 +120,32 @@ def layout(assetId=None, **kwargs):
                             dbc.Row([htm.Small("A threshold range sets both minimum and maximum similarity levels for matches. It helps you find things that are similar enough to what you want, without being too strict or too loose with your matching criteria. (Usually the default setting works just fine)", className="text-muted")])
                         ])
                     ], className="mb-0"),
-                ], width=8),
-            ], className="mb-1"),
 
-            dbc.Row([
-                dbc.Col([
+
                     dbc.Row([
                         dbc.Col([
-                            dbc.Button("Find Similar", id=k.btnFind, color="primary", size="lg", className="w-100", disabled=True),
-                            htm.Small("if there are many pics, it'll take a long time", className="text-muted ms-2"),
-                        ], width=6),
-                        dbc.Col([
-                            dbc.Button("Resume", id=k.btnResume, color="primary", size="lg", className="w-100", disabled=True),
-                            htm.Small("", className="text-muted ms-2"),
-                        ], width=6),
-                    ]),
-                ], width=9),
+                            dbc.Row([
+                                dbc.Col([
+                                    dbc.Button("Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
+                                ], width=6, className="p-0"),
+                                dbc.Col([
+                                    dbc.Button("Resume", id=k.btnResume, color="primary", className="w-100", disabled=True),
+                                ], width=6, className="p-0 ps-1 pe-1"),
+                            ]),
+                        ], width=8),
 
-                dbc.Col([
-                    dbc.Button("Clear All Records", id=k.btnClear, color="danger", size="lg", className="w-100", disabled=True),
-                ], width=3),
+                        dbc.Col([
+                            dbc.Button("Clear All Records", id=k.btnClear, color="danger", className="w-100", disabled=True),
+                        ], width=4),
+                    ], className="mt-2 ms-1"),
+
+
+                ], width=8),
             ], className=""),
 
-            htm.Hr(className="mt-4 mb-4"),
+
+
+            htm.Hr(className="mt-1 mb-4"),
 
             #------------------------------------------------------------------------
             # Tabs
