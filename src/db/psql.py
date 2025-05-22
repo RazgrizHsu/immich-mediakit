@@ -437,6 +437,9 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         upd("exif", len(assetIds), len(assetIds), "exif ready, combine data...", True)
 
         processedCount = 0
+        cntErr = 0
+
+        rstAssets = []
 
         for asset in assets:
             assetId = asset['id']
@@ -452,18 +455,27 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
             else:
                 lg.warn(f"[exif] NotFound.. assetId[{assetId}]")
 
+            # final check
+            pathThumbnail = asset.get('thumbnail_path')
+            if not pathThumbnail:
+                cntErr += 1
+                lg.warn( f"[psql] ignore asset: {asset}" )
+                continue
+
+
             processedCount += 1
+            rstAssets.append(asset)
 
             if len(assets) > 0 and (processedCount % 100 == 0 or processedCount == len(assets)):
                 upd("combine", processedCount, len(assets), f"processing {processedCount}/{len(assets)}...")
 
         cursor.close()
 
-        lg.info(f"Successfully fetched {len(assets)} {asType.lower()} assets")
+        lg.info(f"Successfully fetched {len(rstAssets)} {asType.lower()} assets")
 
-        upd("complete", 1, 1, f"Complete Assets[{len(assets)}] ({asType.lower()})", True)
+        upd("complete", 1, 1, f"Complete fetched Assets[{len(rstAssets)}] error[{cntErr}]", True)
 
-        return assets
+        return rstAssets
     except Exception as e:
         msg = f"Failed to FetchAssets: {str(e)}"
         if onUpdate: onUpdate(100, "Erorr", msg)

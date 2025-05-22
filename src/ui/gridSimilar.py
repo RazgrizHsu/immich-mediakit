@@ -44,7 +44,7 @@ def createGrid(assets: list[models.Asset], rootId: str, minW: int = 250, onEmpty
 
     style = {
         "display": "grid",
-        "grid-template-columns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+        "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
         "gap": "1rem"
     }
 
@@ -154,7 +154,7 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
     checked = ass.selected
     cssIds = "checked" if checked else ""
 
-    si = next((i for i in simInfos if i.id == ass.id), None)
+    si = next((i for i in simInfos if i.id == ass.id), None) if simInfos else None
 
     if not si:
         return dbc.Alert(f"Photo assetId[{assId}] SimNotFound not found", color="danger")

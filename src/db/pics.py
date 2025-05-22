@@ -239,7 +239,7 @@ def saveBy(asset: dict):
         if exifInfo:
             try:
                 jsonExif = json.dumps(exifInfo, ensure_ascii=False, default=BaseDictModel.jsonSerializer)
-                lg.info(f"json: {jsonExif}")
+                # lg.info(f"json: {jsonExif}")
             except Exception as e:
                 raise mkErr("[pics.save] Error converting EXIF to JSON", e)
 
@@ -346,7 +346,7 @@ def getAnyNonSim() -> Optional[models.Asset]:
         if conn is None: raise mkErr('the db is not init')
 
         c = conn.cursor()
-        c.execute("Select * From assets Where simOk!=1")
+        c.execute("Select * From assets Where simOk!=1 AND json_array_length(simINfos) == 0")
 
         row = c.fetchone()
         if row is None: return None

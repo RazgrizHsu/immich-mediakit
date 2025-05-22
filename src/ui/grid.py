@@ -17,7 +17,8 @@ def createGrid(assets: list[models.Asset], minW: int = 250) -> htm.Div:
 
     style = {
         "display": "grid",
-        "grid-template-columns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+
+        "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
         "gap": "1rem"
     }
 
