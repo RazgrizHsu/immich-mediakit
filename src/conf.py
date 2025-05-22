@@ -178,8 +178,8 @@ def pathFromRoot(path):
 class envs:
     isDev = False if isDock else os.getenv('IsDev')
     isDock = False if not isDock else True
-    qdrantUrl = 'http://qdrant:6333' if isDock else os.getenv('QDRANT_URL')
-    redisUrl = 'redis://redis:6379' if isDock else os.getenv('REDIS_URL')
+    qdrantUrl = 'http://immich-mediakit-qdrant:6333' if isDock else os.getenv('QDRANT_URL')
+    redisUrl = 'redis://immich-mediakit-redis:6379' if isDock else os.getenv('REDIS_URL')
     psqlHost = os.getenv('PSQL_HOST')
     psqlPort = os.getenv('PSQL_PORT')
     psqlDb = os.getenv('PSQL_DB')

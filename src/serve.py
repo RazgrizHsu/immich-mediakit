@@ -18,10 +18,10 @@ def regBy(app):
         'CACHE_TYPE': 'RedisCache',
         'CACHE_REDIS_URL': envs.redisUrl,
         'CACHE_DEFAULT_TIMEOUT': TIMEOUT,
-        'CACHE_KEY_PREFIX': 'img:'
+        'CACHE_KEY_PREFIX': 'dsh:img:'
     })
 
-    redis_client = redis.from_url(envs.redisUrl)
+    rdscnn = redis.from_url(envs.redisUrl)
 
     noimg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets/noimg.png")
 
@@ -34,7 +34,7 @@ def regBy(app):
             photoQ = request.args.get('q', ks.db.thumbnail)
             cache_key = f"img:{assetId}_{photoQ}"
 
-            cached_data = redis_client.get(cache_key)
+            cached_data = rdscnn.get(cache_key)
             if cached_data:
                 lg.debug(f"[api:img] cache hit for {assetId}")
                 rep = make_response(Response(cached_data, mimetype='image/jpeg'))
@@ -58,7 +58,7 @@ def regBy(app):
 
                         with open(full_path, 'rb') as f: img_data = f.read()
 
-                        redis_client.setex(cache_key, TIMEOUT, img_data)
+                        rdscnn.setex(cache_key, TIMEOUT, img_data)
 
                         rep = make_response(Response(img_data, mimetype='image/jpeg'))
                         rep.headers['Cache-Control'] = 'public, max-age=31536000'
@@ -78,9 +78,9 @@ def regBy(app):
     def clear_cache():
         try:
             pattern = 'img:*'
-            keys = redis_client.keys(pattern)
+            keys = rdscnn.keys(pattern)
             if keys:
-                redis_client.delete(*keys)
+                rdscnn.delete(*keys)
                 return {'status': 'success', 'cleared': len(keys)}
             return {'status': 'success', 'cleared': 0}
         except Exception as e:

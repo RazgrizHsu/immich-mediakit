@@ -1,5 +1,4 @@
 import os
-from uuid import uuid4
 import dash
 
 # noinspection PyUnresolvedReferences
@@ -15,14 +14,12 @@ from dash.dependencies import Input as inp, Output as out, State as ste
 # noinspection PyUnresolvedReferences
 from dash.exceptions import PreventUpdate as preventUpdate
 
-from conf import pathCache, pathFromRoot, envs
+from conf import pathCache, pathFromRoot
 from util import log
 
 lg = log.get(__name__)
 
 os.makedirs(pathCache, exist_ok=True)
-
-launch_uid = uuid4()
 
 
 def getTriggerId(ctx=None):
@@ -59,27 +56,26 @@ def registerScss():
     observer.start()
 
 
+
 try:
-    from rds import RedisCache
-    from dash import DiskcacheManager
-    import diskcache
 
-    redisCache = RedisCache(envs.redisUrl, 'app:')
-    redisCache.client.ping()
-    lg.info("[dsh] Redis cache initialized successfully")
+    from uuid import uuid4
+    bgId = uuid4()
 
-    diskCache = diskcache.Cache(pathCache)
-    bgMgr = DiskcacheManager(
-        diskCache,
-        cache_by=[lambda: launch_uid],
-        expire=3600
-    )
+    import dash_bgmgr_redis as dbr
 
-    lg.info("[dsh] Diskcache background callback manager initialized")
+    from conf import envs
+    bgMgr = dbr.NewRedisBgManager( envs.redisUrl, 'dsh:bg:', 3600, [lambda: bgId] )
+
+    # from dash import DiskcacheManager
+    # import diskcache
+    # diskCache = diskcache.Cache(pathCache)
+    # bgMgr = DiskcacheManager(
+    #     diskCache,
+    #     cache_by=[lambda: bgId],
+    #     expire=3600
+    # )
 
 except Exception as e:
-    lg.error(f"[dsh] Initialization failed: {e}")
-    raise Exception(f"Diskcache initialization required but failed: {e}")
-
-# global
-appCache = redisCache
+    lg.error(f"[dsh] init failed: {e}")
+    raise Exception(f"[dsh] init failed: {e}")

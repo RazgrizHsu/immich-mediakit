@@ -55,13 +55,13 @@ app.layout = htm.Div([
 
                 htm.Div(notify.render()),
 
-                htm.Div(task.render(), className="m-4"),
+                htm.Div(task.render()),
 
                 htm.Div(dash.page_container),
 
             ], width=9, className="R")
-        ], className="mt-4")
-    ], fluid=True, className="pt-4 flex-grow-1"),
+        ], className="mt-3")
+    ], fluid=True, className="flex-grow-1"),
 
     layout.renderFooter(),
 
