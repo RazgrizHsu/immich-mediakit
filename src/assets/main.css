@@ -17,7 +17,17 @@ span { vertical-align: middle; }
 
 @media (max-width: 768px) { .sidebar-column { margin-bottom: 20px; min-height: auto; } .notification-container { width: 90%; right: 5%; } .image-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } .duplicate-container { grid-template-columns: 1fr; } }
 
-.layout .R { padding: 0 15px 0 5px; }
+.sidebar { position: relative; width: 0px; height: 0px; }
+
+.sidebar > div { width: 250px; margin: 20px 0 0 20px; }
+
+.page .side { flex: 0 0 250px; min-width: 200px; max-width: 300px; }
+
+.page > div > div > .body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 3px 8px; padding: 20px; }
+
+.page > div > div > .body > .main { flex: 0 0 calc(100vw - 350px); margin-left: auto; }
+
+.page > div > div > .body > .main ~ div { flex: 1 0 50vw; }
 
 .txt-sm { font-size: 0.75rem; }
 
@@ -179,6 +189,7 @@ span { vertical-align: middle; }
 
 .tab-content { padding: 0 !important; /* 覆蓋預設的 10px padding */ border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
 
+/*======================== taber ========================*/
 .taber { border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
 
 .taber .head { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; }

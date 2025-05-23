@@ -1,6 +1,6 @@
 from typing import Callable, Tuple
 
-from dsh import htm, dbc, inp, out, ste, noUpd, getTriggerId
+from dsh import htm, dbc, inp, out, ste, callback, noUpd, getTriggerId
 from util import log, models
 from conf import ks
 
@@ -50,112 +50,110 @@ def render():
     )
 
 
-#========================================================================
-def regBy(app):
-    style_show = {'display': 'block'}
-    style_none = {'display': 'none'}
+style_show = {'display': 'block'}
+style_none = {'display': 'none'}
 
-    # ------------------------------------------------------------------------
-    @app.callback(
-        [
-            out(k.div, "style"),
-            out(k.txt, "children"),
-        ],
-        inp(ks.sto.tsk, "data"),
-        prevent_initial_call=True
-    )
-    def task_status(dta_tsk):
-        tsk = models.Tsk.fromStore(dta_tsk)
+# ------------------------------------------------------------------------
+@callback(
+    [
+        out(k.div, "style"),
+        out(k.txt, "children"),
+    ],
+    inp(ks.sto.tsk, "data"),
+    prevent_initial_call=True
+)
+def task_status(dta_tsk):
+    tsk = models.Tsk.fromStore(dta_tsk)
 
-        hasTsk = tsk.name is not None
+    hasTsk = tsk.name is not None
 
-        style = style_show if hasTsk else style_none
+    style = style_show if hasTsk else style_none
 
-        triggerId = getTriggerId()
-        lg.info(f"[Task] Update display: {hasTsk} id[{tsk.id}] name[{tsk.name}] trigger[{triggerId}]")
+    triggerId = getTriggerId()
+    lg.info(f"[Task] Update display: {hasTsk} id[{tsk.id}] name[{tsk.name}] trigger[{triggerId}]")
 
-        return style, tsk.name
+    return style, tsk.name
 
 
-    # ------------------------------------------------------------------------
-    @app.callback(
-        out(ks.sto.tsk, "data"),
-        inp(k.btn, "n_clicks"),
-        ste(ks.sto.tsk, "data"),
-        prevent_initial_call=True
-    )
-    def onBtnTaskClose(_nclk, dta_tsk):
-        tsk = models.Tsk.fromStore(dta_tsk)
-        if tsk.id or tsk.name:
-            tsk.reset()
-            lg.info( "[task] close and reset.." )
+# ------------------------------------------------------------------------
+@callback(
+    out(ks.sto.tsk, "data"),
+    inp(k.btn, "n_clicks"),
+    ste(ks.sto.tsk, "data"),
+    prevent_initial_call=True
+)
+def onBtnTaskClose(_nclk, dta_tsk):
+    tsk = models.Tsk.fromStore(dta_tsk)
+    if tsk.id or tsk.name:
+        tsk.reset()
+        lg.info( "[task] close and reset.." )
 
-        return tsk.toStore()
+    return tsk.toStore()
 
-    # ------------------------------------------------------------------------
-    @app.callback(
-        [
-            out(k.rst, "children"),
-            out(k.prg, "value", allow_duplicate=True),
-            out(ks.sto.tsk, "data", allow_duplicate=True),
-            out(ks.sto.nfy, "data", allow_duplicate=True),
-            out(ks.sto.now, "data", allow_duplicate=True),
-        ],
-        inp(ks.sto.tsk, "data"),
-        ste(ks.sto.nfy, "data"),
-        ste(ks.sto.now, "data"),
-        background=True,
-        running=[
-            (out(k.btn, "disabled"), True, False),
-        ],
-        progress=[
-            out(k.prg, "value"),
-            out(k.prg, "label"),
-            out(k.rst, "children"),
-        ],
-        progress_default=[0, "", "-- rst --"],
-        prevent_initial_call=True
-    )
-    def onTasking(onUpdate, dta_tsk, dta_nfy, dta_now):
+# ------------------------------------------------------------------------
+@callback(
+    [
+        out(k.rst, "children"),
+        out(k.prg, "value", allow_duplicate=True),
+        out(ks.sto.tsk, "data", allow_duplicate=True),
+        out(ks.sto.nfy, "data", allow_duplicate=True),
+        out(ks.sto.now, "data", allow_duplicate=True),
+    ],
+    inp(ks.sto.tsk, "data"),
+    ste(ks.sto.nfy, "data"),
+    ste(ks.sto.now, "data"),
+    background=True,
+    running=[
+        (out(k.btn, "disabled"), True, False),
+    ],
+    progress=[
+        out(k.prg, "value"),
+        out(k.prg, "label"),
+        out(k.rst, "children"),
+    ],
+    progress_default=[0, "", "-- rst --"],
+    prevent_initial_call=True
+)
+def onTasking(onUpdate, dta_tsk, dta_nfy, dta_now):
 
-        tsk = models.Tsk.fromStore(dta_tsk)
-        nfy = models.Nfy.fromStore(dta_nfy)
-        now = models.Now.fromStore(dta_now)
+    tsk = models.Tsk.fromStore(dta_tsk)
+    nfy = models.Nfy.fromStore(dta_nfy)
+    now = models.Now.fromStore(dta_now)
 
-        if not tsk.id:
-            return noUpd, noUpd, noUpd, noUpd, noUpd
+    if not tsk.id:
+        return noUpd, noUpd, noUpd, noUpd, noUpd
 
-        lg.info(f"[Task] Start.. id[{tsk.id}] name[{tsk.name}] keyFn[{tsk.cmd}]")
+    lg.info(f"[Task] Start.. id[{tsk.id}] name[{tsk.name}] keyFn[{tsk.cmd}]")
 
-        fn = mapFns.get(tsk.cmd)
+    fn = mapFns.get(tsk.cmd)
 
-        msg = None
-        pct = 0
+    msg = None
+    pct = 0
 
-        if not fn:
-            msg = f"[Task] mapFns cmd[{tsk.name}] not found"
-            nfy.error(msg)
-            return msg, pct, tsk.toStore(), nfy.toStore(), now.toStore()
-
-
-        def onUpd(percent, label, msg):
-            lg.info(f"[Task] id[{tsk.id}] progress: {percent}% - {label} - {msg}")
-            onUpdate([percent, label, msg])
-
-        if fn:
-            try:
-                nfy, now, msg = fn(nfy, now, tsk, onUpd)
-                pct = 100
-
-                lg.info(f"[Task] done id[{tsk.id}]")
-                tsk.id = None
-
-            except Exception as e:
-                msg = f"Task[{tsk.id}] execution failed: {str(e)}"
-                lg.error(msg)
-        else:
-            pct = 50
-            msg = f"task[{tsk.id}] NotFound task keyFn[{tsk.cmd}]"
-            lg.error( msg )
-
+    if not fn:
+        msg = f"[Task] mapFns cmd[{tsk.name}] not found"
+        nfy.error(msg)
         return msg, pct, tsk.toStore(), nfy.toStore(), now.toStore()
+
+
+    def onUpd(percent, label, msg):
+        lg.info(f"[Task] id[{tsk.id}] progress: {percent}% - {label} - {msg}")
+        onUpdate([percent, label, msg])
+
+    if fn:
+        try:
+            nfy, now, msg = fn(nfy, now, tsk, onUpd)
+            pct = 100
+
+            lg.info(f"[Task] done id[{tsk.id}]")
+            tsk.id = None
+
+        except Exception as e:
+            msg = f"Task[{tsk.id}] execution failed: {str(e)}"
+            lg.error(msg)
+    else:
+        pct = 50
+        msg = f"task[{tsk.id}] NotFound task keyFn[{tsk.cmd}]"
+        lg.error( msg )
+
+    return msg, pct, tsk.toStore(), nfy.toStore(), now.toStore()

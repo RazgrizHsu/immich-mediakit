@@ -57,6 +57,7 @@ def mkConn():
     db = envs.psqlDb
     uid = envs.psqlUser
     pw = envs.psqlPass
+
     try:
         nc = psycopg2.connect(
             host=host,
@@ -69,9 +70,22 @@ def mkConn():
     except Exception as e:
         raise mkErr(f"Failed to connect to PostgreSQL", e)
 
+
+def chk():
+    global conn
+
+    try:
+        if conn and conn.closed: conn = mkConn()
+
+        c = conn.cursor()
+        c.execute("SELECT 1")
+
+    except Exception as e:
+        raise mkErr(f"Failed to connect to PostgreSQL", e)
+
 def fetchUsers():
     try:
-        if not conn: raise RuntimeError("Failed to connect to psql")
+        chk()
 
         sql = """
         Select
@@ -94,7 +108,7 @@ def fetchUsers():
 
 def count(usrId=None, assetType="IMAGE"):
     try:
-        if not conn: raise RuntimeError("Failed to connect to psql")
+        chk()
 
         cursor = conn.cursor()
 
@@ -131,7 +145,7 @@ def fixPrefix(path: Optional[str]):
 
 
 def testAssetsPath():
-    if not conn: return f"pql not ready"
+    chk()
 
     sql = "Select path From asset_files Limit 5"
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -280,7 +294,7 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         return pct
 
     try:
-        if not conn: raise RuntimeError("Failed to connect to psql")
+        chk()
 
         stages = {
             "init": StageInfo("init", 0, 5),

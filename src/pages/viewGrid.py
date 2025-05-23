@@ -35,178 +35,182 @@ class K:
 
 #========================================================================
 def layout():
-    return htm.Div([
+    import ui
+    return ui.renderBody([
+        #====== top start =======================================================
+
         htm.H3("Assets", className="mb-4"),
+        htm.P([
+            "View and organize your photos in a grid layout.", htm.Br(),
+            "Use the filters and sorting options to customize your view."
+        ],
+            className="mb-4"
+        ),
 
-        htm.Div([
-            htm.P([
-                "View and organize your photos in a grid layout.", htm.Br(),
-                "Use the filters and sorting options to customize your view."
-            ],
-                className="mb-4"
-            ),
-
-            dbc.Card([
-                dbc.CardHeader("View Settings"),
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Label("User"),
-                            dcc.Dropdown(
-                                id=K.inp.selectUserId,
-                                options=[{"label": "All Users", "value": ""}],
-                                value="",
-                                clearable=False,
-                                className="mb-2"
-                            ),
-                        ], width=4),
-
-                        dbc.Col([
-                            dbc.Label("Sort By"),
-                            dcc.Dropdown(
-                                id=K.inp.selectSortBy,
-                                options=[
-                                    {"label": "Date Created", "value": "fileCreatedAt"},
-                                    {"label": "Date Modified", "value": "fileModifiedAt"},
-                                    {"label": "File Name", "value": "originalFileName"}
-                                ],
-                                value="fileCreatedAt",
-                                clearable=False,
-                                className="mb-2"
-                            ),
-                        ], width=4),
-
-                        dbc.Col([
-                            dbc.Label("Order"),
-                            dcc.Dropdown(
-                                id=K.inp.selectSortOrder,
-                                options=[
-                                    {"label": "Ascending", "value": "asc"},
-                                    {"label": "Descending", "value": "desc"}
-                                ],
-                                value="desc",
-                                clearable=False,
-                                className="mb-2"
-                            ),
-                        ], width=4),
-                    ]),
-
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Label("Filter"),
-                            dcc.Dropdown(
-                                id=K.inp.selectFilter,
-                                options=[
-                                    {"label": "All Assets", "value": "all"},
-                                    {"label": "With Vectors", "value": "with_vectors"},
-                                    {"label": "Without Vectors", "value": "without_vectors"}
-                                ],
-                                value="all",
-                                clearable=False,
-                                className="mb-2"
-                            ),
-                        ], width=4),
-
-                        dbc.Col([
-                            dbc.Label("Search"),
-                            dbc.Input(
-                                id=K.inp.searchKeyword,
-                                type="text",
-                                placeholder="Search by filename...",
-                                className="mb-2"
-                            ),
-                        ], width=4),
-
-                        dbc.Col([
-                            dbc.Label(" "),
-                            dbc.Checkbox(
-                                id=K.inp.checkFavorites,
-                                label="Favorites Only",
-                                value=False,
-                                className="mt-2"
-                            ),
-                        ], width=4),
-                    ]),
-
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Label("Assets Per Page"),
-                            dcc.Dropdown(
-                                id=K.inp.selectPerPage,
-                                options=[
-                                    {"label": "12", "value": 12},
-                                    {"label": "24", "value": 24},
-                                    {"label": "48", "value": 48},
-                                    {"label": "96", "value": 96}
-                                ],
-                                value=24,
-                                clearable=False,
-                                className="mb-2"
-                            ),
-                        ], width=12),
-                    ]),
-                ])
-            ], className="mb-4"),
-
-            htm.Div(
-                dbc.Alert(
-                    "No photos available. Please fetch first.",
-                    color="warning",
-                    className="mt-3 mb-3"
-                ),
-                id=K.div.noDataAlert,
-                style={"display": "none"}
-            ),
-
-            dbc.Spinner(
-                htm.Div(id=K.div.grid, className="mb-4"),
-                color="primary",
-                type="border",
-                spinner_style={"width": "3rem", "height": "3rem"}
-            ),
-
-            # Pagination
-            dbc.Row([
-                dbc.Col([
-                    dbc.Button(
-                        "Previous",
-                        id=K.div.btnPrevPage,
-                        color="primary",
-                        disabled=True,
-                        className="w-100"
-                    )
-                ], width=4),
-
-                dbc.Col([
-                    htm.Div([
-                        htm.Span("Page: "),
-                        dbc.Input(
-                            id=K.div.currentPage,
-                            type="number",
-                            min=1,
-                            value=1,
-                            style={"width": "80px", "display": "inline-block"},
-                            className="mx-2"
+        dbc.Card([
+            dbc.CardHeader("View Settings"),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Label("User"),
+                        dcc.Dropdown(
+                            id=K.inp.selectUserId,
+                            options=[{"label": "All Users", "value": ""}],
+                            value="",
+                            clearable=False,
+                            className="mb-2"
                         ),
-                        htm.Span("of "),
-                        htm.Span(id=K.div.pagination, className="ms-2")
-                    ], className="text-center")
-                ], width=4),
+                    ], width=4),
 
-                dbc.Col([
-                    dbc.Button(
-                        "Next",
-                        id=K.div.btnNextPage,
-                        color="primary",
-                        className="w-100"
-                    )
-                ], width=4),
-            ], className="mt-3 mb-4"),
+                    dbc.Col([
+                        dbc.Label("Sort By"),
+                        dcc.Dropdown(
+                            id=K.inp.selectSortBy,
+                            options=[
+                                {"label": "Date Created", "value": "fileCreatedAt"},
+                                {"label": "Date Modified", "value": "fileModifiedAt"},
+                                {"label": "File Name", "value": "originalFileName"}
+                            ],
+                            value="fileCreatedAt",
+                            clearable=False,
+                            className="mb-2"
+                        ),
+                    ], width=4),
 
-            dcc.Store(id=K.div.paginationStore, data={"page": 1, "per_page": 24, "total": 0}),
-        ]),
+                    dbc.Col([
+                        dbc.Label("Order"),
+                        dcc.Dropdown(
+                            id=K.inp.selectSortOrder,
+                            options=[
+                                {"label": "Ascending", "value": "asc"},
+                                {"label": "Descending", "value": "desc"}
+                            ],
+                            value="desc",
+                            clearable=False,
+                            className="mb-2"
+                        ),
+                    ], width=4),
+                ]),
+
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Label("Filter"),
+                        dcc.Dropdown(
+                            id=K.inp.selectFilter,
+                            options=[
+                                {"label": "All Assets", "value": "all"},
+                                {"label": "With Vectors", "value": "with_vectors"},
+                                {"label": "Without Vectors", "value": "without_vectors"}
+                            ],
+                            value="all",
+                            clearable=False,
+                            className="mb-2"
+                        ),
+                    ], width=4),
+
+                    dbc.Col([
+                        dbc.Label("Search"),
+                        dbc.Input(
+                            id=K.inp.searchKeyword,
+                            type="text",
+                            placeholder="Search by filename...",
+                            className="mb-2"
+                        ),
+                    ], width=4),
+
+                    dbc.Col([
+                        dbc.Label(" "),
+                        dbc.Checkbox(
+                            id=K.inp.checkFavorites,
+                            label="Favorites Only",
+                            value=False,
+                            className="mt-2"
+                        ),
+                    ], width=4),
+                ]),
+
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Label("Assets Per Page"),
+                        dcc.Dropdown(
+                            id=K.inp.selectPerPage,
+                            options=[
+                                {"label": "12", "value": 12},
+                                {"label": "24", "value": 24},
+                                {"label": "48", "value": 48},
+                                {"label": "96", "value": 96}
+                            ],
+                            value=24,
+                            clearable=False,
+                            className="mb-2"
+                        ),
+                    ], width=12),
+                ]),
+            ])
+        ], className="mb-4"),
+        #====== top end =========================================================
+    ], [
+        #====== bottom start=====================================================
+
+        htm.Div(
+            dbc.Alert(
+                "No photos available. Please fetch first.",
+                color="warning",
+                className="mt-3 mb-3"
+            ),
+            id=K.div.noDataAlert,
+            style={"display": "none"}
+        ),
+
+        dbc.Spinner(
+            htm.Div(id=K.div.grid, className="mb-4"),
+            color="primary",
+            type="border",
+            spinner_style={"width": "3rem", "height": "3rem"}
+        ),
+
+        # Pagination
+        dbc.Row([
+            dbc.Col([
+                dbc.Button(
+                    "Previous",
+                    id=K.div.btnPrevPage,
+                    color="primary",
+                    disabled=True,
+                    className="w-100"
+                )
+            ], width=4),
+
+            dbc.Col([
+                htm.Div([
+                    htm.Span("Page: "),
+                    dbc.Input(
+                        id=K.div.currentPage,
+                        type="number",
+                        min=1,
+                        value=1,
+                        style={"width": "80px", "display": "inline-block"},
+                        className="mx-2"
+                    ),
+                    htm.Span("of "),
+                    htm.Span(id=K.div.pagination, className="ms-2")
+                ], className="text-center")
+            ], width=4),
+
+            dbc.Col([
+                dbc.Button(
+                    "Next",
+                    id=K.div.btnNextPage,
+                    color="primary",
+                    className="w-100"
+                )
+            ], width=4),
+        ], className="mt-3 mb-4"),
+
+        dcc.Store(id=K.div.paginationStore, data={"page": 1, "per_page": 24, "total": 0}),
+
+        #====== bottom end ======================================================
     ])
-
 
 #========================================================================
 # Page initialization

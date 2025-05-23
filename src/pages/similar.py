@@ -38,6 +38,7 @@ class k:
 def layout(assetId=None, **kwargs):
     # return flask.redirect('/target-page') #auth?
 
+
     if assetId:
         lg.info(f"[sim] from url assetId[{assetId}]")
 
@@ -46,165 +47,163 @@ def layout(assetId=None, **kwargs):
             db.dyn.dto.simId = assetId
             lg.info(f"[sim] =============>>>> set current assetId[{assetId}]")
 
-    return htm.Div([
-
+    import ui
+    return ui.renderBody([
+        #====== top start =======================================================
         dbc.Row([
             dbc.Col(htm.H3(f"{ks.pg.similar.name}"), width=3),
             dbc.Col(htm.Small(f"{ks.pg.similar.desc}", className="text-muted"))
         ], className="mb-4"),
 
 
-        htm.Div([
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader("System Similary Records"),
+                    dbc.CardBody([
+                        dbc.Row([
+                            dbc.Col(htm.Small("Resolved", className="d-inline-block me-2"), width=6),
+                            dbc.Col(dbc.Alert(f"0", id=k.txtCntOk, color="info", className="py-1 px-2 mb-2 text-center")),
+                        ]),
+                        dbc.Row([
+                            dbc.Col(htm.Small("Pending", className="d-inline-block me-2"), width=6),
+                            dbc.Col(dbc.Alert(f"0", id=k.txtCntRs, color="info", className="py-1 px-2 mb-2 text-center")),
+                        ]),
+                        dbc.Row([
+                            dbc.Col(htm.Small("NotSearch", className="d-inline-block me-2"), width=6),
+                            dbc.Col(dbc.Alert(f"0", id=k.txtCntNo, color="info", className="py-1 px-2 mb-2 text-center")),
+                        ]),
+                        dbc.Row([htm.Small("Shows vectorized data in the local db and whether similarity comparison has been performed with other assets", className="text-muted")])
+                    ])
+                ], className="mb-4"),
+            ], width=4),
 
-            dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("System Similary Records"),
-                        dbc.CardBody([
-                            dbc.Row([
-                                dbc.Col(htm.Small("Resolved", className="d-inline-block me-2"), width=6),
-                                dbc.Col(dbc.Alert(f"0", id=k.txtCntOk, color="info", className="py-1 px-2 mb-2 text-center")),
-                            ]),
-                            dbc.Row([
-                                dbc.Col(htm.Small("Pending Resolution", className="d-inline-block me-2"), width=6),
-                                dbc.Col(dbc.Alert(f"0", id=k.txtCntRs, color="info", className="py-1 px-2 mb-2 text-center")),
-                            ]),
-                            dbc.Row([
-                                dbc.Col(htm.Small("Not Yet Searched", className="d-inline-block me-2"), width=6),
-                                dbc.Col(dbc.Alert(f"0", id=k.txtCntNo, color="info", className="py-1 px-2 mb-2 text-center")),
-                            ]),
-                            dbc.Row([htm.Small("Shows vectorized data in the local db and whether similarity comparison has been performed with other assets", className="text-muted")])
-                        ])
-                    ], className="mb-4"),
-                ], width=4),
-
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("Search Settings"),
-                        dbc.CardBody([
-                            # dbc.Row([
-                            #     dbc.Col([
-                            #         dbc.Label("Similarity Method", className="txt-sm"),
-                            #         dcc.Dropdown(
-                            #             id=k.mthSim,
-                            #             options=[
-                            #                 {"value": ks.use.mth.cosine, "label": ks.use.mth.cosine.desc},
-                            #                 {"value": ks.use.mth.euclid, "label": ks.use.mth.euclid.desc}
-                            #             ],
-                            #             value="cosine",
-                            #             clearable=False,
-                            #             className="mb-3"
-                            #         ),
-                            #     ]),
-                            # ]),
-
-                            dbc.Row([
-                                dbc.Col([
-                                    dbc.Label("Similarity Threshold Range", className="txt-sm"),
-                                    dbc.Row([
-                                        dbc.Col([
-                                            dcc.RangeSlider(
-                                                id=k.slideTh,
-                                                min=0,
-                                                max=1,
-                                                step=0.01,
-                                                marks=ks.defs.thMarks,
-                                                value=[0.8, 0.99],
-                                                className="mb-0"
-                                            ),
-                                        ], className="mt-2"),
-                                    ])
-                                ]),
-                            ]),
-
-                            dbc.Row([htm.Small("A threshold range sets both minimum and maximum similarity levels for matches. It helps you find things that are similar enough to what you want, without being too strict or too loose with your matching criteria. (Usually the default setting works just fine)", className="text-muted")])
-                        ])
-                    ], className="mb-0"),
-
-
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Row([
-                                dbc.Col([
-                                    dbc.Button("Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
-                                ], width=6, className="p-0"),
-                                dbc.Col([
-                                    dbc.Button("Resume", id=k.btnResume, color="primary", className="w-100", disabled=True),
-                                ], width=6, className="p-0 ps-1 pe-1"),
-                            ]),
-                        ], width=8),
-
-                        dbc.Col([
-                            dbc.Button("Clear All Records", id=k.btnClear, color="danger", className="w-100", disabled=True),
-                        ], width=4),
-                    ], className="mt-2 ms-1"),
-
-
-                ], width=8),
-            ], className=""),
-
-
-
-            htm.Hr(className="mt-1 mb-4"),
-
-            #------------------------------------------------------------------------
-            # Tabs
-            #------------------------------------------------------------------------
-            htm.Div([
-
-                # nav header
-                htm.Div([
-
-                    #left side
-                    htm.Div([
-                        htm.Div("current", className="act", id={"type": "tab", "id": "tab-1"}, n_clicks=0),
-                        htm.Div("history", className="disabled", id={"type": "tab", "id": "tab-2"}, n_clicks=0),
-                        htm.Div("------", className="disabled", id={"type": "tab", "id": "tab-3"}, n_clicks=0),
-                    ], className="nav"),
-
-                    #right side
-                    htm.Div([
-                        dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True, )
-                    ], className="acts"),
-
-                ], className="head"),
-
-                # content
-                htm.Div([
-                    htm.Div([
-
-                        dbc.Spinner(
-                            htm.Div(id=k.grid),
-                            color="primary",
-                            type="border",
-                            spinner_style={"width": "3rem", "height": "3rem"},
-                            show_initially=True
-                        ),
-
-                    ], id="content-1", className="act"),
-                    htm.Div([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader("Search Settings"),
+                    dbc.CardBody([
+                        # dbc.Row([
+                        #     dbc.Col([
+                        #         dbc.Label("Similarity Method", className="txt-sm"),
+                        #         dcc.Dropdown(
+                        #             id=k.mthSim,
+                        #             options=[
+                        #                 {"value": ks.use.mth.cosine, "label": ks.use.mth.cosine.desc},
+                        #                 {"value": ks.use.mth.euclid, "label": ks.use.mth.euclid.desc}
+                        #             ],
+                        #             value="cosine",
+                        #             clearable=False,
+                        #             className="mb-3"
+                        #         ),
+                        #     ]),
+                        # ]),
 
                         dbc.Row([
                             dbc.Col([
-                                dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
-                            ], className="d-flex justify-content-center mb-3")
-                        ],
-                            className="mt-2",
-                        ),
+                                dbc.Label("Similarity Threshold Range", className="txt-sm"),
+                                dbc.Row([
+                                    dbc.Col([
+                                        dcc.RangeSlider(
+                                            id=k.slideTh,
+                                            min=0,
+                                            max=1,
+                                            step=0.01,
+                                            marks=ks.defs.thMarks,
+                                            value=[0.8, 0.99],
+                                            className="mb-0"
+                                        ),
+                                    ], className="mt-2"),
+                                ])
+                            ]),
+                        ]),
 
-                    ], id="content-2", className=""),
-                    htm.Div([
+                        dbc.Row([htm.Small("A threshold range sets both minimum and maximum similarity levels for matches. It helps you find things that are similar enough to what you want, without being too strict or too loose with your matching criteria. (Usually the default setting works just fine)", className="text-muted")])
+                    ])
+                ], className="mb-0"),
 
-                        "content-3"
 
-                    ], id="content-3", className=""),
-                ], className="body"),
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Button("Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
+                            ], width=6, className="p-0"),
+                            dbc.Col([
+                                dbc.Button("Resume", id=k.btnResume, color="primary", className="w-100", disabled=True),
+                            ], width=6, className="p-0 ps-1 pe-1"),
+                        ]),
+                    ], width=8),
 
-            ], className="taber", id=k.taber),
+                    dbc.Col([
+                        dbc.Button("Clear All Records", id=k.btnClear, color="danger", className="w-100", disabled=True),
+                    ], width=4),
+                ], className="mt-2 ms-1"),
 
-            dcc.Store(id=k.stoInitId, data=assetId)
-        ]),
+            ], width=8),
+        ], className=""),
+
+        #====== top end =========================================================
+    ], [
+        #====== bottom start=====================================================
+
+        #------------------------------------------------------------------------
+        # Tabs
+        #------------------------------------------------------------------------
+        htm.Div([
+
+            # nav header
+            htm.Div([
+
+                #left side
+                htm.Div([
+                    htm.Div("current", className="act", id={"type": "tab", "id": "tab-1"}, n_clicks=0),
+                    htm.Div("history", className="disabled", id={"type": "tab", "id": "tab-2"}, n_clicks=0),
+                    htm.Div("------", className="disabled", id={"type": "tab", "id": "tab-3"}, n_clicks=0),
+                ], className="nav"),
+
+                #right side
+                htm.Div([
+                    dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True, )
+                ], className="acts"),
+
+            ], className="head"),
+
+            # content
+            htm.Div([
+                htm.Div([
+
+                    dbc.Spinner(
+                        htm.Div(id=k.grid),
+                        color="primary",
+                        type="border",
+                        spinner_style={"width": "3rem", "height": "3rem"},
+                    ),
+
+                ], id="content-1", className="act"),
+                htm.Div([
+
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
+                        ], className="d-flex justify-content-center mb-3")
+                    ],
+                        className="mt-2",
+                    ),
+
+                ], id="content-2", className=""),
+                htm.Div([
+
+                    "content-3"
+
+                ], id="content-3", className=""),
+            ], className="body"),
+
+        ], className="taber", id=k.taber),
+
+        dcc.Store(id=k.stoInitId, data=assetId)
+        #====== bottom end ======================================================
     ])
+
 
 #========================================================================
 # todo (think):
@@ -289,9 +288,9 @@ from ui import gridSimilar as gvs
 
 @callback(
     [
-        out(k.txtCntNo, "children"),
-        out(k.txtCntRs, "children"),
         out(k.txtCntOk, "children"),
+        out(k.txtCntRs, "children"),
+        out(k.txtCntNo, "children"),
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
         out(k.btnResume, "disabled"),
@@ -300,7 +299,7 @@ from ui import gridSimilar as gvs
     ],
     inp(ks.sto.now, "data"),
     ste(ks.sto.nfy, "data"),
-    prevent_initial_call='initial_duplicate'
+    prevent_initial_call="initial_duplicate"
 )
 def similar_onStatus(dta_now, dta_nfy):
     now = models.Now.fromStore(dta_now)
@@ -318,7 +317,8 @@ def similar_onStatus(dta_now, dta_nfy):
     lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now.pg.sim.assets[{cntAssets}]")
 
     if cntAssets >= 1:
-        lg.info( f"[sim:status] assets: {now.pg.sim.assets[0]}" )
+        #lg.info(f"[sim:status] assets: {now.pg.sim.assets[0]}")
+        pass
 
     grid = []
 
@@ -332,7 +332,7 @@ def similar_onStatus(dta_now, dta_nfy):
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
 
-    return cntNo, cntRs, cntOk, disFind, disCler, disCont, grid, nfy.toStore()
+    return cntOk, cntRs, cntNo, disFind, disCler, disCont, grid, nfy.toStore()
 
 
 #------------------------------------------------------------------------
@@ -452,7 +452,6 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
                 asset = ass
                 lg.info(f"[sim] found non-simOk assetId[{ass.id}]")
 
-
         now.pg.sim.reset()
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
@@ -467,7 +466,6 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
                 f"Begin finding similar?", htm.Br(),
                 f"threshold[{thMin:.2f}-{thMax:.2f}]]",
             ]
-
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
@@ -522,7 +520,6 @@ def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.
         return nfy, now, msg
 
 
-
 def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.IFnProg):
     if tsk.id != ks.pg.similar:
         msg = f"[tsk] wrong triggerId[{tsk.id}]"
@@ -539,7 +536,6 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         assetId = now.pg.sim.assId
         if not assetId:
             raise RuntimeError(f"[tsk] sim.assId is empty")
-
 
         onUpdate(1, "1%", f"prepare..")
 
@@ -571,7 +567,7 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
 
         pgAll = len(simIds)
         if pgAll == 0:
-            db.pics.setSimIds(asset.id, infos, isOk=1)
+            db.pics.setSimIds(asset.id, infos, isOk=0)
 
             now.pg.sim.reset()
 
