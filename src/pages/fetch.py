@@ -248,8 +248,10 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
     try:
         onUpdate(5, "5%", "init connection")
 
-        if not db.psql.conn:
-            msg = "Error: Cannot connect to PostgreSQL database"
+        try:
+            db.psql.chk()
+        except Exception as e:
+            msg = f"Error: Cannot connect to PostgreSQL database: {str(e)}"
             nfy.error(msg)
             return nfy, now, msg
 

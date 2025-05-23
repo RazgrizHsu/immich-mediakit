@@ -45,7 +45,7 @@ def layout(assetId=None, **kwargs):
         ass = db.pics.getById(assetId)
         if ass and db.dyn.dto.simId != assetId:
             db.dyn.dto.simId = assetId
-            lg.info(f"[sim] =============>>>> set current assetId[{assetId}]")
+            lg.info(f"[sim] =============>>>> set target assetId[{assetId}]")
 
     import ui
     return ui.renderBody([
@@ -367,6 +367,7 @@ def update_selected_photos(clks, dta_now, dta_nfy):
         out(ks.sto.mdl, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
+        out(ks.sto.tsk, "data", allow_duplicate=True),
     ],
     [
         inp(k.btnFind, "n_clicks"),
@@ -434,6 +435,7 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
 
         asset: Optional[models.Asset] = None
 
+        # if id from url
         if db.dyn.dto.simId:
             ass = db.pics.getById(db.dyn.dto.simId)
             if ass:
@@ -458,18 +460,20 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
         else:
             now.pg.sim.assId = asset.id
 
-            mdl.reset()
-            mdl.args = {'thMin': thMin, 'thMax': thMax}
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.find
-            mdl.msg = [
-                f"Begin finding similar?", htm.Br(),
-                f"threshold[{thMin:.2f}-{thMax:.2f}]]",
-            ]
+            mdl.args = {'thMin': thMin, 'thMax': thMax}
+            tsk =  mdl.mkTsk()
+            mdl.reset()
+            # mdl.msg = [
+            #     f"Begin finding similar?", htm.Br(),
+            #     f"threshold[{thMin:.2f}-{thMax:.2f}]]",
+            # ]
+            return mdl.toStore(), nfy.toStore(), now.toStore(), tsk.toStore()
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
-    return mdl.toStore(), nfy.toStore(), now.toStore()
+    return mdl.toStore(), nfy.toStore(), now.toStore(), noUpd
 
 
 #========================================================================
@@ -531,11 +535,10 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
     try:
         # todo: 如果資料只包含自已
         #   - 如果是無引導id, 應該自動尋找下一筆
-        #   - 如果是有引導id, 應該告知找不到相似圖片
+        #   - 如果是有引導id, 告知找不到相似圖片就停止
 
         assetId = now.pg.sim.assId
-        if not assetId:
-            raise RuntimeError(f"[tsk] sim.assId is empty")
+        if not assetId: raise RuntimeError(f"[tsk] sim.assId is empty")
 
         onUpdate(1, "1%", f"prepare..")
 

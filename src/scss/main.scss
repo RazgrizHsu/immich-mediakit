@@ -645,22 +645,26 @@ span {
 		}
 
 		//floating on img left-bottom
-		> div:nth-child(2) {
+		> div:nth-of-type(1) {
 			position:absolute;
 			bottom:5px;
 			left:5px;
-			//border: blue 1px solid;
 			display:flex;
 			justify-content:start;
 		}
 
-		> div {
+		> div:nth-of-type(2) {
 			position:absolute;
 			bottom:5px;
 			right:5px;
 			//border: red 1px solid;
 			display:flex;
 			justify-content:end;
+			width:100%;
+
+			> span {
+				font-size: 18px!important;
+			}
 		}
 
 	}

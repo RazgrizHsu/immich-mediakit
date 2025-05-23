@@ -113,8 +113,8 @@ def renderBody(top, bottom):
 
         htm.Div(
             [
-                task.render(),
                 *top,
+                task.render(),
             ],
             className="main"
         ),

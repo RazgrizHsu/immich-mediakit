@@ -13,42 +13,33 @@ from util.task import IFnProg
 
 lg = log.get(__name__)
 
-conn: Optional[psycopg2.extensions.connection] = None
-
 
 def init():
-    global conn
     try:
         from pillow_heif import register_heif_opener
         register_heif_opener()
-
     except ImportError:
         lg.info("pillow-heif not available, skipping HEIC/HEIF support")
-        return False
-
+    
     host = envs.psqlHost
     port = envs.psqlPort
     db = envs.psqlDb
     uid = envs.psqlUser
     pw = envs.psqlPass
-
-    if not (host is not None and port is not None and db is not None and uid is not None):
+    
+    if not all([host, port, db, uid]):
         raise RuntimeError("PostgreSQL connection settings not initialized.")
-
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1")
-            cursor.close()
-
-            return conn
-        except Exception as e:
-            lg.info(f"Connection test failed: {str(e)}")
-            conn = None
-            connected = False
-
-    conn = mkConn()
-    return conn
+    
+    try:
+        conn = mkConn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.close()
+        conn.close()
+        return True
+    except Exception as e:
+        lg.error(f"PostgreSQL connection test failed: {str(e)}")
+        return False
 
 
 def mkConn():
@@ -72,21 +63,22 @@ def mkConn():
 
 
 def chk():
-    global conn
-
+    conn = None
     try:
-        if conn and conn.closed: conn = mkConn()
-
+        conn = mkConn()
         c = conn.cursor()
         c.execute("SELECT 1")
-
+        c.close()
+        return True
     except Exception as e:
         raise mkErr(f"Failed to connect to PostgreSQL", e)
+    finally:
+        if conn: conn.close()
 
 def fetchUsers():
+    conn = None
     try:
-        chk()
-
+        conn = mkConn()
         sql = """
         Select
             u.id,
@@ -97,42 +89,49 @@ def fetchUsers():
         Join api_keys a On u.id = a."userId"
         """
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
         cursor.execute(sql)
         users = [dict(row) for row in cursor.fetchall()]
         cursor.close()
         return users
     except Exception as e:
         raise mkErr(f"Failed to fetch users", e)
+    finally:
+        if conn: conn.close()
 
 
 def count(usrId=None, assetType="IMAGE"):
+    conn = None
     try:
-        chk()
-
+        conn = mkConn()
         cursor = conn.cursor()
-
+        
+        lg.info( f"[psql] count userId[{usrId}]" )
+        
         # noinspection SqlConstantExpression
         sql = "Select Count(*) From assets Where 1=1"
         params = []
-
+        
         if assetType:
             sql += " AND type = %s"
             params.append(assetType)
-
+        
         if usrId:
             sql += ' AND "ownerId" = %s'
             params.append(usrId)
-
+        
         sql += " AND status = 'active'"
-
+        
         cursor.execute(sql, params)
         count = cursor.fetchone()[0]
         cursor.close()
-
+        
+        lg.info( f"[psql] count userId[{usrId}] rst[{count}]" )
+        
         return count
     except Exception as e:
         raise mkErr(f"Failed to count assets", e)
+    finally:
+        if conn: conn.close()
 
 
 # ------------------------------------------------------
@@ -145,33 +144,39 @@ def fixPrefix(path: Optional[str]):
 
 
 def testAssetsPath():
-    chk()
-
-    sql = "Select path From asset_files Limit 5"
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
-    cursor.execute(sql)
-    rows = [dict(row) for row in cursor.fetchall()]
-    cursor.close()
-
-    isOk = False
-
-    # lg.info( f"[psql] test AccessPath.. fetched: {len(rows)}" )
-
-    if not rows or not len(rows): return "No Assets"
-
-    for row in rows:
-        path = row.get("path", None)
-        if path:
-            path = imgs.fixPath(fixPrefix(path))
-            isOk = os.path.exists(path)
-            # lg.info( f"[psql] test isOk[{isOk}] path: {path}" )
-            if isOk:
-                return "OK"
-
-    if not isOk: return "Access Failed"
-
-    return f"test failed"
+    conn = None
+    try:
+        conn = mkConn()
+        sql = "Select path From asset_files Limit 5"
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        cursor.execute(sql)
+        rows = [dict(row) for row in cursor.fetchall()]
+        cursor.close()
+        
+        isOk = False
+        
+        # lg.info( f"[psql] test AccessPath.. fetched: {len(rows)}" )
+        
+        if not rows or not len(rows): return "No Assets"
+        
+        for row in rows:
+            path = row.get("path", None)
+            if path:
+                path = imgs.fixPath(fixPrefix(path))
+                isOk = os.path.exists(path)
+                # lg.info( f"[psql] test isOk[{isOk}] path: {path}" )
+                if isOk:
+                    return "OK"
+        
+        if not isOk: return "Access Failed"
+        
+        return f"test failed"
+    
+    except Exception as e:
+        raise mkErr(f"Failed to test assets path", e)
+    finally:
+        if conn: conn.close()
 
 
 #------------------------------------------------------------------------
@@ -293,6 +298,7 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
 
         return pct
 
+    conn = None
     try:
         chk()
 
@@ -306,7 +312,8 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         }
 
         upd("init", 0, 1, "Start query...", True)
-
+        
+        conn = mkConn()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         # count all
@@ -494,3 +501,5 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         msg = f"Failed to FetchAssets: {str(e)}"
         if onUpdate: onUpdate(100, "Erorr", msg)
         raise mkErr(msg, e)
+    finally:
+        if conn: conn.close()

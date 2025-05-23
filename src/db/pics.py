@@ -449,13 +449,6 @@ def getAnySimPending() -> Optional[List[models.Asset]]:
             )
         """)
 
-        c.execute("""
-            UPDATE assets 
-            SET simOk = 1
-            WHERE simOk = 0
-            AND json_array_length(simInfos) = 0
-        """)
-
         conn.commit()
 
         c.execute("""
