@@ -4,9 +4,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from dsh import dash, htm, dcc, dbc, bgMgr
-from util import log, notify, session, task, err, modal, modalImg
-from ui import layout
-import conf, db
+from util import log, session, err, modal, modalImg, notify
+import conf, db, ui
 
 db.init()
 
@@ -26,84 +25,70 @@ app = dash.Dash(
 
 err.injectCallbacks(app)
 
-import serve
+import serve, pages, util
+
 serve.regBy(app)
-layout.regBy(app)
-task.regBy(app)
-notify.regBy(app)
-modal.regBy(app)
-modalImg.regBy(app)
 
-import pages
-pages.regBy(app)
-
+import ui
 #========================================================================
 app.layout = htm.Div([
 
+    dcc.Location(id='url', refresh=False),
+
+    notify.render(),
     session.render(),
     *modal.render(),
     *modalImg.render(),
 
-    dcc.Location(id='url', refresh=False),
+    ui.renderHeader(),
 
-    layout.renderHeader(),
+    ui.sidebar.layout(),
 
-    dbc.Container([
-        dbc.Row([
-            dbc.Col([layout.renderSideBar()], width=3, className="L"),
-            dbc.Col([
+    htm.Div(dash.page_container, className="page"),
+    ui.renderFooter(),
 
-                htm.Div(notify.render()),
-
-                htm.Div(task.render()),
-
-                htm.Div(dash.page_container),
-
-            ], width=9, className="R")
-        ], className="mt-3")
-    ], fluid=True, className="flex-grow-1"),
-
-    layout.renderFooter(),
+], className="d-flex flex-column min-vh-100")
 
 
-], className="d-flex flex-column min-vh-100 layout")
 
 #========================================================================
 if __name__ == "__main__":
     lg = log.get(__name__)
     try:
         lg.info("=======================================")
-        lg.info(f"Starting Dash {'-DEBUG-'if conf.envs.isDev else ''}")
+        lg.info(f"Starting Dash {'-DEBUG-' if conf.envs.isDev else ''}")
 
         if log.EnableLogFile: lg.info(f"Log file recording: {log.log_file}")
 
         lg.info("---------------------------------------")
         if conf.envs.isDev:
             import dsh
+
             dsh.registerScss()
-            app.run_server(
+            app.run(
                 debug=True,
                 host='0.0.0.0',
                 port=int(conf.envs.mkitPort),
                 dev_tools_ui=False,
-                dev_tools_props_check=True,
                 dev_tools_hot_reload=True,
+                dev_tools_props_check=False,
                 dev_tools_silence_routes_logging=True,
                 dev_tools_serve_dev_bundles=True,
             )
         else:
-            app.run_server(
+            app.run(
                 debug=False,
                 host='0.0.0.0',
                 port=int(conf.envs.mkitPort),
             )
 
-
     finally:
         import db
+
         db.close()
 
         import multiprocessing
+
         multiprocessing.current_process().close()
         lg.info("---------------------------------------")
         lg.info("Application closed, all connections closed")

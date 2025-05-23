@@ -1,6 +1,6 @@
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
 from util import log, models, task
-import db
+import db, ui
 from conf import ks
 
 lg = log.get(__name__)
@@ -19,64 +19,70 @@ class K:
     pageInit = "fetch-page-init"
 
 
-opts = [] #[{"label": "All Users", "value": ""}] # current no support
-
+opts = []  #[{"label": "All Users", "value": ""}] # current no support
 
 #========================================================================
 def layout():
-    return htm.Div([
+    import ui
+    return ui.renderBody([
+        #====== top start =======================================================
+
         htm.H3(ks.pg.fetch.name, className="mb-4"),
+        htm.P(ks.pg.fetch.desc, className="mb-4"),
 
-        htm.Div([
-            htm.P( ks.pg.fetch.desc, className="mb-4" ),
-
-            dbc.Card([
-                dbc.CardHeader("Settings"),
-                dbc.CardBody([
+        dbc.Card([
+            dbc.CardHeader("Settings"),
+            dbc.CardBody([
+                htm.Div([
                     htm.Div([
-                        htm.Div([
-                            dbc.Row([
-                                dbc.Col([
-                                    dbc.Label("Select User"),
-                                    dcc.Dropdown(
-                                        id=K.selectUsr,
-                                        options=opts,
-                                        placeholder="Select user.",
-                                        clearable=False
-                                    ),
-                                ], width=12),
-                            ]),
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Label("Select User"),
+                                dcc.Dropdown(
+                                    id=K.selectUsr,
+                                    options=opts,
+                                    placeholder="Select user.",
+                                    clearable=False
+                                ),
+                            ], width=12),
                         ]),
                     ]),
+                ]),
 
-                ])
-            ], className="mb-4"),
+            ])
+        ], className="mb-4"),
 
 
-            dbc.Row([
-                dbc.Col([
-                    dbc.Button(
-                        id=K.btnFetch,
-                        color="primary",
-                        size="lg",
-                        className="w-100",
-                        disabled=True,
-                    ),
-                ], width=6),
+        dbc.Row([
+            dbc.Col([
+                dbc.Button(
+                    id=K.btnFetch,
+                    color="primary",
+                    size="lg",
+                    className="w-100",
+                    disabled=True,
+                ),
+            ], width=6),
 
-                dbc.Col([
-                    dbc.Button(
-                        "Clear All Asset Data",
-                        id=K.btnClean,
-                        color="danger",
-                        size="lg",
-                        className="w-100",
-                    ),
-                ], width=6),
-            ], className="mb-4"),
+            dbc.Col([
+                dbc.Button(
+                    "Clear All Asset Data",
+                    id=K.btnClean,
+                    color="danger",
+                    size="lg",
+                    className="w-100",
+                ),
+            ], width=6),
+        ], className="mb-4"),
+        #====== top end =========================================================
+    ], [
+        #====== bottom start=====================================================
 
-        ]),
-        dcc.Store( id=K.pageInit ),
+
+        *[htm.Div(f"這是第 {i + 1} 個 div") for i in range(10)],
+
+        dcc.Store(id=K.pageInit),
+        #====== bottom end ======================================================
     ])
 
 
@@ -129,7 +135,6 @@ def assets_Init(dta_pi, dta_now, selId, opts):
     prevent_initial_call=True
 )
 def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
-
     tsk = models.Tsk.fromStore(dta_tsk)
     now = models.Now.fromStore(dta_now)
     nfy = models.Nfy.fromStore(dta_nfy)
@@ -145,7 +150,7 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
 
     txtBtn = f"Fetch: Get Assets"
 
-    if usrId and usrId != ( now.usr.id if now and now.usr else None ):
+    if usrId and usrId != (now.usr.id if now and now.usr else None):
         db.dyn.dto.usrId = usrId
         now.switchUsr(usrId)
         if now.usr:
@@ -211,7 +216,6 @@ def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dt
     if tsk.id: return noUpd, noUpd
     trgSrc = getTriggerId()
 
-
     if trgSrc == K.btnClean:
         mdl.id = ks.pg.fetch
         mdl.cmd = ks.cmd.fetch.clear
@@ -221,7 +225,7 @@ def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dt
         mdl.id = ks.pg.fetch
         mdl.cmd = ks.cmd.fetch.asset
         if now.usr:
-            cnt = db.psql.count( now.usr.id )
+            cnt = db.psql.count(now.usr.id)
             mdl.msg = f"Start getting assets[{cnt}] for user [{now.usr.name}] ?"
         # else:
         #     cnt = db.psql.count()
@@ -232,7 +236,6 @@ def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dt
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-
 
 
 #========================================================================
@@ -272,7 +275,6 @@ def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: I
         onUpdate(15, "15%", f"Found {cntAll} photos, starting to fetch assets")
 
         try:
-
             assets = db.psql.fetchAssets(now.usr, onUpdate=onUpdate)
 
         except Exception as e:

@@ -13,11 +13,11 @@ def createGrid(assets: list[models.Asset], minW: int = 250) -> htm.Div:
             className="text-center mt-4"
         )
 
+    lg.info( f"create grid: {len(assets)}" )
     rows = [htm.Div(createPhotoCard(a), className="photo-card") for a in assets]
 
     style = {
         "display": "grid",
-
         "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
         "gap": "1rem"
     }

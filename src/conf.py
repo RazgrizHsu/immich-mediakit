@@ -85,7 +85,7 @@ class ks:
 
     class pg(co.find):
         fetch = co.tit('fetch', 'FetchAssets', cmds.fetch.dict(), desc='Get photo asset from (Api/Psql) and save to local db')
-        vec = co.tit('photoVec', 'ToVectors', cmds.vec.dict(), desc='Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector')
+        vector = co.tit('vector', 'ToVectors', cmds.vec.dict(), desc='Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector')
         similar = co.tit('similar', 'Similarity', cmds.sim.dict(), desc='Find similar photos based on image content. This uses AI-generated vector embeddings to find visually similar assets')
         settings = co.tit('settings', 'Settings', desc='')
         viewGrid = co.tit('viewGrid', 'ViewGrid', desc='')

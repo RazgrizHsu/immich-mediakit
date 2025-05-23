@@ -505,11 +505,10 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
         if not c.fetchone(): raise RuntimeError(f"Asset {assId} not found")
 
         simDicts = [sim.toDict() for sim in infos] if infos else []
-        c.execute("UPDATE assets SET simInfos = ?, simOk = ? WHERE id = ?",
-                  (json.dumps(simDicts), isOk, assId))
+        c.execute("UPDATE assets SET simInfos = ?, simOk = ? WHERE id = ?", (json.dumps(simDicts), isOk, assId))
         conn.commit()
 
-        lg.info(f"Updated simInfos for asset {assId}: {len(infos)} similar assets, simOk[{isOk}]")
+        lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}]")
         return True
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)
@@ -557,7 +556,7 @@ def countSimOk(isOk=0):
         c.execute("SELECT COUNT(*) FROM assets WHERE isVectored = 1 AND simOk = ?", (isOk,))
         count = c.fetchone()[0]
 
-        lg.info(f"[pics] count type[{isOk}] cnt[{count}]")
+        # lg.info(f"[pics] count isOk[{isOk}] cnt[{count}]")
 
         return count
     except Exception as e:

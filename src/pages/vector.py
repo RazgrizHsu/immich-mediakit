@@ -7,8 +7,8 @@ lg = log.get(__name__)
 
 dash.register_page(
     __name__,
-    path=f'/{ks.pg.vec}',
-    title=f"{ks.title}: " + ks.pg.vec.name,
+    path=f'/{ks.pg.vector}',
+    title=f"{ks.title}: " + ks.pg.vector.name,
 )
 
 class K:
@@ -19,11 +19,14 @@ class K:
 
 #========================================================================
 def layout():
-    return htm.Div([
-        htm.H3(ks.pg.vec.name, className="mb-4"),
+    import ui
+    return ui.renderBody([
+        #====== top start =======================================================
+
+        htm.H3(ks.pg.vector.name, className="mb-4"),
 
         htm.Div([
-            htm.P(ks.pg.vec.desc, className="mb-4"),
+            htm.P(ks.pg.vector.desc, className="mb-4"),
 
             dbc.Row([
                 dbc.Col([
@@ -48,9 +51,9 @@ def layout():
                             dbc.Row([
                                 dbc.Col([
                                     htm.Ul([
-                                    htm.Li( [htm.B( "Thumbnail" ),htm.Small( " Fastest, but with lower detail comparison accuracy" ), ]),
-                                    htm.Li( [htm.B( "Preview" ),htm.Small( " Medium quality, generally the most balanced option" ), ]),
-                                    htm.Li( [htm.B( "FullSize" ),htm.Small( " Slowest, but provides the most precise detail comparison" ), ]),
+                                        htm.Li( [htm.B( "Thumbnail" ),htm.Small( " Fastest, but with lower detail comparison accuracy" ), ]),
+                                        htm.Li( [htm.B( "Preview" ),htm.Small( " Medium quality, generally the most balanced option" ), ]),
+                                        htm.Li( [htm.B( "FullSize" ),htm.Small( " Slowest, but provides the most precise detail comparison" ), ]),
                                     ]),
                                 ], width=12, className=""),
                             ], className="mb-0"),
@@ -83,6 +86,11 @@ def layout():
                 ], width=6),
             ], className="mb-4"),
         ]),
+        #====== top end =========================================================
+    ], [
+        #====== bottom start=====================================================
+
+        #====== bottom end ======================================================
     ])
 
 
@@ -215,7 +223,7 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, 
         if now.cntPic <= 0:
             nfy.error("No asset data to process")
         else:
-            mdl.id = ks.pg.vec
+            mdl.id = ks.pg.vector
             mdl.cmd = ks.cmd.vec.toVec
             mdl.msg = f"Begin processing photos[{now.cntPic}] with quality[{photoQ}] ?"
             now.photoQ = photoQ
@@ -225,7 +233,7 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, 
             nfy.error("No vector data to clear")
         else:
             nfy.info(f"[photoVec] Triggered: Clear all vectors")
-            mdl.id = ks.pg.vec
+            mdl.id = ks.pg.vector
             mdl.cmd = ks.cmd.vec.clear
             mdl.msg = "Are you sure you want to clear all vectors?"
 

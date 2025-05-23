@@ -57,16 +57,124 @@ span {
 	}
 }
 
-.layout {
-	.L {
-		//border: red 1px solid;
-	}
+.sidebar {
 
-	.R {
-		padding:0 15px 0 5px;
+	position:relative;
+	width:0px;
+	height:0px;
+
+	> div {
+		//border: red dotted 2px;
+		width: 250px;
+		margin: 20px 0 0 20px;
 	}
 }
 
+.page {
+
+	//* {
+	//	margin:0;
+	//	padding:0;
+	//	box-sizing:border-box;
+	//}
+
+	$debug:false;
+	$sideW:250px;
+	$gx:8px;
+	$gy:3px;
+	$pad:20px;
+	$spac:$pad * 2 + $gx;
+
+	.side {
+		flex:0 0 $sideW;
+		min-width:200px;
+		max-width:300px;
+		@if $debug { border:#1A95C3 3px dotted }
+	}
+
+	> div > div > .body {
+
+		display:flex;
+		flex-wrap:wrap;
+		align-items:flex-start;
+		gap:$gy $gx;
+		padding:$pad;
+
+		> .main {
+			flex:0 0 calc(100vw - 350px);
+			margin-left: auto;
+
+			@if $debug { border:red 2px dotted }
+		}
+
+		> .main ~ div {
+			@if $debug { border:blue 2px dotted }
+
+			flex:1 0 50vw;
+		}
+	}
+
+
+
+		// in menu
+		//> div {
+		//	display:flex;
+		//	align-items:center;
+		//	padding:8px 0;
+		//	cursor:pointer;
+		//}
+		//
+		//.ico {
+		//	margin-right:10px;
+		//	font-size:18px;
+		//	width:24px;
+		//	text-align:center;
+		//}
+
+		//> * {
+		//	flex:1 1 calc(100vw - 450px);
+		//	min-width:0;
+		//	border-radius:8px;
+		//	border:2px solid blue;
+		//}
+		//
+		//> *:nth-child(n+6) {
+		//	flex:1 1 100%;
+		//	border-radius:8px;
+		//	border:2px solid green;
+		//}
+
+		//// 響應式：縮小 sidebar 而不是垂直排列
+		//@media (max-width:768px) {
+		//	> div:first-child {
+		//		flex:0 0 60px;
+		//		min-width:60px;
+		//		max-width:60px;
+		//		padding:10px;
+		//
+		//		// 隱藏 sidebar 內的文字，只保留圖標
+		//		span:not(.ico) {
+		//			display:none;
+		//		}
+		//
+		//		h3 {
+		//			display:none;
+		//		}
+		//
+		//		p {
+		//			display:none;
+		//		}
+		//
+		//		// 讓圖標居中顯示
+		//		.ico {
+		//			display:block;
+		//			text-align:center;
+		//			margin:5px 0;
+		//		}
+		//	}
+		//}
+
+}
 
 .txt-sm {
 	font-size:0.75rem;
@@ -358,7 +466,7 @@ span {
 	}
 
 	&.lg {
-		font-size: 15px;
+		font-size:15px;
 	}
 }
 
@@ -528,29 +636,30 @@ span {
 
 	.img {
 
-		position: relative;
+		position:relative;
 
 		img {
 			object-fit:contain;
-			height: 180px;
-			cursor: pointer!important;
+			height:180px;
+			cursor:pointer !important;
 		}
 
 		//floating on img left-bottom
 		> div:nth-child(2) {
-			position: absolute;
-			bottom: 5px;
-			left: 5px;
+			position:absolute;
+			bottom:5px;
+			left:5px;
 			//border: blue 1px solid;
-			display: flex;
+			display:flex;
 			justify-content:start;
 		}
+
 		> div {
-			position: absolute;
-			bottom: 5px;
-			right: 5px;
+			position:absolute;
+			bottom:5px;
+			right:5px;
 			//border: red 1px solid;
-			display: flex;
+			display:flex;
 			justify-content:end;
 		}
 
@@ -637,7 +746,11 @@ span {
 	border-bottom-right-radius:12px;
 }
 
+/*======================== taber ========================*/
 .taber {
+
+	$debug: true;
+
 	border-radius:8px;
 	overflow:hidden;
 	margin-bottom:20px;
@@ -655,11 +768,11 @@ span {
 
 			> div {
 				padding:8px 38px;
-				cursor:pointer!important;
+				cursor:pointer !important;
 				border-radius:4px 4px 0 0;
 				transition:all 0.2s ease;
-				border: #737373 1px solid;
-				border-bottom: none;
+				border:#737373 1px solid;
+				border-bottom:none;
 				margin-right:5px;
 
 				&:hover {
@@ -676,7 +789,7 @@ span {
 
 				&.disabled {
 					opacity:0.5;
-					cursor:not-allowed!important;
+					cursor:not-allowed !important;
 					pointer-events:none;
 					background:#444444;
 					color:#999999;
@@ -686,10 +799,10 @@ span {
 		}
 
 		.acts {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-			white-space: nowrap;
+			display:flex;
+			align-items:center;
+			gap:8px;
+			white-space:nowrap;
 		}
 	}
 

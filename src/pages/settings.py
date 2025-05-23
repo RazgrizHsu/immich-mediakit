@@ -12,7 +12,10 @@ dash.register_page(
 
 #========================================================================
 def layout():
-    return htm.Div([
+    import ui
+    return ui.renderBody([
+        #====== top start =======================================================
+
         htm.H3("System Settings", className="mb-4"),
 
         htm.Div([
@@ -78,4 +81,9 @@ def layout():
                 htm.P("Note: All settings must be configured through environment variables or the .env file, and cannot be modified through the UI.", className="text-warning")
             ]),
         ]),
+        #====== top end =========================================================
+    ], [
+        #====== bottom start=====================================================
+
+        #====== bottom end ======================================================
     ])
