@@ -20,7 +20,7 @@ lg = log.get(__name__)
     ],
     prevent_initial_call=True
 )
-def task_RunActs(dta_mdl, dta_now, dta_nfy):
+def task_RunActsFromModal(dta_mdl, dta_now, dta_nfy):
     mdl = models.Mdl.fromStore(dta_mdl)
 
     tid = getTriggerId()

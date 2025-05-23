@@ -60,19 +60,19 @@ def registerScss():
 try:
 
     from uuid import uuid4
-    bgId = uuid4()
-
-    import dash_bgmgr_redis as dbr
 
     from conf import envs
-    bgMgr = dbr.NewRedisBgManager( envs.redisUrl, 'dsh:bg:', 3600, [lambda: bgId] )
+
+    import dash_bgmgr_redis as dbr
+    bgMgr = dbr.NewRedisBgManager( envs.redisUrl, 'dsh:bg:', 3600 )
+    # import util.rds as rds
+    # bgMgr = rds.NewRedisBgManager( envs.redisUrl, 'dsh:bg:', 3600 )
 
     # from dash import DiskcacheManager
     # import diskcache
     # diskCache = diskcache.Cache(pathCache)
     # bgMgr = DiskcacheManager(
     #     diskCache,
-    #     cache_by=[lambda: bgId],
     #     expire=3600
     # )
 

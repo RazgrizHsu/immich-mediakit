@@ -24,7 +24,7 @@ lg = log.get(__name__)
 #     return htm.Div(rows)
 
 
-def createGrid(assets: list[models.Asset], rootId: str, minW: int = 250, onEmpty=None):
+def createGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=None):
     if not assets or len(assets) == 0:
         lg.info( "[sim-grid] return empty grid" )
         if onEmpty:
@@ -40,17 +40,24 @@ def createGrid(assets: list[models.Asset], rootId: str, minW: int = 250, onEmpty
 
     rootSI = next((a.simInfos for a in assets if a.id == rootId), None)
 
-    rows = [htm.Div(mkImgCardSim(a, rootSI), className="photo-card") for a in assets]
-
-    style = {
+    styItem = {"maxWidth": f"{maxW}px"}
+    styGrid = {
         "display": "grid",
         "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
-        "gap": "1rem"
+        "gap": "1rem",
+        "justifyItems": "center"
     }
+
+    cntAss = len(assets)
+    if cntAss <= 4:
+        styItem.pop("maxWidth")
+        styGrid.pop("justifyItems")
+
+    rows = [htm.Div(mkImgCardSim(a, rootSI), className="photo-card", style=styItem) for a in assets]
 
     lg.info( f"[sim-grid] create with rows[{len(assets)}] return rows[{len(rows)}]" )
 
-    return htm.Div(rows, style=style)
+    return htm.Div(rows, style=styGrid)
 
 
 # def create_pair_card(photo1_id, photo2_id, similarity, index, selected_images=None):
@@ -186,10 +193,12 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
                 className="card-img"
             ),
             htm.Div([
-                htm.Span(f"autoId: {ass.autoId}", className="badge"),
+                htm.Span(f"#{ass.autoId}", className="badge"),
             ]),
             htm.Div([
-                htm.Span(f"{imgW} x {imgH}", className="badge bg-primary"),
+                htm.Span(f"{imgW}", className="badge bg-primary"),
+                htm.Span("x"),
+                htm.Span(f"{imgH}", className="badge bg-primary"),
             ])
         ], className="img"),
         dbc.CardBody([
