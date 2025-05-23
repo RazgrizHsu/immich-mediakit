@@ -27,9 +27,10 @@ def render():
 #========================================================================
 @callback(
     [
-        out(ks.sto.mdl, "data", allow_duplicate=True),
         out(k.id.div, "is_open"),
         out(k.id.txt, "children"),
+        out(ks.sto.mdl, "data", allow_duplicate=True),
+        out(ks.sto.tsk, "data", allow_duplicate=True),
     ],
     [
         inp(ks.sto.mdl, "data"),
@@ -40,6 +41,7 @@ def render():
 )
 def update_txt(dta_mdl, nclk_ok, nclk_no):
     mdl = models.Mdl.fromStore(dta_mdl)
+    tsk = models.Tsk()
 
     isOpen = mdl.id is not None
 
@@ -53,8 +55,18 @@ def update_txt(dta_mdl, nclk_ok, nclk_no):
         isOpen = False
 
     if trigId == k.id.btnOk:
-        lg.info( f"[modal] Confirm execution: id[{mdl.id}] msg[{mdl.msg}]" )
+        lg.info( f"[modal] Confirm execution: id[{mdl.id}] cmd[{mdl.cmd}]" )
         mdl.ok = True
         isOpen = False
 
-    return mdl.toStore(), isOpen, mdl.msg
+        if mdl.cmd:
+            tsk = mdl.mkTsk()
+            if not tsk:
+                lg.error(f"[modal] Failed to create task from modal")
+                tsk = models.Tsk()
+            else:
+                lg.info(f"[modal] Created task: id[{tsk.id}] cmd[{tsk.cmd}]")
+
+        mdl.reset()
+
+    return isOpen, mdl.msg, mdl.toStore(), tsk.toStore()
