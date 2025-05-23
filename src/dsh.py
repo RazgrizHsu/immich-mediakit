@@ -54,28 +54,3 @@ def registerScss():
     observer = Observer()
     observer.schedule(ScssHandler(), pathFromRoot('src/scss'), recursive=True)
     observer.start()
-
-
-
-try:
-
-    from uuid import uuid4
-
-    from conf import envs
-
-    import dash_bgmgr_redis as dbr
-    bgMgr = dbr.NewRedisBgManager( envs.redisUrl, 'dsh:bg:', 3600 )
-    # import util.rds as rds
-    # bgMgr = rds.NewRedisBgManager( envs.redisUrl, 'dsh:bg:', 3600 )
-
-    # from dash import DiskcacheManager
-    # import diskcache
-    # diskCache = diskcache.Cache(pathCache)
-    # bgMgr = DiskcacheManager(
-    #     diskCache,
-    #     expire=3600
-    # )
-
-except Exception as e:
-    lg.error(f"[dsh] init failed: {e}")
-    raise Exception(f"[dsh] init failed: {e}")

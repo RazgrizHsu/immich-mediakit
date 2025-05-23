@@ -7,8 +7,8 @@ from datetime import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from util.models import Now, Usr, Nfy, Tsk, Mdl, Asset, AssetExif, SimInfo
-from util.baseModel import Json
+from mod.models import Now, Usr, Nfy, Tsk, Mdl, Asset, AssetExif, SimInfo
+from mod.bse.baseModel import Json
 import db.pics as pics
 from util import log
 

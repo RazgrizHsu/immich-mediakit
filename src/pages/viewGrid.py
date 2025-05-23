@@ -1,6 +1,7 @@
 import db
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId
-from util import log, models
+from util import log
+from mod import models
 from conf import ks
 from ui.grid import createGrid
 

@@ -1,5 +1,6 @@
 from dsh import dbc, inp, out, callback, getTriggerId
-from util import log, models
+from util import log
+from mod import models
 from conf import ks
 
 lg = log.get(__name__)
@@ -52,7 +53,7 @@ def update_txt(dta_mdl, nclk_ok, nclk_no):
         isOpen = False
 
     if trigId == k.id.btnOk:
-        # lg.info( f"[modal] Confirm execution: id[{mdl.id}] {mdl.msg}" )
+        lg.info( f"[modal] Confirm execution: id[{mdl.id}] msg[{mdl.msg}]" )
         mdl.ok = True
         isOpen = False
 

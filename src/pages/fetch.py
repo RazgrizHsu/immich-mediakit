@@ -1,6 +1,7 @@
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
-from util import log, models, task
-import db, ui
+from util import log
+from mod import models
+import db
 from conf import ks
 
 lg = log.get(__name__)
@@ -79,7 +80,7 @@ def layout():
         #====== bottom start=====================================================
 
 
-        *[htm.Div(f"這是第 {i + 1} 個 div") for i in range(10)],
+        # *[htm.Div(f"這是第 {i + 1} 個 div") for i in range(10)],
 
         dcc.Store(id=K.pageInit),
         #====== bottom end ======================================================
@@ -241,7 +242,7 @@ def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dt
 #========================================================================
 # task acts
 #========================================================================
-from util.task import IFnProg
+from mod import IFnProg, mapFns
 
 #------------------------------------------------------------------------
 def onFetchAssets(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnProg):
@@ -335,5 +336,5 @@ def onFetchClearAll(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
 #========================================================================
 # Set up global functions
 #========================================================================
-task.mapFns[ks.cmd.fetch.asset] = onFetchAssets
-task.mapFns[ks.cmd.fetch.clear] = onFetchClearAll
+mapFns[ks.cmd.fetch.asset] = onFetchAssets
+mapFns[ks.cmd.fetch.clear] = onFetchClearAll

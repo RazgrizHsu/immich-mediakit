@@ -7,9 +7,9 @@ import psycopg2.extras
 
 import imgs
 from conf import ks, envs
-from util import log, models
+from util import log
+from mod import models, IFnProg
 from util.err import mkErr
-from util.task import IFnProg
 
 lg = log.get(__name__)
 
@@ -19,17 +19,18 @@ def init():
         from pillow_heif import register_heif_opener
         register_heif_opener()
     except ImportError:
+        register_heif_opener = None
         lg.info("pillow-heif not available, skipping HEIC/HEIF support")
-    
+
     host = envs.psqlHost
     port = envs.psqlPort
     db = envs.psqlDb
     uid = envs.psqlUser
     pw = envs.psqlPass
-    
+
     if not all([host, port, db, uid]):
         raise RuntimeError("PostgreSQL connection settings not initialized.")
-    
+
     try:
         conn = mkConn()
         cursor = conn.cursor()
@@ -104,29 +105,29 @@ def count(usrId=None, assetType="IMAGE"):
     try:
         conn = mkConn()
         cursor = conn.cursor()
-        
-        lg.info( f"[psql] count userId[{usrId}]" )
-        
+
+        #lg.info( f"[psql] count userId[{usrId}]" )
+
         # noinspection SqlConstantExpression
         sql = "Select Count(*) From assets Where 1=1"
         params = []
-        
+
         if assetType:
             sql += " AND type = %s"
             params.append(assetType)
-        
+
         if usrId:
             sql += ' AND "ownerId" = %s'
             params.append(usrId)
-        
+
         sql += " AND status = 'active'"
-        
+
         cursor.execute(sql, params)
         count = cursor.fetchone()[0]
         cursor.close()
-        
-        lg.info( f"[psql] count userId[{usrId}] rst[{count}]" )
-        
+
+        #lg.info( f"[psql] count userId[{usrId}] rst[{count}]" )
+
         return count
     except Exception as e:
         raise mkErr(f"Failed to count assets", e)
@@ -149,17 +150,17 @@ def testAssetsPath():
         conn = mkConn()
         sql = "Select path From asset_files Limit 5"
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        
+
         cursor.execute(sql)
         rows = [dict(row) for row in cursor.fetchall()]
         cursor.close()
-        
+
         isOk = False
-        
+
         # lg.info( f"[psql] test AccessPath.. fetched: {len(rows)}" )
-        
+
         if not rows or not len(rows): return "No Assets"
-        
+
         for row in rows:
             path = row.get("path", None)
             if path:
@@ -168,11 +169,11 @@ def testAssetsPath():
                 # lg.info( f"[psql] test isOk[{isOk}] path: {path}" )
                 if isOk:
                     return "OK"
-        
+
         if not isOk: return "Access Failed"
-        
+
         return f"test failed"
-    
+
     except Exception as e:
         raise mkErr(f"Failed to test assets path", e)
     finally:
@@ -312,7 +313,7 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         }
 
         upd("init", 0, 1, "Start query...", True)
-        
+
         conn = mkConn()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 

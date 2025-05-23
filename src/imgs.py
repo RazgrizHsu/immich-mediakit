@@ -16,8 +16,8 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
 
 import db, conf
-from util import log, models
-from util.task import IFnProg
+from util import log
+from mod import models, IFnProg
 from util.err import mkErr
 from conf import envs
 

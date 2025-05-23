@@ -3,11 +3,18 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from dsh import dash, htm, dcc, dbc, bgMgr
-from util import log, session, err, modal, modalImg, notify
-import conf, db, ui
+from dsh import dash, htm, dcc, dbc
+from dash_extensions import WebSocket
+from util import log, err
+from mod import notify, modalImg, session, modal, tsk
+from mod.mgr import tskSvc
+import conf, db
+
+lg = log.get(__name__)
 
 db.init()
+
+tskSvc.init()
 
 app = dash.Dash(
     __name__,
@@ -20,20 +27,39 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
     use_pages=True,
     pages_folder="pages",
-    background_callback_manager=bgMgr,
 )
 
 err.injectCallbacks(app)
 
-import serve, pages, util
+import serve
 
 serve.regBy(app)
+
+from dsh import callback, inp, out
+
+@callback(
+    out("url", "pathname"),
+    [
+        inp(tsk.k.wsId, "state"),
+        inp(tsk.k.wsId, "error")
+    ],
+    prevent_initial_call=True
+)
+def monitor_ws_connection(state, error):
+    if error:
+        lg.error(f"[app:ws] ERROR: {error}")
+    elif state:
+        lg.info(f"[app:ws] state changed: {state}")
+    return dash.no_update
 
 import ui
 #========================================================================
 app.layout = htm.Div([
 
     dcc.Location(id='url', refresh=False),
+
+    # Global WebSocket connection for task updates
+    WebSocket(id=tsk.k.wsId, url="ws://localhost:8765"),
 
     notify.render(),
     session.render(),

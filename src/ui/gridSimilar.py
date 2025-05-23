@@ -1,5 +1,6 @@
 from dsh import htm, dbc
-from util import log, models
+from util import log
+from mod import models
 
 lg = log.get(__name__)
 

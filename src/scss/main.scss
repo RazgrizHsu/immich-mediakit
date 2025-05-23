@@ -65,8 +65,8 @@ span {
 
 	> div {
 		//border: red dotted 2px;
-		width: 250px;
-		margin: 20px 0 0 20px;
+		width:250px;
+		margin:20px 0 0 20px;
 	}
 }
 
@@ -102,7 +102,7 @@ span {
 
 		> .main {
 			flex:0 0 calc(100vw - 350px);
-			margin-left: auto;
+			margin-left:auto;
 
 			@if $debug { border:red 2px dotted }
 		}
@@ -115,64 +115,63 @@ span {
 	}
 
 
+	// in menu
+	//> div {
+	//	display:flex;
+	//	align-items:center;
+	//	padding:8px 0;
+	//	cursor:pointer;
+	//}
+	//
+	//.ico {
+	//	margin-right:10px;
+	//	font-size:18px;
+	//	width:24px;
+	//	text-align:center;
+	//}
 
-		// in menu
-		//> div {
-		//	display:flex;
-		//	align-items:center;
-		//	padding:8px 0;
-		//	cursor:pointer;
-		//}
-		//
-		//.ico {
-		//	margin-right:10px;
-		//	font-size:18px;
-		//	width:24px;
-		//	text-align:center;
-		//}
+	//> * {
+	//	flex:1 1 calc(100vw - 450px);
+	//	min-width:0;
+	//	border-radius:8px;
+	//	border:2px solid blue;
+	//}
+	//
+	//> *:nth-child(n+6) {
+	//	flex:1 1 100%;
+	//	border-radius:8px;
+	//	border:2px solid green;
+	//}
 
-		//> * {
-		//	flex:1 1 calc(100vw - 450px);
-		//	min-width:0;
-		//	border-radius:8px;
-		//	border:2px solid blue;
-		//}
-		//
-		//> *:nth-child(n+6) {
-		//	flex:1 1 100%;
-		//	border-radius:8px;
-		//	border:2px solid green;
-		//}
-
-		//// 響應式：縮小 sidebar 而不是垂直排列
-		//@media (max-width:768px) {
-		//	> div:first-child {
-		//		flex:0 0 60px;
-		//		min-width:60px;
-		//		max-width:60px;
-		//		padding:10px;
-		//
-		//		// 隱藏 sidebar 內的文字，只保留圖標
-		//		span:not(.ico) {
-		//			display:none;
-		//		}
-		//
-		//		h3 {
-		//			display:none;
-		//		}
-		//
-		//		p {
-		//			display:none;
-		//		}
-		//
-		//		// 讓圖標居中顯示
-		//		.ico {
-		//			display:block;
-		//			text-align:center;
-		//			margin:5px 0;
-		//		}
-		//	}
-		//}
+	//// 響應式：縮小 sidebar 而不是垂直排列
+	//@media (max-width:768px) {
+	//	> div:first-child {
+	//		flex:0 0 60px;
+	//		min-width:60px;
+	//		max-width:60px;
+	//		padding:10px;
+	//
+	//		// 隱藏 sidebar 內的文字，只保留圖標
+	//		span:not(.ico) {
+	//			display:none;
+	//		}
+	//
+	//		h3 {
+	//			display:none;
+	//		}
+	//
+	//		p {
+	//			display:none;
+	//		}
+	//
+	//		// 讓圖標居中顯示
+	//		.ico {
+	//			display:block;
+	//			text-align:center;
+	//			margin:5px 0;
+	//		}
+	//	}
+	//}
 
 }
 
@@ -396,6 +395,17 @@ span {
 .modal {
 
 	$rad:12px;
+
+	.btn-close {
+
+		color: red;
+		background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M1.707 1.707a2 2 0 0 1 2.828 0L8 5.172l3.465-3.465a2 2 0 1 1 2.828 2.828L10.828 8l3.465 3.465a2 2 0 0 1-2.828 2.828L8 10.828l-3.465 3.465a2 2 0 0 1-2.828-2.828L5.172 8 1.707 4.535a2 2 0 0 1 0-2.828'/%3e%3c/svg%3e");
+		border: 1px solid #BBB;
+		margin-right: 10px;
+	}
+
+	//<path d='M1.707 1.707a2 2 0 0 1 2.828 0L8 5.172l3.465-3.465a2 2 0 1 1 2.828 2.828L10.828 8l3.465 3.465a2 2 0 0 1-2.828 2.828L8 10.828l-3.465 3.465a2 2 0 0 1-2.828-2.828L5.172 8 1.707 4.535a2 2 0 0 1 0-2.828'/>
+	//data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414'/%3e%3c/svg%3e
 
 	&-content {
 		border-radius:$rad;
@@ -663,7 +673,7 @@ span {
 			width:100%;
 
 			> span {
-				font-size: 18px!important;
+				font-size:18px !important;
 			}
 		}
 
@@ -741,19 +751,25 @@ span {
 	border:red 1px solid;
 }
 
-.tab-content {
-	padding:0 !important; /* 覆蓋預設的 10px padding */
 
-	border:var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+/*======================== task ========================*/
+.tskPanel {
+	margin:10px 20px 15px 20px;
+	padding:20px 30px 20px 30px;
+	border-radius:16px;
+	border:2px solid var(--bs-border-color);
+	background:#3F3F3F;
+	box-shadow:0 0 6px rgba(255, 255, 255, 0.2);
 
-	border-bottom-left-radius:12px;
-	border-bottom-right-radius:12px;
+	.progress {
+		border:#999999 1px solid;
+	}
 }
 
 /*======================== taber ========================*/
 .taber {
 
-	$debug: true;
+	$debug:true;
 
 	border-radius:8px;
 	overflow:hidden;
@@ -788,7 +804,7 @@ span {
 					color:white;
 					font-weight:500;
 
-					@include bg-gradient(var(--main-lig), var(--main-bs), var(--main-dk))
+					@include bg-gradient(var(--main-bs), var(--main-lig), var(--main-dk))
 				}
 
 				&.disabled {

@@ -4,7 +4,8 @@ from typing import Optional
 import db
 from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
-from util import log, models, task
+from util import log
+from mod import models, mapFns, IFnProg
 
 lg = log.get(__name__)
 
@@ -384,7 +385,7 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     prevent_initial_call=True
 )
 def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
-    if not clk_fnd and not clk_clr and not clk_con: return noUpd, noUpd, noUpd
+    if not clk_fnd and not clk_clr and not clk_con: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
@@ -393,7 +394,19 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
     tsk = models.Tsk.fromStore(dta_tsk)
     nfy = models.Nfy.fromStore(dta_nfy)
 
-    if tsk.id: return noUpd, noUpd, noUpd
+    if tsk.id:
+        # 檢查任務是否真的還在運行
+        from mod.mgr.tskSvc import mgr
+        if mgr and mgr.getInfo(tsk.id):
+            task_info = mgr.getInfo(tsk.id)
+            if task_info.status in ['pending', 'running']:
+                lg.info(f"[similar] Task already running: {tsk.id}")
+                return noUpd, noUpd, noUpd, noUpd
+
+        # 如果任務已經完成或不存在，清除 tsk.id
+        lg.info(f"[similar] Clearing completed task: {tsk.id}")
+        tsk.id = None
+        tsk.cmd = None
 
     lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
 
@@ -402,7 +415,7 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
         cntRs = db.pics.countHasSimIds()
         if cntOk <= 0 and cntRs <= 0:
             nfy.warn(f"[similar] DB does not contain any similarity records")
-            return noUpd, nfy.toStore(), noUpd
+            return noUpd, nfy.toStore(), noUpd, noUpd
 
         mdl.reset()
         mdl.id = ks.pg.similar
@@ -473,13 +486,14 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
-    return mdl.toStore(), nfy.toStore(), now.toStore(), noUpd
+    # 如果有清除過 tsk.id，需要更新 store
+    return mdl.toStore(), nfy.toStore(), now.toStore(), tsk.toStore() if tsk.id is None else noUpd
 
 
 #========================================================================
 # task acts
 #========================================================================
-def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.IFnProg):
+def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnProg):
     if tsk.id != ks.pg.similar:
         msg = f"[tsk] wrong triggerId[{tsk.id}]"
         lg.warn(msg)
@@ -524,7 +538,7 @@ def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.
         return nfy, now, msg
 
 
-def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: task.IFnProg):
+def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnProg):
     if tsk.id != ks.pg.similar:
         msg = f"[tsk] wrong triggerId[{tsk.id}]"
         lg.warn(msg)
@@ -639,5 +653,5 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
 #========================================================================
 # Set up global functions
 #========================================================================
-task.mapFns[ks.cmd.sim.find] = sim_FindSimilar
-task.mapFns[ks.cmd.sim.clear] = sim_Clear
+mapFns[ks.cmd.sim.find] = sim_FindSimilar
+mapFns[ks.cmd.sim.clear] = sim_Clear

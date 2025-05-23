@@ -1,43 +1,45 @@
+import hashlib
 import os
-from flask import send_file, request, make_response, Response
+from flask import send_file, request, make_response
 from flask_caching import Cache
-import redis
 
-from conf import envs, ks
+from conf import envs, ks, pathCache
 from util import log
 
 lg = log.get(__name__)
 
-TIMEOUT = 2592000 #30day
+TIMEOUT = (60 * 60 * 24) * 30  #30day
 
 
 def regBy(app):
     import db
 
-    cache = Cache(app.server, config={
-        'CACHE_TYPE': 'RedisCache',
-        'CACHE_REDIS_URL': envs.redisUrl,
-        'CACHE_DEFAULT_TIMEOUT': TIMEOUT,
-        'CACHE_KEY_PREFIX': 'dsh:img:'
-    })
+    dirCache = os.path.abspath(os.path.join(pathCache, 'imgs'))
 
-    rdscnn = redis.from_url(envs.redisUrl)
+    cache = Cache(app.server, config={
+        'CACHE_TYPE': 'filesystem',
+        'CACHE_DIR': dirCache,
+        'CACHE_DEFAULT_TIMEOUT': TIMEOUT,
+        'CACHE_THRESHOLD': 300,
+    })
 
     noimg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets/noimg.png")
 
-    #----------------------------------------------------------------
+
+    # ----------------------------------------------------------------
     # serve for viewGrid
-    #----------------------------------------------------------------
+    # ----------------------------------------------------------------
     @app.server.route('/api/img/<assetId>')
     def serve_image(assetId):
         try:
             photoQ = request.args.get('q', ks.db.thumbnail)
-            cache_key = f"img:{assetId}_{photoQ}"
 
-            cached_data = rdscnn.get(cache_key)
-            if cached_data:
-                lg.debug(f"[api:img] cache hit for {assetId}")
-                rep = make_response(Response(cached_data, mimetype='image/jpeg'))
+            cache_key = f"{assetId}_{photoQ}"
+            cache_hash = hashlib.md5(cache_key.encode()).hexdigest()
+            cache_path = os.path.abspath(os.path.join(dirCache, f"{cache_hash}.jpg"))
+
+            if os.path.exists(cache_path):
+                rep = make_response(send_file(cache_path, mimetype='image/jpeg'))
                 rep.headers['Cache-Control'] = 'public, max-age=31536000'  # client 1year
                 return rep
 
@@ -49,18 +51,17 @@ def regBy(app):
             if row:
                 if photoQ == ks.db.preview: path = row[1]
                 elif photoQ == ks.db.fullsize: path = row[2]
-                else: path = row[0]
+                else:
+                    path = row[0]
 
                 if path:
-                    full_path = os.path.join(envs.immichPath, path)
-                    if os.path.exists(full_path):
-                        lg.info(f"[api:img] loading img id[{assetId}] path[{full_path}]")
+                    path = os.path.join(envs.immichPath, path)
+                    if os.path.exists(path):
+                        lg.info(f"[api:img] get img cache id[{assetId}] path[{path}]")
+                        with open(cache_path, 'wb') as f:
+                            with open(path, 'rb') as src: f.write(src.read())
 
-                        with open(full_path, 'rb') as f: img_data = f.read()
-
-                        rdscnn.setex(cache_key, TIMEOUT, img_data)
-
-                        rep = make_response(Response(img_data, mimetype='image/jpeg'))
+                        rep = make_response(send_file(cache_path, mimetype='image/jpeg'))
                         rep.headers['Cache-Control'] = 'public, max-age=31536000'
                         return rep
 
@@ -69,20 +70,3 @@ def regBy(app):
         except Exception as e:
             lg.error(f"Error serving image: {str(e)}")
             return send_file(noimg_path, mimetype='image/png')
-
-
-    #----------------------------------------------------------------
-    # for clear cache
-    #----------------------------------------------------------------
-    @app.server.route('/api/cache/clear')
-    def clear_cache():
-        try:
-            pattern = 'img:*'
-            keys = rdscnn.keys(pattern)
-            if keys:
-                rdscnn.delete(*keys)
-                return {'status': 'success', 'cleared': len(keys)}
-            return {'status': 'success', 'cleared': 0}
-        except Exception as e:
-            lg.error(f"Error clearing cache: {str(e)}")
-            return {'status': 'error', 'message': str(e)}

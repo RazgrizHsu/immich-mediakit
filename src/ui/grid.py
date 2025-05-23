@@ -1,6 +1,7 @@
 import dash.html as htm
 import dash_bootstrap_components as dbc
-from util import log, models
+from util import log
+from mod import models
 from ui.gridExif import mkTipExif
 
 lg = log.get(__name__)

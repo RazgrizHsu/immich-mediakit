@@ -2,7 +2,8 @@ from typing import Any
 from db import pics, psql, vecs
 from db.dyn import dto
 from dsh import htm, dcc
-from util import log, models
+from util import log
+from mod import models
 from conf import ks
 
 lg = log.get(__name__)

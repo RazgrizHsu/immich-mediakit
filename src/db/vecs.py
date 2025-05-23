@@ -5,7 +5,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmod
 
 from conf import envs
-from util import log, models
+from util import log
+from mod import models
 from util.err import mkErr
 
 lg = log.get(__name__)
