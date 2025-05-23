@@ -440,7 +440,7 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
         if now.cntVec <= 0:
             nfy.error("No vector data to process")
             now.pg.sim.reset()
-            return mdl.toStore(), nfy.toStore(), noUpd
+            return mdl.toStore(), nfy.toStore(), now.toStore(), noUpd
 
         thMin, thMax = thRange
         thMin = co.valid.float(thMin, 0.80)
@@ -476,7 +476,7 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.find
             mdl.args = {'thMin': thMin, 'thMax': thMax}
-            tsk =  mdl.mkTsk()
+            tsk = mdl.mkTsk()
             mdl.reset()
             # mdl.msg = [
             #     f"Begin finding similar?", htm.Br(),
