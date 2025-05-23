@@ -1,6 +1,6 @@
 import requests
 
-from conf import envs, ks
+from conf import envs
 from util import log
 
 lg = log.get(__name__)

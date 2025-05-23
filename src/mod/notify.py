@@ -1,5 +1,6 @@
 from dsh import dash, htm, dbc, out, inp, ste, callback, ALL
-from util import log, models
+from util import log
+from mod import models
 from conf import ks
 
 lg = log.get(__name__)

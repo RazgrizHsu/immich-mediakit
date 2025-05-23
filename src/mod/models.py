@@ -5,7 +5,7 @@ from typing import Dict, List, Any, Optional
 
 from conf import ks, envs
 from util import log
-from util.baseModel import BaseDictModel
+from mod.bse.baseModel import BaseDictModel
 
 lg = log.get(__name__)
 

@@ -1,7 +1,8 @@
 from dsh import out, inp, ste, noUpd, callback, getTriggerId
 
 from conf import ks
-from util import log, models
+from util import log
+from mod import models
 
 lg = log.get(__name__)
 

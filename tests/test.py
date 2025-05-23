@@ -5,7 +5,8 @@ import unittest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from util import log, models
+from util import log
+from mod import models
 from conf import ks, co
 import db
 

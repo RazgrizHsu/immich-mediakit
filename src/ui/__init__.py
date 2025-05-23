@@ -1,6 +1,9 @@
 from conf import ks
-from dsh import htm, dbc, inp, out, ste, callback
-from util import log, models
+from dsh import htm, dbc, inp, out, callback
+from util import log
+from mod import tsk, models
+
+from . import sidebar
 
 lg = log.get(__name__)
 
@@ -103,18 +106,13 @@ def renderFooter():
 
 
 #========================================================================
-from . import sidebar
 def renderBody(top, bottom):
-    from util import task
-
     return htm.Div([
-
-        #sidebar.layout(),
 
         htm.Div(
             [
                 *top,
-                task.render(),
+                tsk.render(),
             ],
             className="main"
         ),

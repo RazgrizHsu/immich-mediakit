@@ -4,8 +4,9 @@ from sqlite3 import Cursor
 from typing import Optional, List
 
 from conf import envs
-from util import log, models
-from util.baseModel import BaseDictModel
+from util import log
+from mod import models
+from mod.bse.baseModel import BaseDictModel
 from util.err import mkErr, tracebk
 
 lg = log.get(__name__)
@@ -478,7 +479,7 @@ def setSimOk(assId: str, isOk: int = 0):
         c.execute("UPDATE assets SET simOk = ? WHERE id = ?", (isOk, assId))
         conn.commit()
 
-        lg.info(f"Updated asset {assId}, simOk[{isOk}]")
+        # lg.info(f"Updated asset {assId}, simOk[{isOk}]")
         return True
     except Exception as e:
         raise mkErr(f"Failed to set simOK[{isOk}] assId[{assId}]", e)

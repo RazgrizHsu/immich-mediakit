@@ -1,7 +1,8 @@
 import db
 from conf import ks
 from dsh import dash, htm, callback, dbc, inp, out, ste, getTriggerId, noUpd
-from util import log, models, task
+from util import log
+from mod import models, mapFns, IFnProg
 
 lg = log.get(__name__)
 
@@ -245,7 +246,6 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, 
 # task acts
 #========================================================================
 import imgs
-from util.task import IFnProg
 
 def photoVec_ToVec(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnProg):
     msg = "[PhotoVec] Processing successful"
@@ -321,5 +321,5 @@ def photoVec_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: 
 #========================================================================
 # Set up global functions
 #========================================================================
-task.mapFns[ks.cmd.vec.toVec] = photoVec_ToVec
-task.mapFns[ks.cmd.vec.clear] = photoVec_Clear
+mapFns[ks.cmd.vec.toVec] = photoVec_ToVec
+mapFns[ks.cmd.vec.clear] = photoVec_Clear

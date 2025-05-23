@@ -9,7 +9,7 @@ from typing import List, Optional
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from util.baseModel import BaseDictModel, Json
+from mod.bse.baseModel import BaseDictModel, Json
 from util import log
 
 lg = log.get(__name__)
