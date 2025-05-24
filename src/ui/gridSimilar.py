@@ -27,7 +27,7 @@ lg = log.get(__name__)
 
 def createGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=None):
     if not assets or len(assets) == 0:
-        lg.info( "[sim-grid] return empty grid" )
+        # lg.info( "[sim-grid] return empty grid" )
         if onEmpty:
             if isinstance(onEmpty, str):
                 return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
@@ -56,7 +56,7 @@ def createGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEm
 
     rows = [htm.Div(mkImgCardSim(a, rootSI), className="photo-card", style=styItem) for a in assets]
 
-    lg.info( f"[sim-grid] create with rows[{len(assets)}] return rows[{len(rows)}]" )
+    # lg.info( f"[sim-grid] create with rows[{len(assets)}] return rows[{len(rows)}]" )
 
     return htm.Div(rows, style=styGrid)
 

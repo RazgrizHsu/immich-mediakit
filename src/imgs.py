@@ -172,7 +172,7 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: IFnProg = None) -> m
                 if result is True:
                     pi.done += 1
 
-                    db.pics.updateVecBy(asset, cur=cur)
+                    db.pics.updVecBy(asset, cur=cur)
                 elif result is False or result is None:
                     pi.skip += 1
             except Exception as e:

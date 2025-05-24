@@ -66,7 +66,11 @@ span {
 	> div {
 		//border: red dotted 2px;
 		width:250px;
-		margin:20px 0 0 20px;
+		margin:28px 0 0 20px;
+
+		small {
+			font-size: 12px;
+		}
 	}
 }
 
@@ -83,7 +87,7 @@ span {
 	$gx:8px;
 	$gy:3px;
 	$pad:20px;
-	$spac:$pad * 2 + $gx;
+	$spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 	.side {
 		flex:0 0 $sideW;
@@ -101,7 +105,7 @@ span {
 		padding:$pad;
 
 		> .main {
-			flex:0 0 calc(100vw - 350px);
+			flex:0 0 calc(100vw - #{$spac});
 			margin-left:auto;
 
 			@if $debug { border:red 2px dotted }
@@ -453,11 +457,12 @@ span {
 	}
 
 	&.auto img {
-		max-height:92vh;
+		max-height:90vh;
 	}
 
 	.modal-body {
 		flex:none;
+		padding: 0;
 	}
 }
 
