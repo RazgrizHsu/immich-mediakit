@@ -194,18 +194,21 @@ class Asset(BaseDictModel):
 class PageSim(BaseDictModel):
     avTabId: Optional[str] = None
     disableTabIds: List[str] = field(default_factory=list)
-    isContinued: Optional[bool] = None
+
 
     assId: Optional[str] = None
     assets: List[Asset] = field(default_factory=list)
 
     selectIds: List[str] = field(default_factory=list)
 
+    hisAssets: List[Asset] = field(default_factory=list)
+
     def reset(self):
-        self.avTabId = self.isContinued = self.assId = None
+        self.avTabId = self.assId = None
         self.assets = []
         self.selectIds = []
         self.disableTabIds = []
+        self.hisAssets = []
 
 @dataclass
 class Pages(BaseDictModel):

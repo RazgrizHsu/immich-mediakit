@@ -88,7 +88,7 @@ class ks:
         vector = co.tit('vector', 'ToVectors', cmds.vec.dict(), desc='Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector')
         similar = co.tit('similar', 'Similarity', cmds.sim.dict(), desc='Find similar photos based on image content. This uses AI-generated vector embeddings to find visually similar assets')
         settings = co.tit('settings', 'Settings', desc='')
-        viewGrid = co.tit('viewGrid', 'ViewGrid', desc='')
+        viewGrid = co.tit('viewGrid', 'ViewGrid', desc='Use the filters and sorting options to customize your view')
 
 
     class db:

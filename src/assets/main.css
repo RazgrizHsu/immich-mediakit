@@ -18,13 +18,15 @@ span { vertical-align: middle; }
 
 .sidebar { position: relative; width: 0px; height: 0px; }
 
-.sidebar > div { width: 250px; margin: 20px 0 0 20px; }
+.sidebar > div { width: 250px; margin: 28px 0 0 20px; }
+
+.sidebar > div small { font-size: 12px; }
 
 .page .side { flex: 0 0 250px; min-width: 200px; max-width: 300px; }
 
 .page > div > div > .body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 3px 8px; padding: 20px; }
 
-.page > div > div > .body > .main { flex: 0 0 calc(100vw - 350px); margin-left: auto; }
+.page > div > div > .body > .main { flex: 0 0 calc(100vw - 316px); margin-left: auto; }
 
 .page > div > div > .body > .main ~ div { flex: 1 0 50vw; }
 
@@ -107,9 +109,9 @@ span { vertical-align: middle; }
 
 .img-pop img { max-width: 99vw; margin: auto; }
 
-.img-pop.auto img { max-height: 92vh; }
+.img-pop.auto img { max-height: 90vh; }
 
-.img-pop .modal-body { flex: none; }
+.img-pop .modal-body { flex: none; padding: 0; }
 
 .tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px; background: #2D4A69; border-radius: 5px; font-size: 12px; vertical-align: middle; }
 

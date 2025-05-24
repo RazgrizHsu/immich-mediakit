@@ -15,7 +15,7 @@ dash.register_page(
 
 class K:
     class inp:
-        selectUserId = "inp-grid-user-selector"
+        selectUsrId = "inp-grid-user-selector"
         selectSortBy = "inp-grid-sort-by"
         selectSortOrder = "inp-grid-sort-order"
         selectFilter = "inp-grid-filter"
@@ -26,12 +26,11 @@ class K:
     class div:
         grid = "div-photo-grid"
         pagination = "div-grid-pagination"
-        currentPage = "inp-grid-current-page"
-        noDataAlert = "div-no-data-alert"
+        pgIdx = "vg-pg-idx"
         loadingIndicator = "div-grid-loading"
         btnNextPage = "btn-grid-next-page"
         btnPrevPage = "btn-grid-prev-page"
-        paginationStore = "store-grid-pagination"
+        dataPaged = "store-grid-pagination"
 
 
 #========================================================================
@@ -39,14 +38,10 @@ def layout():
     import ui
     return ui.renderBody([
         #====== top start =======================================================
-
-        htm.H3("Assets", className="mb-4"),
-        htm.P([
-            "View and organize your photos in a grid layout.", htm.Br(),
-            "Use the filters and sorting options to customize your view."
-        ],
-            className="mb-4"
-        ),
+        dbc.Row([
+            dbc.Col(htm.H3(f"{ks.pg.viewGrid.name}"), width=3),
+            dbc.Col(htm.Small(f"{ks.pg.viewGrid.desc}", className="text-muted"))
+        ], className="mb-4"),
 
         dbc.Card([
             dbc.CardHeader("View Settings"),
@@ -55,7 +50,7 @@ def layout():
                     dbc.Col([
                         dbc.Label("User"),
                         dcc.Dropdown(
-                            id=K.inp.selectUserId,
+                            id=K.inp.selectUsrId,
                             options=[{"label": "All Users", "value": ""}],
                             value="",
                             clearable=False,
@@ -153,16 +148,6 @@ def layout():
     ], [
         #====== bottom start=====================================================
 
-        htm.Div(
-            dbc.Alert(
-                "No photos available. Please fetch first.",
-                color="warning",
-                className="mt-3 mb-3"
-            ),
-            id=K.div.noDataAlert,
-            style={"display": "none"}
-        ),
-
         dbc.Spinner(
             htm.Div(id=K.div.grid, className="mb-4"),
             color="primary",
@@ -173,26 +158,13 @@ def layout():
         # Pagination
         dbc.Row([
             dbc.Col([
-                dbc.Button(
-                    "Previous",
-                    id=K.div.btnPrevPage,
-                    color="primary",
-                    disabled=True,
-                    className="w-100"
-                )
+                dbc.Button("Previous", id=K.div.btnPrevPage, color="primary", disabled=True, className="w-100")
             ], width=4),
 
             dbc.Col([
                 htm.Div([
                     htm.Span("Page: "),
-                    dbc.Input(
-                        id=K.div.currentPage,
-                        type="number",
-                        min=1,
-                        value=1,
-                        style={"width": "80px", "display": "inline-block"},
-                        className="mx-2"
-                    ),
+                    dbc.Input(id=K.div.pgIdx, type="number", min=1, value=1, style={"width": "80px", "display": "inline-block"}, className="mx-2"),
                     htm.Span("of "),
                     htm.Span(id=K.div.pagination, className="ms-2")
                 ], className="text-center")
@@ -208,7 +180,7 @@ def layout():
             ], width=4),
         ], className="mt-3 mb-4"),
 
-        dcc.Store(id=K.div.paginationStore, data={"page": 1, "per_page": 24, "total": 0}),
+        dcc.Store(id=K.div.dataPaged, data={"page": 1, "per_page": 24, "total": 0}),
 
         #====== bottom end ======================================================
     ])
@@ -218,9 +190,8 @@ def layout():
 #========================================================================
 @callback(
     [
-        out(K.inp.selectUserId, "options"),
-        out(K.div.noDataAlert, "style"),
-        out(K.div.paginationStore, "data"),
+        out(K.inp.selectUsrId, "options"),
+        out(K.div.dataPaged, "data"),
     ],
     inp(ks.sto.now, "data"),
     prevent_initial_call=False
@@ -228,36 +199,33 @@ def layout():
 def viewGrid_Init(dta_now):
     now = models.Now.fromStore(dta_now)
 
-    user_options = [{"label": "All Users", "value": ""}]
+    opts = [{"label": "All Users", "value": ""}]
     if now.usrs and len(now.usrs) > 0:
-        for usr in now.usrs:
-            user_options.append({"label": usr.name, "value": usr.id})
+        for usr in now.usrs: opts.append({"label": usr.name, "value": usr.id})
 
-    show_alert = {"display": "block"} if now.cntPic <= 0 else {"display": "none"}
+    data = {"page": 1, "per_page": 24, "total": now.cntPic or 0}
 
-    pag_data = {"page": 1, "per_page": 24, "total": now.cntPic or 0}
-
-    return user_options, show_alert, pag_data
+    return opts, data
 
 
 #========================================================================
 # Handle filter changes and pagination controls
 #========================================================================
 @callback(
-    out(K.div.paginationStore, "data", allow_duplicate=True),
+    out(K.div.dataPaged, "data", allow_duplicate=True),
     [
-        inp(K.inp.selectUserId, "value"),
+        inp(K.inp.selectUsrId, "value"),
         inp(K.inp.selectFilter, "value"),
         inp(K.inp.checkFavorites, "value"),
         inp(K.inp.searchKeyword, "value"),
         inp(K.inp.selectPerPage, "value"),
         inp(K.div.btnNextPage, "n_clicks"),
         inp(K.div.btnPrevPage, "n_clicks"),
-        inp(K.div.currentPage, "value"),
+        inp(K.div.pgIdx, "value"),
     ],
     [
-        ste(K.div.paginationStore, "data"),
-        ste(K.inp.selectUserId, "value"),
+        ste(K.div.dataPaged, "data"),
+        ste(K.inp.selectUsrId, "value"),
         ste(K.inp.selectFilter, "value"),
         ste(K.inp.checkFavorites, "value"),
         ste(K.inp.searchKeyword, "value"),
@@ -265,48 +233,48 @@ def viewGrid_Init(dta_now):
     prevent_initial_call=True
 )
 def on_pagination_controls(
-    userId, filterOption, favoritesOnly, searchKeyword, perPage,
-    nextClicks, prevClicks, currentPage,
-    pag_data, stateUserId, stateFilterOption, stateFavoritesOnly, stateSearchKeyword
+    usrId, filterOption, favoritesOnly, schKey, pgSize,
+    clks_next, clks_prev, currentPage,
+    dta_pgd, stateUsrId, stateFilterOption, stateFavoritesOnly, stateSearchKeyword
 ):
     trigger = getTriggerId()
 
     filter_triggers = [
-        K.inp.selectUserId, K.inp.selectFilter,
+        K.inp.selectUsrId, K.inp.selectFilter,
         K.inp.checkFavorites, K.inp.searchKeyword,
         K.inp.selectPerPage
     ]
 
     if trigger in filter_triggers:
-        pag_data["page"] = 1
-        pag_data["per_page"] = perPage
+        dta_pgd["page"] = 1
+        dta_pgd["per_page"] = pgSize
 
-        total = getTotalFilteredCount(
-            usrId=userId,
+        total = db.pics.countFiltered(
+            usrId=usrId,
             opts=filterOption,
-            search=searchKeyword,
+            search=schKey,
             favOnly=favoritesOnly
         )
-        pag_data["total"] = total
+        dta_pgd["total"] = total
 
-        return pag_data
+        return dta_pgd
 
-    page = pag_data["page"]
-    per_page = pag_data["per_page"]
-    total = pag_data["total"]
+    page = dta_pgd["page"]
+    per_page = dta_pgd["per_page"]
+    total = dta_pgd["total"]
 
     total_pages = max(1, (total + per_page - 1) // per_page)
 
-    if trigger == K.div.btnNextPage and nextClicks:
+    if trigger == K.div.btnNextPage and clks_next:
         page = min(page + 1, total_pages)
-    elif trigger == K.div.btnPrevPage and prevClicks:
+    elif trigger == K.div.btnPrevPage and clks_prev:
         page = max(1, page - 1)
-    elif trigger == K.div.currentPage:
+    elif trigger == K.div.pgIdx:
         page = max(1, min(currentPage, total_pages)) if currentPage else 1
 
-    pag_data["page"] = page
+    dta_pgd["page"] = page
 
-    return pag_data
+    return dta_pgd
 
 
 #========================================================================
@@ -316,14 +284,14 @@ def on_pagination_controls(
     [
         out(K.div.grid, "children"),
         out(K.div.pagination, "children"),
-        out(K.div.currentPage, "value"),
-        out(K.div.currentPage, "max"),
+        out(K.div.pgIdx, "value"),
+        out(K.div.pgIdx, "max"),
         out(K.div.btnPrevPage, "disabled"),
         out(K.div.btnNextPage, "disabled"),
     ],
     [
-        inp(K.div.paginationStore, "data"),
-        inp(K.inp.selectUserId, "value"),
+        inp(K.div.dataPaged, "data"),
+        inp(K.inp.selectUsrId, "value"),
         inp(K.inp.selectSortBy, "value"),
         inp(K.inp.selectSortOrder, "value"),
         inp(K.inp.selectFilter, "value"),
@@ -333,12 +301,12 @@ def on_pagination_controls(
     ste(ks.sto.now, "data"),
     prevent_initial_call=False
 )
-def viewGrid_Load(pag_data, userId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now):
+def viewGrid_Load(dta_pg, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now):
     now = models.Now.fromStore(dta_now)
 
-    page = pag_data["page"]
-    pageSize = pag_data["per_page"]
-    total = pag_data["total"]
+    page = dta_pg["page"]
+    pageSize = dta_pg["per_page"]
+    total = dta_pg["total"]
 
     if now.cntPic <= 0: return htm.Div("No photos available"), "0", 1, 1, True, True
 
@@ -346,7 +314,7 @@ def viewGrid_Load(pag_data, userId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta
 
     pageIdx = min(total_pages, max(1, page))
 
-    photos = getFilteredAssets(userId, sortBy, sortOrd, filOpt, shKey, onlyFav, pageIdx, pageSize)
+    photos = db.pics.getFiltered(usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, pageIdx, pageSize)
 
     if photos and len(photos) > 0:
         lg.info(f"Loaded {len(photos)} photos")
@@ -364,82 +332,3 @@ def viewGrid_Load(pag_data, userId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta
 #========================================================================
 # Helper Functions
 #========================================================================
-def getFilteredAssets(
-    usrId="", sort="fileCreatedAt", sortOrd="desc",
-    opts="all", search="", onlyFav=False,
-    page=1, pageSize=24
-) -> list[models.Asset]:
-    try:
-        conditions = []
-        params = []
-
-        if usrId:
-            conditions.append("ownerId = ?")
-            params.append(usrId)
-
-        if onlyFav:
-            conditions.append("isFavorite = 1")
-
-        if opts == "with_vectors":
-            conditions.append("isVectored = 1")
-        elif opts == "without_vectors":
-            conditions.append("isVectored = 0")
-
-        if search and len(search.strip()) > 0:
-            conditions.append("originalFileName LIKE ?")
-            params.append(f"%{search}%")
-
-        query = "Select * From assets"
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        query += f" ORDER BY {sort} {'DESC' if sortOrd == 'desc' else 'ASC'}"
-        query += f" LIMIT {pageSize} OFFSET {(page - 1) * pageSize}"
-
-        conn = db.pics.getConn()
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-
-        assets = []
-        for row in cursor.fetchall():
-            asset = models.Asset.fromDB(cursor, row)
-            assets.append(asset)
-
-        return assets
-    except Exception as e:
-        lg.error(f"Error fetching photos: {str(e)}")
-        return []
-
-
-def getTotalFilteredCount(usrId="", opts="all", search="", favOnly=False):
-    try:
-        conditions = []
-        params = []
-
-        if usrId:
-            conditions.append("ownerId = ?")
-            params.append(usrId)
-
-        if favOnly:
-            conditions.append("isFavorite = 1")
-
-        if opts == "with_vectors":
-            conditions.append("isVectored = 1")
-        elif opts == "without_vectors":
-            conditions.append("isVectored = 0")
-
-        if search and len(search.strip()) > 0:
-            conditions.append("originalFileName LIKE ?")
-            params.append(f"%{search}%")
-
-        query = "Select Count(*) From assets"
-        if conditions: query += " WHERE " + " AND ".join(conditions)
-
-        conn = db.pics.getConn()
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-
-        return cursor.fetchone()[0]
-    except Exception as e:
-        lg.error(f"Error counting photos: {str(e)}")
-        return 0

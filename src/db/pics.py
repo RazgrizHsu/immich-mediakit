@@ -117,7 +117,9 @@ def count(usrId=None):
     except Exception as e:
         raise mkErr("Failed to get asset count", e)
 
-
+#========================================================================
+# quary
+#========================================================================
 def getById(assId) -> Optional[models.Asset]:
     try:
         if conn is None: raise mkErr('the db is not init')
@@ -173,47 +175,97 @@ def getAll(count=0) -> list[models.Asset]:
         raise mkErr("Failed to get all asset information", e)
 
 
-def getPaged(pageIdx=1, pageSize=20, usrId=None) -> tuple[List[models.Asset], int]:
+#------------------------------------------------------------------------
+# paged
+#------------------------------------------------------------------------
+def getFiltered(
+    usrId="", sort="fileCreatedAt", sortOrd="desc",
+    opts="all", search="", onlyFav=False,
+    page=1, pageSize=24
+) -> list[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-
-        if usrId:
-            c.execute("Select Count(*) From assets Where ownerId = ?", (usrId,))
-        else:
-            c.execute("Select Count(*) From assets")
-
-        cnt = c.fetchone()[0]
-
-        offset = (pageIdx - 1) * pageSize
+        cds = []
+        pms = []
 
         if usrId:
-            c.execute('''
-                Select *
-                From assets
-                Where ownerId = ?
-                Order By autoId Desc
-                Limit ? Offset ?
-                ''', (usrId, pageSize, offset))
-        else:
-            c.execute('''
-                Select *
-                From assets
-                Order By autoId Desc
-                Limit ? Offset ?
-                ''', (pageSize, offset))
+            cds.append("ownerId = ?")
+            pms.append(usrId)
 
-        rows = c.fetchall()
-        if not rows: return [], cnt
+        if onlyFav:
+            cds.append("isFavorite = 1")
 
-        assets = [models.Asset.fromDB(c, row) for row in rows]
-        return assets, cnt
+        if opts == "with_vectors":
+            cds.append("isVectored = 1")
+        elif opts == "without_vectors":
+            cds.append("isVectored = 0")
+
+        if search and len(search.strip()) > 0:
+            cds.append("originalFileName LIKE ?")
+            pms.append(f"%{search}%")
+
+        query = "Select * From assets"
+        if cds:
+            query += " WHERE " + " AND ".join(cds)
+
+        query += f" ORDER BY {sort} {'DESC' if sortOrd == 'desc' else 'ASC'}"
+        query += f" LIMIT {pageSize} OFFSET {(page - 1) * pageSize}"
+
+        conn = getConn()
+        cursor = conn.cursor()
+        cursor.execute(query, pms)
+
+        assets = []
+        for row in cursor.fetchall():
+            asset = models.Asset.fromDB(cursor, row)
+            assets.append(asset)
+
+        return assets
     except Exception as e:
-        raise mkErr("Failed to get paginated asset information", e)
+        lg.error(f"Error fetching photos: {str(e)}")
+        return []
 
 
-def updateVecBy(asset: models.Asset, done=1, cur: Cursor = None):
+def countFiltered(usrId="", opts="all", search="", favOnly=False):
+    try:
+        cds = []
+        pms = []
+
+        if usrId:
+            cds.append("ownerId = ?")
+            pms.append(usrId)
+
+        if favOnly:
+            cds.append("isFavorite = 1")
+
+        if opts == "with_vectors":
+            cds.append("isVectored = 1")
+        elif opts == "without_vectors":
+            cds.append("isVectored = 0")
+
+        if search and len(search.strip()) > 0:
+            cds.append("originalFileName LIKE ?")
+            pms.append(f"%{search}%")
+
+        query = "Select Count(*) From assets"
+        if cds: query += " WHERE " + " AND ".join(cds)
+
+        conn = getConn()
+        cursor = conn.cursor()
+        cursor.execute(query, pms)
+
+        return cursor.fetchone()[0]
+    except Exception as e:
+        lg.error(f"Error counting photos: {str(e)}")
+        return 0
+
+
+
+
+#========================================================================
+# update
+#========================================================================
+
+def updVecBy(asset: models.Asset, done=1, cur: Cursor = None):
     try:
         if conn is None: raise mkErr('the db is not init')
 

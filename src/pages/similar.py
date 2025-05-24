@@ -26,13 +26,15 @@ class k:
     slideTh = "sim-inp-threshold"
 
     btnFind = "sim-btn-find"
-    btnResume = "sim-btn-resume"
     btnClear = "sim-btn-clear"
     btnDelChks = "sim-btn-delete-checkeds"
 
     taber = 'sim-taber'
     pager = "sim-pager"
+
     grid = "sim-grid"
+
+    hisGv = 'sim-his-gv'
 
 
 #========================================================================
@@ -63,16 +65,16 @@ def layout(assetId=None, **kwargs):
                     dbc.CardHeader("System Similary Records"),
                     dbc.CardBody([
                         dbc.Row([
-                            dbc.Col(htm.Small("Resolved", className="d-inline-block me-2"), width=6),
-                            dbc.Col(dbc.Alert(f"0", id=k.txtCntOk, color="info", className="py-1 px-2 mb-2 text-center")),
+                            dbc.Col(htm.Small("NotSearch", className="d-inline-block me-2"), width=6),
+                            dbc.Col(dbc.Alert(f"0", id=k.txtCntNo, color="secondary", className="py-1 px-2 mb-2 text-center")),
                         ]),
                         dbc.Row([
                             dbc.Col(htm.Small("Pending", className="d-inline-block me-2"), width=6),
                             dbc.Col(dbc.Alert(f"0", id=k.txtCntRs, color="info", className="py-1 px-2 mb-2 text-center")),
                         ]),
                         dbc.Row([
-                            dbc.Col(htm.Small("NotSearch", className="d-inline-block me-2"), width=6),
-                            dbc.Col(dbc.Alert(f"0", id=k.txtCntNo, color="info", className="py-1 px-2 mb-2 text-center")),
+                            dbc.Col(htm.Small("Resolved", className="d-inline-block me-2"), width=6),
+                            dbc.Col(dbc.Alert(f"0", id=k.txtCntOk, color="success", className="py-1 px-2 mb-2 text-center")),
                         ]),
                         dbc.Row([htm.Small("Shows vectorized data in the local db and whether similarity comparison has been performed with other assets", className="text-muted")])
                     ])
@@ -83,36 +85,12 @@ def layout(assetId=None, **kwargs):
                 dbc.Card([
                     dbc.CardHeader("Search Settings"),
                     dbc.CardBody([
-                        # dbc.Row([
-                        #     dbc.Col([
-                        #         dbc.Label("Similarity Method", className="txt-sm"),
-                        #         dcc.Dropdown(
-                        #             id=k.mthSim,
-                        #             options=[
-                        #                 {"value": ks.use.mth.cosine, "label": ks.use.mth.cosine.desc},
-                        #                 {"value": ks.use.mth.euclid, "label": ks.use.mth.euclid.desc}
-                        #             ],
-                        #             value="cosine",
-                        #             clearable=False,
-                        #             className="mb-3"
-                        #         ),
-                        #     ]),
-                        # ]),
-
                         dbc.Row([
                             dbc.Col([
                                 dbc.Label("Similarity Threshold Range", className="txt-sm"),
                                 dbc.Row([
                                     dbc.Col([
-                                        dcc.RangeSlider(
-                                            id=k.slideTh,
-                                            min=0,
-                                            max=1,
-                                            step=0.01,
-                                            marks=ks.defs.thMarks,
-                                            value=[0.8, 0.99],
-                                            className="mb-0"
-                                        ),
+                                        dcc.RangeSlider(id=k.slideTh, min=0, max=1, step=0.01, marks=ks.defs.thMarks, value=[0.8, 0.99], className="mb-0"),
                                     ], className="mt-2"),
                                 ])
                             ]),
@@ -125,20 +103,13 @@ def layout(assetId=None, **kwargs):
 
                 dbc.Row([
                     dbc.Col([
-                        dbc.Row([
-                            dbc.Col([
-                                dbc.Button("Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
-                            ], width=6, className="p-0"),
-                            dbc.Col([
-                                dbc.Button("Resume", id=k.btnResume, color="primary", className="w-100", disabled=True),
-                            ], width=6, className="p-0 ps-1 pe-1"),
-                        ]),
+                        dbc.Button("Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
                     ], width=8),
 
                     dbc.Col([
                         dbc.Button("Clear All Records", id=k.btnClear, color="danger", className="w-100", disabled=True),
                     ], width=4),
-                ], className="mt-2 ms-1"),
+                ], className="mt-3"),
 
             ], width=8),
         ], className=""),
@@ -152,14 +123,14 @@ def layout(assetId=None, **kwargs):
         #------------------------------------------------------------------------
         htm.Div([
 
-            # nav header
             htm.Div([
-
+                #------------------------------------------------------------------------
+                # tab header
+                #------------------------------------------------------------------------
                 #left side
                 htm.Div([
+                    htm.Div("pending", className="disabled", id={"type": "tab", "id": "tab-2"}, n_clicks=0),
                     htm.Div("current", className="act", id={"type": "tab", "id": "tab-1"}, n_clicks=0),
-                    htm.Div("history", className="disabled", id={"type": "tab", "id": "tab-2"}, n_clicks=0),
-                    htm.Div("------", className="disabled", id={"type": "tab", "id": "tab-3"}, n_clicks=0),
                 ], className="nav"),
 
                 #right side
@@ -167,36 +138,54 @@ def layout(assetId=None, **kwargs):
                     dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True, )
                 ], className="acts"),
 
+                #------ tab header end ------
             ], className="head"),
-
-            # content
             htm.Div([
-                htm.Div([
+                #------------------------------------------------------------------------
+                # tab contents
+                #------------------------------------------------------------------------
 
+
+                htm.Div([
+                    #------------------------------------------------------------------------
+                    # pending
+                    #------------------------------------------------------------------------
+                    dbc.Row([
+                        dbc.Col([
+
+                            dbc.Spinner(
+                                htm.Div(id=k.hisGv),
+                                color="primary",
+                                type="border",
+                                spinner_style={"width": "3rem", "height": "3rem"},
+                            ),
+
+                        ], className="d-flex justify-content-center mb-3")
+                    ], className="mt-2"),
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
+                        ], className="d-flex justify-content-center mb-3")
+                    ], className="mt-2"),
+
+                    #------------------------------------------------------------------------
+                ], id="content-2", className=""),
+
+                htm.Div([
+                    #------------------------------------------------------------------------
+                    # current
+                    #------------------------------------------------------------------------
                     dbc.Spinner(
                         htm.Div(id=k.grid),
                         color="primary",
                         type="border",
                         spinner_style={"width": "3rem", "height": "3rem"},
                     ),
-
+                    #------------------------------------------------------------------------
                 ], id="content-1", className="act"),
-                htm.Div([
 
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
-                        ], className="d-flex justify-content-center mb-3")
-                    ],
-                        className="mt-2",
-                    ),
 
-                ], id="content-2", className=""),
-                htm.Div([
-
-                    "content-3"
-
-                ], id="content-3", className=""),
+                #------ tab content end ------
             ], className="body"),
 
         ], className="taber", id=k.taber),
@@ -249,9 +238,9 @@ def sim_taber(clks, items):
         lg.info(f"[taber] change tab: {dstTabId}")
         head = None
         body = None
-        for i, child in enumerate(items):
-            if isinstance(child, dict) and child.get("props", {}).get("className") == "head": head = i
-            elif isinstance(child, dict) and child.get("props", {}).get("className") == "body": body = i
+        for i, ch in enumerate(items):
+            if isinstance(ch, dict) and ch.get("props", {}).get("className") == "head": head = i
+            elif isinstance(ch, dict) and ch.get("props", {}).get("className") == "body": body = i
 
         if head is not None and body is not None:
             nav_div = items[head]["props"]["children"][0]
@@ -294,7 +283,6 @@ from ui import gridSimilar as gvs
         out(k.txtCntNo, "children"),
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
-        out(k.btnResume, "disabled"),
         out(k.grid, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
     ],
@@ -311,7 +299,6 @@ def similar_onStatus(dta_now, dta_nfy):
     cntRs = db.pics.countHasSimIds()
     disFind = cntNo <= 0 or (cntRs >= cntNo)
     disCler = cntOk <= 0 and cntRs <= 0
-    disCont = cntRs <= 0
 
     cntAssets = len(now.pg.sim.assets) if now.pg.sim.assets else -1
 
@@ -326,14 +313,12 @@ def similar_onStatus(dta_now, dta_nfy):
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    if now.pg.sim.isContinued:
-        disCont = True
 
     grid = gvs.createGrid(now.pg.sim.assets, now.pg.sim.assId, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
 
-    return cntOk, cntRs, cntNo, disFind, disCler, disCont, grid, nfy.toStore()
+    return cntOk, cntRs, cntNo, disFind, disCler, grid, nfy.toStore()
 
 
 #------------------------------------------------------------------------
@@ -373,7 +358,6 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     [
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
-        inp(k.btnResume, "n_clicks"),
     ],
     [
         ste(k.slideTh, "value"),
@@ -384,8 +368,8 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     ],
     prevent_initial_call=True
 )
-def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
-    if not clk_fnd and not clk_clr and not clk_con: return noUpd, noUpd, noUpd, noUpd
+def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
+    if not clk_fnd and not clk_clr: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
@@ -427,13 +411,13 @@ def similar_RunModal(clk_fnd, clk_clr, clk_con, thRange, dta_now, dta_mdl, dta_t
             "You may need to perform all similarity searches again."
         ]
 
-    if trgId == k.btnResume:
-        assets = db.pics.getAnySimPending()
-        if assets:
-            now.pg.sim.isContinued = True
-            now.pg.sim.assId = assets[0].id
-            now.pg.sim.assets = assets
-            nfy.info(f"Loading pending groups, id[{now.pg.sim.assId}] with {len(assets)} similar images")
+    # if trgId == k.btnResume:
+    #     assets = db.pics.getAnySimPending()
+    #     if assets:
+    #         now.pg.sim.isContinued = True
+    #         now.pg.sim.assId = assets[0].id
+    #         now.pg.sim.assets = assets
+    #         nfy.info(f"Loading pending groups, id[{now.pg.sim.assId}] with {len(assets)} similar images")
 
 
     elif trgId == k.btnFind:
@@ -518,7 +502,6 @@ def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnPr
         onUpdate(90, "90%", "Updating dynamic data...")
 
         if hasattr(db.dyn.dto, 'simId'): db.dyn.dto.simId = None
-        now.pg.sim.isContinued = False
         now.pg.sim.assets = []
         now.pg.sim.assId = None
 
@@ -627,7 +610,6 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
 
         now.pg.sim.assId = asset.id
         now.pg.sim.assets = db.pics.getSimGroup(asset.id)
-        now.pg.sim.isContinued = False
 
         onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
 
