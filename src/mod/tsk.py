@@ -73,11 +73,13 @@ def render():
     prevent_initial_call=True
 )
 def tsk_PanelStatus(dta_tsk):
-    tsk = models.Tsk.fromStore(dta_tsk)
+    tsk = models.Tsk.fromDict(dta_tsk)
     hasTsk = tsk.name is not None
     style = style_show if hasTsk else style_none
 
-    lg.info(f"[TaskWS] Update display: {hasTsk} id[{tsk.id}] name[{tsk.name}]")
+    if tsk.id or tsk.name:
+        lg.info(f"[TaskWS] Update display: {hasTsk} id[{tsk.id}] name[{tsk.name}]")
+
     return style, tsk.name
 
 
@@ -88,11 +90,11 @@ def tsk_PanelStatus(dta_tsk):
     prevent_initial_call=True
 )
 def tsk_onBtnClose(_nclk, dta_tsk):
-    tsk = models.Tsk.fromStore(dta_tsk)
+    tsk = models.Tsk.fromDict(dta_tsk)
     if tsk.id or tsk.name:
         tsk.reset()
         lg.info("[TaskWS] close and reset..")
-    return tsk.toStore()
+    return tsk.toDict()
 
 
 
@@ -149,7 +151,7 @@ def tsk_OnTskUpdate(msg, dta_tsk):
 
     try:
         data = json.loads(msg.get('data') if isinstance(msg, dict) else msg)
-        tsk = models.Tsk.fromStore(dta_tsk)
+        tsk = models.Tsk.fromDict(dta_tsk)
 
         # 暫時不檢查 tskId，因為目前只支援單一任務
         # 之後可以改進為維護 tskId 映射表
@@ -193,9 +195,9 @@ def tsk_OnTskUpdate(msg, dta_tsk):
     prevent_initial_call=True
 )
 def tsk_OnTasking(dta_tsk, dta_nfy, dta_now):
-    tsk = models.Tsk.fromStore(dta_tsk)
-    nfy = models.Nfy.fromStore(dta_nfy)
-    now = models.Now.fromStore(dta_now)
+    tsk = models.Tsk.fromDict(dta_tsk)
+    nfy = models.Nfy.fromDict(dta_nfy)
+    now = models.Now.fromDict(dta_now)
 
     if not tsk.id or not tsk.cmd: return noUpd, noUpd, noUpd
 
@@ -207,7 +209,7 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now):
     if not fn:
         msg = f"[TaskWS] mapFns cmd[{tsk.cmd}] not found"
         nfy.error(msg)
-        return tsk.toStore(), nfy.toStore(), now.toStore()
+        return tsk.toDict(), nfy.toDict(), now.toDict()
 
     try:
         tskId = tskSvc.mkTask(tsk.name, tsk.cmd, fn, nfy, now, tsk)
@@ -216,17 +218,17 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now):
 
         if ok:
             lg.info(f"[TaskWS] Task started successfully: {tskId}")
-            return tsk.toStore(), nfy.toStore(), now.toStore()
+            return tsk.toDict(), nfy.toDict(), now.toDict()
         else:
             msg = "Failed to start task"
             nfy.error(msg)
-            return tsk.toStore(), nfy.toStore(), now.toStore()
+            return tsk.toDict(), nfy.toDict(), now.toDict()
 
     except Exception as e:
         msg = f"Task execution failed: {str(e)}"
         lg.error(msg)
         nfy.error(msg)
-        return tsk.toStore(), nfy.toStore(), now.toStore()
+        return tsk.toDict(), nfy.toDict(), now.toDict()
 
 
 # 處理任務完成並更新 store
@@ -245,7 +247,7 @@ def tsk_OnComplete(msg, dta_tsk):
 
     try:
         data = json.loads(msg.get('data') if isinstance(msg, dict) else msg)
-        tsk = models.Tsk.fromStore(dta_tsk)
+        tsk = models.Tsk.fromDict(dta_tsk)
 
         if data.get('type') == 'complete':
             from .mgr.tskSvc import getResultBy
@@ -256,7 +258,7 @@ def tsk_OnComplete(msg, dta_tsk):
                 # 清除任務 ID 以允許執行新任務，但保留名稱供顯示
                 tsk.id = None
                 tsk.cmd = None
-                return nfy.toStore(), now.toStore(), tsk.toStore()
+                return nfy.toDict(), now.toDict(), tsk.toDict()
     except Exception as e:
         lg.error(f"[TaskWS] Error in handle_task_complete: {e}")
 
@@ -276,7 +278,7 @@ def enable_close_on_complete(msg, dta_tsk):
 
     try:
         data = json.loads(msg.get('data') if isinstance(msg, dict) else msg)
-        tsk = models.Tsk.fromStore(dta_tsk)
+        tsk = models.Tsk.fromDict(dta_tsk)
 
         if data.get('type') == 'complete':
             if DEBUG_WS: lg.info(f"[TaskWS] Enabling close button for completed task")
@@ -309,7 +311,7 @@ def tsk_Test(n_clicks, dta_tsk):
     if not n_clicks:
         return noUpd
 
-    tsk = models.Tsk.fromStore(dta_tsk)
+    tsk = models.Tsk.fromDict(dta_tsk)
     lg.info(f"[Test-WS] Current task: id={tsk.id}, name={tsk.name}")
 
     if not tsk.id:

@@ -27,8 +27,8 @@ def layout():
     prevent_initial_call="initial_duplicate",
 )
 def onUpdateSideBar(_trigger, dta_now, dta_nfy):
-    now = models.Now.fromStore(dta_now)
-    nfy = models.Nfy.fromStore(dta_nfy)
+    now = models.Now.fromDict(dta_now)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     testIP = envs.immichPath if envs.immichPath else '--none--'
     testDA = psql.testAssetsPath()
@@ -76,7 +76,7 @@ def onUpdateSideBar(_trigger, dta_now, dta_nfy):
 
     ])
 
-    return htmCnts, nfy.toStore()
+    return htmCnts, nfy.toDict()
 
 def test():
     import ui

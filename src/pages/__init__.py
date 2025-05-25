@@ -22,15 +22,15 @@ lg = log.get(__name__)
     prevent_initial_call=True
 )
 def task_RunActsFromModal(dta_mdl, dta_now, dta_nfy):
-    mdl = models.Mdl.fromStore(dta_mdl)
+    mdl = models.Mdl.fromDict(dta_mdl)
 
     tid = getTriggerId()
     # lg.info(f"[tsk] runActs tid[{tid}] mdl: ok[{mdl.ok}] id[{mdl.id}]")
 
     if not mdl.ok: return noUpd, noUpd, noUpd
 
-    now = models.Now.fromStore(dta_now)
-    nfy = models.Nfy.fromStore(dta_nfy)
+    now = models.Now.fromDict(dta_now)
+    nfy = models.Nfy.fromDict(dta_nfy)
     tsk = mdl.mkTsk()
 
     if tsk:
@@ -39,4 +39,4 @@ def task_RunActsFromModal(dta_mdl, dta_now, dta_nfy):
         nfy.info( f"Start task: {msg}" )
         mdl.reset()
 
-    return mdl.toStore(), tsk.toStore(), nfy.toStore()
+    return mdl.toDict(), tsk.toDict(), nfy.toDict()

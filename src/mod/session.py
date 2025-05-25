@@ -56,11 +56,11 @@ def render():
     if not now.useType:
         now.useType = dto.useType = 'API'
 
-    mk(ks.sto.now, now.toStore())
+    mk(ks.sto.now, now.toDict())
 
-    mk(ks.sto.nfy, nfy.toStore())
-    mk(ks.sto.tsk, tsk.toStore())
-    mk(ks.sto.mdl, mdl.toStore())
+    mk(ks.sto.nfy, nfy.toDict())
+    mk(ks.sto.tsk, tsk.toDict())
+    mk(ks.sto.mdl, mdl.toDict())
 
     items.append(htm.Div(id=ks.sto.init, children='init'))
 

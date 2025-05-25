@@ -36,7 +36,7 @@ def render():
 def update_notifications(dta_nfy):
     if not dta_nfy: return []
 
-    nfy = models.Nfy.fromStore(dta_nfy)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     divs = []
 
@@ -72,7 +72,7 @@ def remove_notification(itemOpened, itemIds, dta_nfy):
     if not dta_nfy: return dash.no_update
     if not any(itemIds) or all(itemOpened): return dash.no_update
 
-    nfy = models.Nfy.fromStore(dta_nfy)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     # Find the IDs of closed
     cIds = []
@@ -87,4 +87,4 @@ def remove_notification(itemOpened, itemIds, dta_nfy):
 
     nfy.msgs = newMsgs
 
-    return nfy.toStore()
+    return nfy.toDict()

@@ -26,8 +26,8 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(usr_dict["id"], "1")
         self.assertEqual(usr_dict["name"], "TestUser")
 
-        usr_from_dict = Usr.fromStore(usr_dict)
-        usr_from_json = Usr.fromStore(json.loads(usr_json))
+        usr_from_dict = Usr.fromDict(usr_dict)
+        usr_from_json = Usr.fromDict(json.loads(usr_json))
 
         self.assertEqual(usr_from_dict.id, "1")
         self.assertEqual(usr_from_dict.name, "TestUser")
@@ -42,7 +42,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertIsNone(usr1.key)
 
         usr1_dict = usr1.toDict()
-        usr1_restored = Usr.fromStore(usr1_dict)
+        usr1_restored = Usr.fromDict(usr1_dict)
 
         self.assertEqual(usr1_restored.id, "1")
         self.assertEqual(usr1_restored.name, "User1")
@@ -50,7 +50,7 @@ class TestBaseDictModel(unittest.TestCase):
 
         usr2 = Usr()
         usr2_dict = usr2.toDict()
-        usr2_restored = Usr.fromStore(usr2_dict)
+        usr2_restored = Usr.fromDict(usr2_dict)
 
         self.assertIsNone(usr2_restored.id)
         self.assertIsNone(usr2_restored.name)
@@ -63,7 +63,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(now_dict["usr"]["id"], "1")
         self.assertEqual(now_dict["usr"]["name"], "User1")
 
-        now_restored = Now.fromStore(now_dict)
+        now_restored = Now.fromDict(now_dict)
 
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")
@@ -80,7 +80,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(now_dict["usrs"][0]["id"], "1")
         self.assertEqual(now_dict["usrs"][1]["id"], "2")
 
-        now_restored = Now.fromStore(now_dict)
+        now_restored = Now.fromDict(now_dict)
 
         self.assertEqual(len(now_restored.usrs), 2)
         self.assertIsInstance(now_restored.usrs[0], Usr)
@@ -93,7 +93,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertIsNone(now1.usr)
 
         now1_dict = now1.toDict()
-        now1_restored = Now.fromStore(now1_dict)
+        now1_restored = Now.fromDict(now1_dict)
 
         self.assertIsNone(now1_restored.usr)
         self.assertEqual(now1_restored.useType, "test")
@@ -102,7 +102,7 @@ class TestBaseDictModel(unittest.TestCase):
         now2 = Now(usr=usr, useType="test")
 
         now2_dict = now2.toDict()
-        now2_restored = Now.fromStore(now2_dict)
+        now2_restored = Now.fromDict(now2_dict)
 
         self.assertIsInstance(now2_restored.usr, Usr)
         self.assertEqual(now2_restored.usr.id, "1")
@@ -121,7 +121,7 @@ class TestBaseDictModel(unittest.TestCase):
 
         now_dict = now.toDict()
 
-        now_restored = Now.fromStore(now_dict)
+        now_restored = Now.fromDict(now_dict)
 
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")
@@ -159,7 +159,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset_dict["id"], "test-asset")
         self.assertEqual(asset_dict["ownerId"], "user1")
 
-        asset_restored = Asset.fromStore(asset_dict)
+        asset_restored = Asset.fromDict(asset_dict)
         self.assertEqual(asset_restored.id, "test-asset")
         self.assertEqual(asset_restored.originalFileName, "test.jpg")
 
@@ -181,7 +181,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset_dict["simInfos"][0]["id"], "a")
         self.assertEqual(asset_dict["simInfos"][1]["id"], "b")
 
-        asset_restored = Asset.fromStore(asset_dict)
+        asset_restored = Asset.fromDict(asset_dict)
         self.assertEqual(asset_restored.id, "test-asset")
         self.assertEqual(asset_restored.originalFileName, "test.jpg")
         self.assertEqual(len(asset_restored.simInfos), 2)
@@ -197,7 +197,7 @@ class TestBaseDictModel(unittest.TestCase):
             "jsonExif": exif_json_string
         }
 
-        asset = Asset.fromStore(asset_dict)
+        asset = Asset.fromDict(asset_dict)
         self.assertIsInstance(asset.jsonExif, AssetExif)
         self.assertEqual(asset.jsonExif.make, "Canon")
         self.assertEqual(asset.jsonExif.model, "EOS 5D")
@@ -252,7 +252,7 @@ class TestBaseDictModel(unittest.TestCase):
         tsk_from_json = json.loads(tsk_json)
         self.assertTrue(isinstance(tsk_from_json["args"]["created_at"], str))
 
-        tsk_restored = Tsk.fromStore(tsk_dict)
+        tsk_restored = Tsk.fromDict(tsk_dict)
         self.assertTrue(isinstance(tsk_restored.args["created_at"], datetime))
         self.assertEqual(tsk_restored.args["created_at"].year, 2023)
         self.assertEqual(tsk_restored.args["created_at"].month, 1)
@@ -268,7 +268,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(nfy_dict["msgs"][msg_id]["message"], "Test message")
         self.assertEqual(nfy_dict["msgs"][msg_id]["type"], "info")
 
-        nfy_restored = Nfy.fromStore(nfy_dict)
+        nfy_restored = Nfy.fromDict(nfy_dict)
         self.assertEqual(len(nfy_restored.msgs), 1)
         msg_id = list(nfy_restored.msgs.keys())[0]
         self.assertEqual(nfy_restored.msgs[msg_id]["message"], "Test message")
@@ -305,10 +305,10 @@ class TestBaseDictModel(unittest.TestCase):
             "mdl": mdl.toDict()
         }
 
-        now_restored = Now.fromStore(data["now"])
-        nfy_restored = Nfy.fromStore(data["nfy"])
-        tsk_restored = Tsk.fromStore(data["tsk"])
-        mdl_restored = Mdl.fromStore(data["mdl"])
+        now_restored = Now.fromDict(data["now"])
+        nfy_restored = Nfy.fromDict(data["nfy"])
+        tsk_restored = Tsk.fromDict(data["tsk"])
+        mdl_restored = Mdl.fromDict(data["mdl"])
 
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")
@@ -346,7 +346,7 @@ class TestBaseDictModel(unittest.TestCase):
 
         now.switchUsr("1")
         now_dict = now.toDict()
-        now_restored = Now.fromStore(now_dict)
+        now_restored = Now.fromDict(now_dict)
 
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")

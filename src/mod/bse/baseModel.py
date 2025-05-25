@@ -51,9 +51,6 @@ class BaseDictModel:
 
     def toJson(self) -> str: return json.dumps(self.toDict(), default=self.jsonSerializer, ensure_ascii=False)
 
-    def toStore(self) -> Dict[str, Any]:
-        return self.toDict()
-
     @classmethod
     def _get_type_hints(cls):
         if cls not in BaseDictModel._type_hints_cache:
@@ -82,13 +79,13 @@ class BaseDictModel:
             if cls._is_model_subclass(hint_type):
                 if isinstance(val, dict):
                     # noinspection PyUnresolvedReferences
-                    return hint_type.fromStore(val)
+                    return hint_type.fromDict(val)
                 elif isinstance(val, str):
                     try:
                         json_data = json.loads(val)
                         if isinstance(json_data, dict):
                             # noinspection PyUnresolvedReferences
-                            return hint_type.fromStore(json_data)
+                            return hint_type.fromDict(json_data)
                     except:
                         pass
             return val
@@ -97,7 +94,7 @@ class BaseDictModel:
             if isinstance(val, list):
                 item_type = get_args(hint_type)[0]
                 if cls._is_model_subclass(item_type):
-                    return [item_type.fromStore(item) for item in val]
+                    return [item_type.fromDict(item) for item in val]
                 return val
             elif isinstance(val, str):
                 try:
@@ -105,7 +102,7 @@ class BaseDictModel:
                     if isinstance(list_data, list):
                         item_type = get_args(hint_type)[0]
                         if cls._is_model_subclass(item_type):
-                            return [item_type.fromStore(item) for item in list_data]
+                            return [item_type.fromDict(item) for item in list_data]
                         return list_data
                 except:
                     pass
@@ -121,12 +118,12 @@ class BaseDictModel:
                 real_type = real_types[0]
                 if cls._is_model_subclass(real_type):
                     if isinstance(val, dict):
-                        return real_type.fromStore(val)
+                        return real_type.fromDict(val)
                     elif isinstance(val, str):
                         try:
                             json_data = json.loads(val)
                             if isinstance(json_data, dict):
-                                return real_type.fromStore(json_data)
+                                return real_type.fromDict(json_data)
                         except:
                             pass
             return val
@@ -162,7 +159,7 @@ class BaseDictModel:
         return cls._complex_type_cache[cls]
 
     @classmethod
-    def fromStore(cls: Type[T], src: Dict[str, Any]) -> T:
+    def fromDict(cls: Type[T], src: Dict[str, Any]) -> T:
         if not src: return cls()
 
         type_hints = cls._get_type_hints()
