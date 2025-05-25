@@ -15,9 +15,6 @@ body {
 	box-sizing:border-box;
 }
 
-span {
-	vertical-align:middle;
-}
 
 ::-webkit-scrollbar {
 	width:8px;
@@ -69,7 +66,7 @@ span {
 		margin:28px 0 0 20px;
 
 		small {
-			font-size: 12px;
+			font-size:12px;
 		}
 	}
 }
@@ -402,10 +399,10 @@ span {
 
 	.btn-close {
 
-		color: red;
-		background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M1.707 1.707a2 2 0 0 1 2.828 0L8 5.172l3.465-3.465a2 2 0 1 1 2.828 2.828L10.828 8l3.465 3.465a2 2 0 0 1-2.828 2.828L8 10.828l-3.465 3.465a2 2 0 0 1-2.828-2.828L5.172 8 1.707 4.535a2 2 0 0 1 0-2.828'/%3e%3c/svg%3e");
-		border: 1px solid #BBB;
-		margin-right: 10px;
+		color:red;
+		background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M1.707 1.707a2 2 0 0 1 2.828 0L8 5.172l3.465-3.465a2 2 0 1 1 2.828 2.828L10.828 8l3.465 3.465a2 2 0 0 1-2.828 2.828L8 10.828l-3.465 3.465a2 2 0 0 1-2.828-2.828L5.172 8 1.707 4.535a2 2 0 0 1 0-2.828'/%3e%3c/svg%3e");
+		border:1px solid #BBBBBB;
+		margin-right:10px;
 	}
 
 	//<path d='M1.707 1.707a2 2 0 0 1 2.828 0L8 5.172l3.465-3.465a2 2 0 1 1 2.828 2.828L10.828 8l3.465 3.465a2 2 0 0 1-2.828 2.828L8 10.828l-3.465 3.465a2 2 0 0 1-2.828-2.828L5.172 8 1.707 4.535a2 2 0 0 1 0-2.828'/>
@@ -462,7 +459,7 @@ span {
 
 	.modal-body {
 		flex:none;
-		padding: 0;
+		padding:0;
 	}
 }
 
@@ -812,7 +809,7 @@ span {
 					@include bg-gradient(var(--main-bs), var(--main-lig), var(--main-dk))
 				}
 
-				&.disabled {
+				&.dis {
 					opacity:0.5;
 					cursor:not-allowed !important;
 					pointer-events:none;
@@ -835,6 +832,17 @@ span {
 		border:var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
 		padding:15px 10px 15px 10px;
 
+		$co:rgb(52, 99, 148);
+
+		background:linear-gradient(
+						to bottom,
+						rgba($co, 0.5) 0%,
+						rgba($co, 0.2) 10%,
+						rgba($co, 0.0) 50%,
+						rgba($co, 0.2) 90%,
+						rgba($co, 0.5) 100%
+		);
+
 		> div {
 			display:none;
 
@@ -852,6 +860,13 @@ span {
 }
 
 .pagination {
+
+	margin:5px auto 5px auto;
+	border-radius:6px;
+	display:inline-flex;
+	border:rgba(26, 149, 195, 0.4) 1px solid;
+	box-shadow:0 0 3px rgba(26, 149, 195, 0.5);
+
 	.page-link {
 		background-color:#2D3748;
 		border-color:#4A5568;
@@ -880,6 +895,18 @@ span {
 			background-color:#1A202C;
 			border-color:#2D3748;
 			color:#718096;
+		}
+	}
+}
+
+/*======================== similar card ========================*/
+.sim {
+	&.has-related {
+		border: 2px solid var(--warn-bs) !important;
+		box-shadow: 0 0 8px rgba(254, 178, 4, 0.3);
+		
+		.card-header {
+			background: linear-gradient(to right, rgba(254, 178, 4, 0.2), transparent);
 		}
 	}
 }

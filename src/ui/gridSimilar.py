@@ -25,7 +25,7 @@ lg = log.get(__name__)
 #     return htm.Div(rows)
 
 
-def createGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=None):
+def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=None):
     if not assets or len(assets) == 0:
         # lg.info( "[sim-grid] return empty grid" )
         if onEmpty:
@@ -34,10 +34,7 @@ def createGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEm
             else:
                 return onEmpty
 
-        return htm.Div(
-            dbc.Alert("--------", color="warning"),
-            className="text-center"
-        )
+        return htm.Div( dbc.Alert("--------", color="warning"), className="text-center" )
 
     rootSI = next((a.simInfos for a in assets if a.id == rootId), None)
 
@@ -59,6 +56,41 @@ def createGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEm
     # lg.info( f"[sim-grid] create with rows[{len(assets)}] return rows[{len(rows)}]" )
 
     return htm.Div(rows, style=styGrid)
+
+
+def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None, showRelated=True):
+    if not assets or len(assets) == 0:
+        # lg.info( "[sim-grid] return empty grid" )
+        if onEmpty:
+            if isinstance(onEmpty, str):
+                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
+            else:
+                return onEmpty
+
+        return htm.Div( dbc.Alert("--------", color="warning"), className="text-center" )
+
+    styItem = {"maxWidth": f"{maxW}px"}
+    styGrid = {
+        "display": "grid",
+        "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+        "gap": "1rem",
+        "justifyItems": "center"
+    }
+
+    cntAss = len(assets)
+    if cntAss <= 4:
+        styItem.pop("maxWidth")
+        styGrid.pop("justifyItems")
+
+    try:
+
+        rows = [htm.Div(mkImgCardPending(a, showRelated), className="photo-card", style=styItem) for a in assets]
+
+        lg.info( f"[sim-grid] mkPndGrid with assets[{len(assets)}] return rows[{len(rows)}]" )
+
+        return htm.Div(rows, style=styGrid)
+    except Exception as e:
+        lg.error( f"[mkPndGrid] Render failed, assets[{assets}], {e}", exc_info=True )
 
 
 # def create_pair_card(photo1_id, photo2_id, similarity, index, selected_images=None):
@@ -213,6 +245,113 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
                 htm.Span("createAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
 
             ], class_name="grid2"),
+
+            # htm.Div([
+            #     dbc.Button(
+            #         "Details",
+            #         id={"type": "details-btn", "id": assId},
+            #         color="secondary",
+            #         size="sm"
+            #     )
+            # ], className="d-flex justify-content-between align-items-center"),
+
+        ], className="p-2")
+    ], className=f"h-100 sim {cssIds}")
+
+
+
+def mkImgCardPending(ass: models.Asset, showRelated=True):
+    if not ass: return htm.Div("Photo not found")
+
+    imgSrc = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
+
+    if not ass.id:
+        return htm.Div( "-Render None-" )
+
+    assId = ass.id
+    fnm = ass.originalFileName
+    dtc = ass.fileCreatedAt
+
+    checked = ass.selected
+    cssIds = "checked" if checked else ""
+
+
+    exi = ass.jsonExif
+
+    imgW = exi.exifImageWidth if exi else 0
+    imgH = exi.exifImageHeight if exi else 0
+
+    htmSimInfos = []
+
+    for si in ass.simInfos:
+        if not si.isSelf:
+            htmSimInfos.append(htm.Div([
+                htm.Span(f"score[{si.score:.6f}]", className="tag"),
+                htm.Span(f"{si.id[:8]}...", className="badge bg-primary txt-sm"),
+            ]))
+    
+    # 顯示相關群組
+    htmRelated = []
+    if hasattr(ass, 'relats') and ass.relats and showRelated:
+        htmRelated.append(htm.Hr(className="my-2"))
+        htmRelated.append(htm.Div([
+            htm.Span("相關群組: ", className="text-muted"),
+            htm.Span(f"{len(ass.relats)}", className="badge bg-warning")
+        ]))
+        for ra in ass.relats[:2]:
+            htmRelated.append(htm.Div([
+                htm.Span(f"#{ra.autoId}", className="badge bg-secondary me-1"),
+                htm.Span(f"{ra.id[:8]}...", className="text-muted small"),
+            ]))
+        if len(ass.relats) > 2:
+            htmRelated.append(htm.Div(
+                f"... 還有 {len(ass.relats) - 2} 個",
+                className="text-muted small"
+            ))
+
+
+    return dbc.Card([
+        dbc.CardHeader([
+            dbc.Row([
+                dbc.Col(
+                ),
+                dbc.Col([
+                    htm.Span("Matches: "), htm.Span(f"{len(ass.simInfos)-1}", className="tag lg ms-1")
+                ], className="d-flex justify-content-end")
+            ])
+
+        ], className=""),
+        htm.Div([
+            htm.Img(
+                src=imgSrc,
+                id={"type": "img-pop", "index": assId}, n_clicks=0,
+                className="card-img"
+            ),
+            htm.Div([
+                htm.Span(f"#{ass.autoId}", className="badge"),
+            ]),
+            htm.Div([
+                htm.Span(f"{imgW}", className="badge bg-primary"),
+                htm.Span("x"),
+                htm.Span(f"{imgH}", className="badge bg-primary"),
+            ])
+        ], className="img"),
+        dbc.CardBody([
+            dbc.Row([
+                htm.Span("id"), htm.Span(f"{ass.id}", className="badge bg-success text-truncate"),
+
+            ], class_name="grid"),
+
+            dbc.Row([
+                htm.Span("fileName"), htm.Span(f"{ass.originalFileName}", className="text-truncate"),
+                htm.Span("createAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
+
+            ], class_name="grid2"),
+
+
+            htm.Div(
+                htmSimInfos + htmRelated,
+            ),
 
             # htm.Div([
             #     dbc.Button(
