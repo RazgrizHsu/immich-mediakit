@@ -13,9 +13,9 @@ dash.register_page(
 )
 
 class K:
-    selectQ = "sel-photoQ"
-    btnProcess = "btn-process-photos"
-    btnClear = "btn-clear-vectors"
+    selectQ = "vector-selectPhotoQ"
+    btnDoVec = "vector-btnDoVec"
+    btnClear = "vector-btnClear"
 
 
 #========================================================================
@@ -67,7 +67,7 @@ def layout():
                 dbc.Col([
                     dbc.Button(
                         "Execute: Process Assets",
-                        id=K.btnProcess,
+                        id=K.btnDoVec,
                         color="primary",
                         size="lg",
                         className="w-100",
@@ -100,8 +100,8 @@ def layout():
 #========================================================================
 @callback(
     [
-        out(K.btnProcess, "children"),
-        out(K.btnProcess, "disabled"),
+        out(K.btnDoVec, "children"),
+        out(K.btnDoVec, "disabled"),
         out(K.btnClear, "disabled"),
         out(K.selectQ, "disabled"),
     ],
@@ -141,31 +141,25 @@ def photoVec_OnInit(dta_now):
 #------------------------------------------------------------------------
 @callback(
     [
-        out(K.btnProcess, "children", allow_duplicate=True),
-        out(K.btnProcess, "disabled", allow_duplicate=True),
+        out(K.btnDoVec, "children", allow_duplicate=True),
+        out(K.btnDoVec, "disabled", allow_duplicate=True),
         out(K.btnClear, "disabled", allow_duplicate=True),
         out(K.selectQ, "disabled", allow_duplicate=True),
-        out(ks.sto.nfy, "data", allow_duplicate=True)
     ],
     [
-        inp(K.btnProcess, "n_clicks"),
-        inp(K.btnClear, "n_clicks"),
         inp(ks.sto.tsk, "data"),
     ],
     [
         ste(ks.sto.now, "data"),
-        ste(ks.sto.nfy, "data"),
     ],
     prevent_initial_call=True
 )
-def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
-    trgId = getTriggerId()
-    if not trgId or (not nclk_proc and not nclk_clear): return noUpd, noUpd, noUpd, noUpd, noUpd
-    if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd, noUpd
+def photoVec_Status(dta_tsk, dta_now):
+    # trgId = getTriggerId()
+    # if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd, noUpd
 
     tsk = models.Tsk.fromDict(dta_tsk)
     now = models.Now.fromDict(dta_now)
-    nfy = models.Nfy.fromDict(dta_nfy)
 
     hasPic = now.cntPic > 0
     isTskin = tsk.id is not None
@@ -180,7 +174,7 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     if tsk.id:
         txtBtn = "Task in progress.."
 
-    return txtBtn, disBtnRun, disBtnClr, disSelect, nfy.toDict()
+    return txtBtn, disBtnRun, disBtnClr, disSelect
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
@@ -191,7 +185,7 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
         out(ks.sto.now, "data", allow_duplicate=True),
     ],
     [
-        inp(K.btnProcess, "n_clicks"),
+        inp(K.btnDoVec, "n_clicks"),
         inp(K.btnClear, "n_clicks"),
     ],
     [
@@ -220,7 +214,7 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, 
     lg.info( f"[photoVec] trig[{trgId}] clk[{nclk_proc}/{nclk_clear}] tsk[{tsk}]" )
 
 
-    if trgId == K.btnProcess:
+    if trgId == K.btnDoVec:
         if now.cntPic <= 0:
             nfy.error("No asset data to process")
         else:

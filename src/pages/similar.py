@@ -121,15 +121,15 @@ def layout(assetId=None, **kwargs):
         #------------------------------------------------------------------------
         *taber.createTaber(
             tabId=k.tab,
-            tabs=[
+            defs=[
                 taber.Tab(title="current", active=True),
                 taber.Tab(title="pending", disabled=True),
-                ["this is:", htm.Span("Tab3")]
+                "this is tab3"
             ],
-            tabActs=[
+            htmActs=[
                 dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True)
             ],
-            contents=[
+            tabBodies=[
                 # Current tab content
                 dbc.Spinner(
                     htm.Div(id=k.grid),
@@ -193,6 +193,30 @@ taber.regCallbacks(k.tab)
 from ui import gridSimilar as gvs
 
 
+#------------------------------------------------------------------------
+# Sync taber state from now.pg.sim.taber
+#------------------------------------------------------------------------
+@callback(
+    out(taber.id.store(k.tab), "data", allow_duplicate=True),
+    inp(ks.sto.now, "data"),
+    prevent_initial_call=True
+)
+def sync_taber_from_now(dta_now):
+
+    # lg.info( "[sync] from now" )
+
+    if not dta_now or not dta_now['pg']:
+        return dash.no_update
+
+    taber = dta_now['pg']['sim']['taber']
+
+    lg.info( f"[sync] from now, taber: {taber}" )
+    return taber
+
+
+#------------------------------------------------------------------------
+# onStatus
+#------------------------------------------------------------------------
 @callback(
     [
         out(k.txtCntOk, "children"),
@@ -212,9 +236,6 @@ from ui import gridSimilar as gvs
     prevent_initial_call="initial_duplicate"
 )
 def similar_onStatus(dta_now, dta_nfy, dta_tar):
-    if not dta_tar:
-        lg.warn(f"[sim:status] no taber!!!!!!!!!!!!!!!!!!!!!")
-
 
     now = models.Now.fromDict(dta_now)
     nfy = models.Nfy.fromDict(dta_nfy)
@@ -259,30 +280,10 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
 
             now.pg.sim.taber = tar
 
+
     return cntOk, cntRs, cntNo, disFind, disCler, grid, nfy.toDict(), now.toDict()
 
 
-#------------------------------------------------------------------------
-# Sync taber state from now.pg.sim.taber
-#------------------------------------------------------------------------
-@callback(
-    out(taber.id.store(k.tab), "data", allow_duplicate=True),
-    inp(ks.sto.now, "data"),
-    prevent_initial_call=True
-)
-def sync_taber_from_now(dta_now):
-
-    # lg.info( "[sync] from now" )
-
-    if not dta_now:
-        return dash.no_update
-
-    now = models.Now.fromDict(dta_now)
-    if now.pg.sim.taber:
-        # lg.info( f"[sync] from now, taber: {now.pg.sim.taber}" )
-        return now.pg.sim.taber.toDict()
-
-    return dash.no_update
 
 #------------------------------------------------------------------------
 # Update status counters

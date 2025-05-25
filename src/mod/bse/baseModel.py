@@ -11,6 +11,17 @@ lg = log.get(__name__)
 
 T = TypeVar('T', bound='BaseDictModel')
 
+
+# danger: replace dict to string method
+orig_dict_toStr = dict.__str__
+
+def custom_dict_str(self):
+    items = [f"{k}:{v}" for k, v in self.items()]
+    return "{" + ", ".join(items) + "}"
+
+
+
+
 class Json(Dict[str, Any]):
     def __init__(self, data=None):
         super().__init__()
@@ -37,6 +48,17 @@ class BaseDictModel:
 
     _cursor_columns_cache = {}  # 保存cursor的columns緩存
     _complex_type_cache = {}  # 緩存嵌套類型檢查結果
+
+    def __str__(self):
+        dic = self.toDict()
+
+
+        strs = []
+        for k, v, in dic.items():
+            if isinstance(v, str): v = f"'{v}'"
+            strs.append( f"{k}:{v}")
+
+        return "{" + ", ".join(strs) + "}"
 
     @staticmethod
     def jsonSerializer(obj: Any) -> Any:
