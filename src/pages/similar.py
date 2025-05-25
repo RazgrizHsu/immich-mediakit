@@ -30,9 +30,8 @@ class k:
     tab = 'sim-taber'
     pager = "sim-pager"
 
-    grid = "sim-grid"
-
-    hisGv = 'sim-his-gv'
+    gvSim = "sim-gvSim"
+    gvPnd = 'sim-gvPnd'
 
 
 #========================================================================
@@ -102,6 +101,8 @@ def layout(assetId=None, **kwargs):
                 dbc.Row([
                     dbc.Col([
                         dbc.Button("Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
+                        htm.Br(),
+                        htm.Small("No similar found → auto-mark resolved", className="ms-2 me-2")
                     ], width=8),
 
                     dbc.Col([
@@ -124,42 +125,26 @@ def layout(assetId=None, **kwargs):
             defs=[
                 taber.Tab(title="current", active=True),
                 taber.Tab(title="pending", disabled=True),
-                "this is tab3"
             ],
             htmActs=[
                 dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True)
             ],
             tabBodies=[
-                # Current tab content
-                dbc.Spinner(
-                    htm.Div(id=k.grid),
-                    color="primary",
-                    type="border",
-                    spinner_style={"width": "3rem", "height": "3rem"},
+                # Current
+                [
+                    dbc.Spinner(
+                        htm.Div(id=k.gvSim), color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
+                    ),
+                ],
+                # Pending
+                htm.Div([
+                    dbc.Spinner(
+                        htm.Div(id=k.gvPnd), color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
+                    ),
+                    dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False)
+                ],
+                    className="text-center"
                 ),
-
-                # Pending tab content
-                htm.Div([
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Spinner(
-                                htm.Div(id=k.hisGv),
-                                color="primary",
-                                type="border",
-                                spinner_style={"width": "3rem", "height": "3rem"},
-                            ),
-                        ], className="d-flex justify-content-center mb-3")
-                    ], className="mt-2"),
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
-                        ], className="d-flex justify-content-center mb-3")
-                    ], className="mt-2"),
-                ]),
-
-                htm.Div([
-                    htm.Span("這邊是tab3")
-                ])
             ]
         ),
 
@@ -202,15 +187,12 @@ from ui import gridSimilar as gvs
     prevent_initial_call=True
 )
 def sync_taber_from_now(dta_now):
-
-    # lg.info( "[sync] from now" )
-
-    if not dta_now or not dta_now['pg']:
+    if not dta_now:
+        lg.warn("[sim:sync] taber is none")
         return dash.no_update
 
     taber = dta_now['pg']['sim']['taber']
 
-    lg.info( f"[sync] from now, taber: {taber}" )
     return taber
 
 
@@ -224,7 +206,8 @@ def sync_taber_from_now(dta_now):
         out(k.txtCntNo, "children"),
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
-        out(k.grid, "children"),
+        out(k.gvSim, "children"),
+        out(k.gvPnd, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
     ],
@@ -236,7 +219,6 @@ def sync_taber_from_now(dta_now):
     prevent_initial_call="initial_duplicate"
 )
 def similar_onStatus(dta_now, dta_nfy, dta_tar):
-
     now = models.Now.fromDict(dta_now)
     nfy = models.Nfy.fromDict(dta_nfy)
     tar = models.Taber.fromDict(dta_tar)
@@ -246,26 +228,38 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
-    cntRs = db.pics.countHasSimIds()
+    cntRs = db.pics.countSimPending()
     disFind = cntNo <= 0 or (cntRs >= cntNo)
     disCler = cntOk <= 0 and cntRs <= 0
 
-    cntAssets = len(now.pg.sim.assets) if now.pg.sim.assets else -1
+    cntAssets = len(now.pg.sim.simAss) if now.pg.sim.simAss else -1
 
-    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now.pg.sim.assets[{cntAssets}]")
+    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now[{cntAssets}]")
 
     if cntAssets >= 1:
         #lg.info(f"[sim:status] assets: {now.pg.sim.assets[0]}")
         pass
 
-    grid = []
+    gvSim = []
 
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    grid = gvs.createGrid(now.pg.sim.assets, now.pg.sim.assId, onEmpty=[
+    gvSim = gvs.mkGrid(now.pg.sim.simAss, now.pg.sim.assId, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
+
+    if cntRs and not now.pg.sim.pndAss:
+        paged = db.pics.getPendingPaged()
+
+        lg.info( f"[sim] read pendings[{paged}]" )
+        now.pg.sim.pndAss = paged
+
+    # lg.info( f"[sim] reading len({paged})" )
+    gvPnd = gvs.mkPndGrid(now.pg.sim.pndAss, onEmpty=[
+        dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
+    ])
+
 
     # Update pending tab (index 1) state based on cntRs
     if tar and len(tar.tabs) > 1:
@@ -280,9 +274,7 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
 
             now.pg.sim.taber = tar
 
-
-    return cntOk, cntRs, cntNo, disFind, disCler, grid, nfy.toDict(), now.toDict()
-
+    return cntOk, cntRs, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict()
 
 
 #------------------------------------------------------------------------
@@ -299,9 +291,9 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     now = models.Now.fromDict(dta_now)
     nfy = models.Nfy.fromDict(dta_nfy)
 
-    if ctx.triggered and now.pg.sim.assets and len(now.pg.sim.assets) > 1:
+    if ctx.triggered and now.pg.sim.simAss and len(now.pg.sim.simAss) > 1:
         trgId = ctx.triggered_id
-        ass = next((a for a in now.pg.sim.assets if a.id == trgId.id), None)
+        ass = next((a for a in now.pg.sim.simAss if a.id == trgId.id), None)
         if ass:
             ass.selected = ctx.triggered[0]['value']
             # lg.info(f'[select] found: {ass.autoId}, selected: {ass.selected}, trgId: {trgId}')
@@ -466,7 +458,9 @@ def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnPr
         onUpdate(90, "90%", "Updating dynamic data...")
 
         if hasattr(db.dyn.dto, 'simId'): db.dyn.dto.simId = None
-        now.pg.sim.assets = []
+
+        now.pg.sim.pndAss = []
+        now.pg.sim.simAss = []
         now.pg.sim.assId = None
 
         onUpdate(100, "100%", "Clear completed")
@@ -531,7 +525,7 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
 
         pgAll = len(simIds)
         if pgAll == 0:
-            db.pics.setSimIds(asset.id, infos, isOk=0)
+            db.pics.setSimIds(asset.id, infos, isOk=1)
 
             now.pg.sim.reset()
 
@@ -573,7 +567,7 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         onUpdate(95, "95%", f"Finalizing similar photo relationships")
 
         now.pg.sim.assId = asset.id
-        now.pg.sim.assets = db.pics.getSimGroup(asset.id)
+        now.pg.sim.simAss = db.pics.getSimGroup(asset.id)
 
         onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
 

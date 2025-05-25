@@ -88,12 +88,14 @@
 @mixin btn-colors($light, $base, $dark, $darker) {
 	background-image:linear-gradient($light, $base 50%, $dark);
 	filter:none;
-	border:var(--btn-borderW) var(--bs-border-style) $darker;
+	border:var(--btn-borderW) var(--bs-border-style) $light;
 
 	&:not(.disabled):hover {
 		background-image:linear-gradient(color-mix(in srgb, $light 80%, white), $base 60%, color-mix(in srgb, $dark 85%, white));
 		filter:none;
-		border:var(--btn-borderW) var(--bs-border-style) $darker;
+		border:var(--btn-borderW) var(--bs-border-style) $light;
+
+		text-shadow:0 0 3px #260564, 0 0 3px #2D3748;
 	}
 }
 

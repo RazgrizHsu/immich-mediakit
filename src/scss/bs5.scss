@@ -87,10 +87,10 @@ select {
 	border-radius:6px;
 	font-weight:400;
 	transition:all 0.3s ease, background-image 0.8s ease, background-color 0.8s ease;
-	border:var(--btn-borderW) solid transparent;
+	border:var(--btn-borderW) solid 1px;
 	z-index:1;
 	box-shadow:var(--btn-shadow);
-	text-shadow:-1px -1px 0 rgba(0, 0, 0, .1);
+	//text-shadow:-1px -1px 0 rgba(0, 0, 0, .1);
 
 	&:hover {
 		box-shadow:var(--btn-shadowHov);

@@ -104,7 +104,7 @@ class Tab(BaseDictModel):
     def css(self):
         css = ""
         if self.active: css += " act"
-        if self.disabled: css += " disabled"
+        if self.disabled: css += " dis"
         return css.strip()
 
 @dataclass
@@ -220,6 +220,7 @@ class Asset(BaseDictModel):
 
     # view only
     selected:Optional[bool] = False
+    relats: List['Asset'] = field(default_factory=list)
 
     def getImagePath(self, photoQ=None):
 
@@ -236,23 +237,31 @@ class Asset(BaseDictModel):
 
         return os.path.join(envs.immichPath, path)
 
+
+@dataclass
+class Pager(BaseDictModel):
+    idx: Optional[int] = None
+    size: Optional[int] = 0
+    cnt: Optional[int] = 0
+
 @dataclass
 class PageSim(BaseDictModel):
 
+    taber: Optional[Taber] = None
+
     assId: Optional[str] = None
-    assets: List[Asset] = field(default_factory=list)
+    simAss: List[Asset] = field(default_factory=list)
 
     selectIds: List[str] = field(default_factory=list)
 
-    hisAssets: List[Asset] = field(default_factory=list)
+    pndAss: List[Asset] = field(default_factory=list)
 
-    taber: Optional[Taber] = None
 
     def reset(self):
         self.assId = None
-        self.assets = []
+        self.simAss = []
         self.selectIds = []
-        self.hisAssets = []
+        self.pndAss = []
 
 @dataclass
 class Pages(BaseDictModel):

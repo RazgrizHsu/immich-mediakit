@@ -41,12 +41,6 @@ def onUpdateSideBar(_trigger, dta_now, dta_nfy):
             dbc.CardHeader("env"),
             dbc.CardBody([
                 dbc.Row([
-                    dbc.Col([htm.Small("IMMICH_PATH:")], width=5, className=""),
-                    dbc.Col([
-                        htm.Span(f"{testIP}", className="tag" ),
-                    ]),
-                ], className="mb-2"),
-                dbc.Row([
                     dbc.Col([htm.Small("Path Test:")], width=5, className=""),
                     dbc.Col([
                         htm.Span(
@@ -64,12 +58,12 @@ def onUpdateSideBar(_trigger, dta_now, dta_nfy):
             dbc.CardHeader("Cache Count"),
             dbc.CardBody([
                 dbc.Row([
-                    dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=5),
-                    dbc.Col(dbc.Alert(f"{now.cntPic}", color="info", className="py-0 px-2 mb-2")),
+                    dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=6),
+                    dbc.Col(dbc.Alert(f"{now.cntPic}", color="info", className="py-0 px-2 mb-2 text-center")),
                 ]),
                 dbc.Row([
-                    dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=5),
-                    dbc.Col(dbc.Alert(f"{now.cntVec}", color="info", className="py-0 px-2 mb-2")),
+                    dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=6),
+                    dbc.Col(dbc.Alert(f"{now.cntVec}", color="info", className="py-0 px-2 mb-2 text-center")),
                 ]),
             ])
         ]),

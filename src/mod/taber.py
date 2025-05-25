@@ -1,5 +1,6 @@
-from typing import List, Any, Optional, Union
-from dsh import htm, dcc, dbc, callback, inp, out, ste, ctx, ALL, noUpd
+from typing import List, Any, Union
+
+from dsh import htm, dcc, callback, inp, out, ste, ctx, ALL, noUpd
 from mod.models import Taber, Tab
 from util import log
 
@@ -23,23 +24,7 @@ class id:
 
 
 def createTaber(tabId: str, defs: List[Union[Tab, str, List[Any]]], htmActs: List[Any] = None, tabBodies: List[Any] = None) -> List[Any]:
-    """
-    Create a taber component with necessary stores
 
-    Args:
-        tabId: Unique identifier for the taber
-        defs: List of Tab models, strings, or lists of components
-              - Tab: Use as is
-              - str: Create Tab with string as title
-              - List: Create Tab with components as title
-        htmActs: List of actions for right side of tab header
-        tabBodies: List of content divs corresponding to each tab
-
-    Returns:
-        List of components including taber div and store
-    """
-
-    # Process tabs - ensure they have IDs and indices
     tabs = []
     htmTabs = []
 
@@ -96,15 +81,26 @@ def createTaber(tabId: str, defs: List[Union[Tab, str, List[Any]]], htmActs: Lis
     model = Taber(id=tabId, tabs=tabs)
 
     data = model.toDict()
-    lg.info(f"[taber] data: {data}")
+    # lg.info(f"[taber] init data: {data}")
 
     return [
         divTaber,
-        dcc.Store(id={"type": k.store, "id": tabId}, data=data)
+        dcc.Store(id={"type": k.store, "id": tabId}, data=data, storage_type="session" ),
     ]
 
 
 def regCallbacks(tarId: str):
+
+    # @callback(
+    #     out("debug-info", "children"), #somewhere
+    #     [inp({"type": k.store, "id": ALL}, "modified_timestamp")],
+    #     [ste({"type": k.store, "id": ALL}, "data")],
+    #     prevent_initial_call=False
+    # )
+    # def monitor_store(timestamp, data):
+    #     if timestamp:  # ignore init
+    #         lg.info(f"[store changed] data: {data}")
+    #     return ""
 
     @callback(
         [
@@ -127,9 +123,7 @@ def regCallbacks(tarId: str):
         css = tar.cssTabs()
         chs = tar.titles()
 
-        # lg.info( f"[taber:chg] cssT: {css}" )
-        # lg.info( f"[taber:chg] children: {chs}" )
-        # lg.info( f"[taber:chg] children: {chs_tab}" )
+        # lg.info( f"[taber:chg] chs_tab: {tar}" )
 
         return css, css, chs
 
@@ -176,7 +170,7 @@ def regCallbacks(tarId: str):
         css = []
         for tab in taber.tabs: css.append(tab.css())
 
-        lg.info(f"[taber] clickTab[{tabId}]")
+        # lg.info(f"[taber] clickTab[{tabId}]")
 
         # if not tItems:
         #     lg.warn( "[taber] =====>>> No Data?" )
