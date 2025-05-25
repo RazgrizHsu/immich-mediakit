@@ -13,9 +13,9 @@ dash.register_page(
 )
 
 class K:
-    selectUsr = "inp-user-selector"
-    btnFetch = "btn-assets-fetch"
-    btnClean = "btn-assets-clear"
+    selectUsr = "fetch-usr-select"
+    btnFetch = "fetch-btn-assets"
+    btnClean = "fetch-btn-clear"
 
     pageInit = "fetch-page-init"
 
@@ -41,7 +41,7 @@ def layout():
                                 dbc.Label("Select User"),
                                 dcc.Dropdown(
                                     id=K.selectUsr,
-                                    options=opts,
+                                    options=[],
                                     placeholder="Select user.",
                                     clearable=False
                                 ),
@@ -99,19 +99,19 @@ dis_hide = {"display": "none"}
     ],
     inp(K.pageInit, "data"),
     ste(ks.sto.now, "data"),
-    ste(K.selectUsr, "value"),
-    ste(K.selectUsr, "options")
+    prevent_initial_call="initial_duplicate"
 )
-def assets_Init(dta_pi, dta_now, selId, opts):
+def assets_Init(dta_pi, dta_now):
     # lg.info("[Assets] Initialization: PageInit by Sess")
 
     now = models.Now.fromDict(dta_now)
 
-    if len(opts) <= 1:  # Only refill if there's just 1 option
-        usrs = now.usrs
-        if usrs and len(usrs) > 0:
-            for usr in usrs:
-                opts.append({"label": usr.name, "value": usr.id})
+    #if len(opts) <= 1:  # Only refill if there's just 1 option
+    opts = []
+    usrs = now.usrs
+    if usrs and len(usrs) > 0:
+        for usr in usrs:
+            opts.append({"label": usr.name, "value": usr.id})
 
     return opts, db.dyn.dto.usrId
 
@@ -129,8 +129,8 @@ def assets_Init(dta_pi, dta_now, selId, opts):
     ],
     [
         inp(K.selectUsr, "value"),
-        inp(ks.sto.tsk, "data"),
     ],
+    ste(ks.sto.tsk, "data"),
     ste(ks.sto.now, "data"),
     ste(ks.sto.nfy, "data"),
     prevent_initial_call=True

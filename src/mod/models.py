@@ -95,24 +95,23 @@ class Mdl(Cmd):
 @dataclass
 class Tab(BaseDictModel):
     title: Optional[str] = None
-    disabled: bool = False
+    disabled: Optional[bool] = False
     active: bool = False
-    allowRefresh: bool = False  # 是否允許重複點擊刷新
+    rehit: bool = False  # 是否允許重複點擊刷新
     id: Optional[str] = None  # 可選，如果不提供會自動生成
-    _idx: Optional[int] = None  # 內部使用，記錄 tab 的索引
-    n_clicks: int = 0
+    idx: Optional[int] = None  # 內部使用，記錄 tab 的索引
 
     def css(self):
         css = ""
         if self.active: css += " act"
-        if self.disabled and not self.active: css += " disabled"
+        if self.disabled: css += " disabled"
         return css.strip()
 
 @dataclass
 class Taber(BaseDictModel):
     id: str
     tabs: List[Tab] = field(default_factory=list)
-    tabActs: List[Any] = field(default_factory=list)
+    # tabActs: List[Any] = field(default_factory=list)
 
     def getTab(self, tabId: str) -> Optional[Tab]:
         return next((t for t in self.tabs if t.id == tabId), None)
@@ -120,6 +119,19 @@ class Taber(BaseDictModel):
     def setActive(self, tabId: str):
         for tab in self.tabs:
             tab.active = (tab.id == tabId)
+
+
+    def cssTabs(self):
+        css = []
+        for tab in self.tabs: css.append(tab.css())
+        return css
+
+    def titles(self):
+        tits = []
+        for tab in self.tabs:
+            tits.append(tab.title)
+
+        return tits
 
 
 
