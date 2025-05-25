@@ -3,6 +3,7 @@ from dsh import htm, dbc, inp, out, callback
 from util import log
 from mod import tsk, models
 
+# public for refs
 from . import sidebar
 
 lg = log.get(__name__)
@@ -102,7 +103,7 @@ def onUpdateMenus(dta_now):
     # lg.info("Registered pages:")
     # for page, config in dash.page_registry.items(): lg.info(f"- {page}: {config['path']}")
 
-    now = models.Now.fromStore(dta_now)
+    now = models.Now.fromDict(dta_now)
 
     disVec = now.cntPic <= 0
     disGrd = disVec

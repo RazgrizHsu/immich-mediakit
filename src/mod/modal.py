@@ -40,7 +40,7 @@ def render():
     prevent_initial_call=True
 )
 def update_txt(dta_mdl, nclk_ok, nclk_no):
-    mdl = models.Mdl.fromStore(dta_mdl)
+    mdl = models.Mdl.fromDict(dta_mdl)
     tsk = models.Tsk()
 
     isOpen = mdl.id is not None
@@ -69,4 +69,4 @@ def update_txt(dta_mdl, nclk_ok, nclk_no):
 
         mdl.reset()
 
-    return isOpen, mdl.msg, mdl.toStore(), tsk.toStore()
+    return isOpen, mdl.msg, mdl.toDict(), tsk.toDict()

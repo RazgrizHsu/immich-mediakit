@@ -49,7 +49,9 @@ def monitor_ws_connection(state, error):
     if error:
         lg.error(f"[app:ws] ERROR: {error}")
     elif state:
-        lg.info(f"[app:ws] state changed: {state}")
+        # lg.info(f"[app:ws] state changed: {state}")
+        pass
+
     return dash.no_update
 
 import ui

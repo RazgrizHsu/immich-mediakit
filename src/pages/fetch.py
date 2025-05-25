@@ -105,7 +105,7 @@ dis_hide = {"display": "none"}
 def assets_Init(dta_pi, dta_now, selId, opts):
     # lg.info("[Assets] Initialization: PageInit by Sess")
 
-    now = models.Now.fromStore(dta_now)
+    now = models.Now.fromDict(dta_now)
 
     if len(opts) <= 1:  # Only refill if there's just 1 option
         usrs = now.usrs
@@ -136,9 +136,9 @@ def assets_Init(dta_pi, dta_now, selId, opts):
     prevent_initial_call=True
 )
 def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
-    tsk = models.Tsk.fromStore(dta_tsk)
-    now = models.Now.fromStore(dta_now)
-    nfy = models.Nfy.fromStore(dta_nfy)
+    tsk = models.Tsk.fromDict(dta_tsk)
+    now = models.Now.fromDict(dta_now)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     # lg.info(f"[assets] Status: usrId[{usrId}]")
 
@@ -184,7 +184,7 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
                 cnt = db.psql.count(now.usr.id)
                 txtBtn = f"Fetch: {now.usr.name} ({cnt})"
 
-    return txtBtn, disBtnRun, disBtnClr, now.toStore(), nfy.toStore()
+    return txtBtn, disBtnRun, disBtnClr, now.toDict(), nfy.toDict()
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
@@ -209,10 +209,10 @@ def assets_Status(usrId, dta_tsk, dta_now, dta_nfy):
 def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
     if not nclk_fetch and not nclk_clean: return noUpd, noUpd
 
-    now = models.Now.fromStore(dta_now)
-    mdl = models.Mdl.fromStore(dta_mdl)
-    tsk = models.Tsk.fromStore(dta_tsk)
-    nfy = models.Nfy.fromStore(dta_nfy)
+    now = models.Now.fromDict(dta_now)
+    mdl = models.Mdl.fromDict(dta_mdl)
+    tsk = models.Tsk.fromDict(dta_tsk)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     if tsk.id: return noUpd, noUpd
     trgSrc = getTriggerId()
@@ -232,7 +232,7 @@ def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dt
         #     cnt = db.psql.count()
         #     mdl.msg = f"Start getting all users assets count[{cnt}] ?"
 
-    return mdl.toStore(), nfy.toStore()
+    return mdl.toDict(), nfy.toDict()
 
 
 #------------------------------------------------------------------------

@@ -262,12 +262,12 @@ def method4_complex_base_dict_model(cursor: sqlite3.Cursor):
                 except:
                     data[field] = None
 
-        asset = ComplexAsset.fromStore(data)
+        asset = ComplexAsset.fromDict(data)
         result.append(asset)
 
     end_time = time.time()
     execution_time = end_time - start_time
-    lg.info(f"Method 4 (BaseDictModel.fromStore) complex data: {execution_time:.6f} seconds")
+    lg.info(f"Method 4 (BaseDictModel.fromDict) complex data: {execution_time:.6f} seconds")
 
     return result, execution_time
 
@@ -342,9 +342,9 @@ def run_complex_test(iterations: int = 5, num_records: int = 1000, silent: bool 
         lg.info("=" * 50)
         lg.info(f"Complex data test completed: read {num_records} records, tested {iterations} times")
         lg.info(f"Method 3 (dict(zip) + JSON parsing) average time: {avg_time3:.6f} seconds")
-        lg.info(f"Method 4 (BaseDictModel.fromStore) average time: {avg_time4:.6f} seconds")
-        lg.info(f"Performance gap: BaseDictModel.fromStore takes {speedup:.2f} times longer than dict(zip)+JSON parsing")
-        lg.info(f"       => dict(zip)+JSON parsing is {speedup:.2f} times faster than BaseDictModel.fromStore")
+        lg.info(f"Method 4 (BaseDictModel.fromDict) average time: {avg_time4:.6f} seconds")
+        lg.info(f"Performance gap: BaseDictModel.fromDict takes {speedup:.2f} times longer than dict(zip)+JSON parsing")
+        lg.info(f"       => dict(zip)+JSON parsing is {speedup:.2f} times faster than BaseDictModel.fromDict")
         lg.info("=" * 50)
 
     return avg_time3, avg_time4
@@ -409,7 +409,7 @@ def run_nested_object_test(iterations: int = 3, num_records: int = 100, silent: 
         start_time = time.time()
         model_results = []
         for data in test_data:
-            model = ComplexAsset.fromStore(data)
+            model = ComplexAsset.fromDict(data)
             model_results.append(model)
         model_time = time.time() - start_time
         method_model_times.append(model_time)

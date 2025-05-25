@@ -74,7 +74,11 @@ class TskMgr:
     #------------------------------------------------
     async def _handler(self, conn: ServerConnection) -> None:
         self.conns.add(conn)
-        lg.info(f"[TskMgrWs] connected.. Total[{len(self.conns)}]")
+
+        cnt = len(self.conns)
+        if cnt != 1:
+            lg.info(f"[TskMgrWs] connected.. Total[{cnt}]")
+
         try:
             await conn.send(json.dumps({
                 'type': 'connected',

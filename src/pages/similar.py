@@ -5,7 +5,7 @@ import db
 from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
 from util import log
-from mod import models, mapFns, IFnProg
+from mod import models, mapFns, IFnProg, taber
 
 lg = log.get(__name__)
 
@@ -17,8 +17,6 @@ dash.register_page(
 )
 
 class k:
-    stoInitId = "store-init-id"
-
     txtCntRs = 'sim-txt-cnt-records'
     txtCntOk = 'sim-txt-cnt-ok'
     txtCntNo = 'sim-txt-cnt-no'
@@ -29,7 +27,7 @@ class k:
     btnClear = "sim-btn-clear"
     btnDelChks = "sim-btn-delete-checkeds"
 
-    taber = 'sim-taber'
+    tab = 'sim-taber'
     pager = "sim-pager"
 
     grid = "sim-grid"
@@ -121,45 +119,35 @@ def layout(assetId=None, **kwargs):
         #------------------------------------------------------------------------
         # Tabs
         #------------------------------------------------------------------------
-        htm.Div([
+        *taber.createTaber(
+            tabId=k.tab,
+            tabs=[
+                taber.Tab(title="current", active=True),
+                taber.Tab(title="pending", disabled=True),
+                ["this is:", htm.Span("Tab3")]
+            ],
+            tabActs=[
+                dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True)
+            ],
+            contents=[
+                # Current tab content
+                dbc.Spinner(
+                    htm.Div(id=k.grid),
+                    color="primary",
+                    type="border",
+                    spinner_style={"width": "3rem", "height": "3rem"},
+                ),
 
-            htm.Div([
-                #------------------------------------------------------------------------
-                # tab header
-                #------------------------------------------------------------------------
-                #left side
+                # Pending tab content
                 htm.Div([
-                    htm.Div("pending", className="disabled", id={"type": "tab", "id": "tab-2"}, n_clicks=0),
-                    htm.Div("current", className="act", id={"type": "tab", "id": "tab-1"}, n_clicks=0),
-                ], className="nav"),
-
-                #right side
-                htm.Div([
-                    dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True, )
-                ], className="acts"),
-
-                #------ tab header end ------
-            ], className="head"),
-            htm.Div([
-                #------------------------------------------------------------------------
-                # tab contents
-                #------------------------------------------------------------------------
-
-
-                htm.Div([
-                    #------------------------------------------------------------------------
-                    # pending
-                    #------------------------------------------------------------------------
                     dbc.Row([
                         dbc.Col([
-
                             dbc.Spinner(
                                 htm.Div(id=k.hisGv),
                                 color="primary",
                                 type="border",
                                 spinner_style={"width": "3rem", "height": "3rem"},
                             ),
-
                         ], className="d-flex justify-content-center mb-3")
                     ], className="mt-2"),
                     dbc.Row([
@@ -167,30 +155,14 @@ def layout(assetId=None, **kwargs):
                             dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False, style={"display": ""})
                         ], className="d-flex justify-content-center mb-3")
                     ], className="mt-2"),
-
-                    #------------------------------------------------------------------------
-                ], id="content-2", className=""),
+                ]),
 
                 htm.Div([
-                    #------------------------------------------------------------------------
-                    # current
-                    #------------------------------------------------------------------------
-                    dbc.Spinner(
-                        htm.Div(id=k.grid),
-                        color="primary",
-                        type="border",
-                        spinner_style={"width": "3rem", "height": "3rem"},
-                    ),
-                    #------------------------------------------------------------------------
-                ], id="content-1", className="act"),
+                    htm.Span("這邊是tab3")
+                ])
+            ]
+        ),
 
-
-                #------ tab content end ------
-            ], className="body"),
-
-        ], className="taber", id=k.taber),
-
-        dcc.Store(id=k.stoInitId, data=assetId)
         #====== bottom end ======================================================
     ])
 
@@ -212,69 +184,14 @@ def layout(assetId=None, **kwargs):
 # callbacks
 #========================================================================
 
-#------------------------------------------------------------------------
-# taber change
-#------------------------------------------------------------------------
-@callback(
-    out(k.taber, "children"),
-    [
-        inp({"type": "tab", "id": ALL}, "n_clicks"),
-        inp(k.taber, "children"),
-    ],
-    prevent_initial_call=True
-)
-def sim_taber(clks, items):
-    if not ctx.triggered_id: return items
-
-    if isinstance(ctx.triggered_id, dict) and ctx.triggered_id.get("type") == "tab":
-        dstTabId = ctx.triggered_id.get("id")
-
-        trigTab = None
-        for i, click in enumerate(clks):
-            if clks[i] and clks[i] > 0:
-                trigTab = i
-                break
-
-        lg.info(f"[taber] change tab: {dstTabId}")
-        head = None
-        body = None
-        for i, ch in enumerate(items):
-            if isinstance(ch, dict) and ch.get("props", {}).get("className") == "head": head = i
-            elif isinstance(ch, dict) and ch.get("props", {}).get("className") == "body": body = i
-
-        if head is not None and body is not None:
-            nav_div = items[head]["props"]["children"][0]
-
-            if trigTab is not None:
-                clickedTab = nav_div["props"]["children"][trigTab]
-                if "disabled" in clickedTab.get("props", {}).get("className", ""):
-                    lg.warn(f"[taber] ignore disabled tab id[{dstTabId}]")
-                    return items
-
-            for i, tab in enumerate(nav_div["props"]["children"]):
-                tabId = tab.get("props", {}).get("id", {}).get("id", "")
-
-                if "disabled" in tab.get("props", {}).get("className", ""): continue
-
-                if tabId == dstTabId:
-                    nav_div["props"]["children"][i]["props"]["className"] = "act"
-                else:
-                    nav_div["props"]["children"][i]["props"]["className"] = ""
-
-            divBody = items[body]
-            for i, content in enumerate(divBody["props"]["children"]):
-                bodyId = content.get("props", {}).get("id", "")
-                if bodyId == f"content-{dstTabId.split('-')[1]}":
-                    divBody["props"]["children"][i]["props"]["className"] = "act"
-                else:
-                    divBody["props"]["children"][i]["props"]["className"] = ""
-
-    return items
+# Register taber callback
+taber.regCallbacks(k.tab)
 
 #------------------------------------------------------------------------
 # Update status counters
 #------------------------------------------------------------------------
 from ui import gridSimilar as gvs
+
 
 @callback(
     [
@@ -285,14 +202,26 @@ from ui import gridSimilar as gvs
         out(k.btnClear, "disabled"),
         out(k.grid, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
+        out(ks.sto.now, "data", allow_duplicate=True),
     ],
     inp(ks.sto.now, "data"),
-    ste(ks.sto.nfy, "data"),
+    [
+        ste(ks.sto.nfy, "data"),
+        ste(taber.id.store(k.tab), "data"),
+    ],
     prevent_initial_call="initial_duplicate"
 )
-def similar_onStatus(dta_now, dta_nfy):
-    now = models.Now.fromStore(dta_now)
-    nfy = models.Nfy.fromStore(dta_nfy)
+def similar_onStatus(dta_now, dta_nfy, dta_tar):
+    if not dta_tar:
+        lg.warn(f"[sim:status] no taber!!!!!!!!!!!!!!!!!!!!!")
+
+
+    now = models.Now.fromDict(dta_now)
+    nfy = models.Nfy.fromDict(dta_nfy)
+    tar = models.Taber.fromDict(dta_tar)
+
+    # Store taber in page state
+    now.pg.sim.taber = tar
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
@@ -313,13 +242,47 @@ def similar_onStatus(dta_now, dta_nfy):
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-
     grid = gvs.createGrid(now.pg.sim.assets, now.pg.sim.assId, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
 
-    return cntOk, cntRs, cntNo, disFind, disCler, grid, nfy.toStore()
+    # Update pending tab (index 1) state based on cntRs
+    if tar and len(tar.tabs) > 1:
+        tab = tar.tabs[1]  # tab (pending)
+        if tab:
+            if cntRs >= 1:
+                tab.disabled = False
+                tab.title = f"pending ({cntRs})"
+            else:
+                tab.disabled = True
+                tab.title = "pending"
 
+            now.pg.sim.taber = tar
+
+    return cntOk, cntRs, cntNo, disFind, disCler, grid, nfy.toDict(), now.toDict()
+
+
+#------------------------------------------------------------------------
+# Sync taber state from now.pg.sim.taber
+#------------------------------------------------------------------------
+@callback(
+    out(taber.id.store(k.tab), "data", allow_duplicate=True),
+    inp(ks.sto.now, "data"),
+    prevent_initial_call=True
+)
+def sync_taber_from_now(dta_now):
+
+    # lg.info( "[sync] from now" )
+
+    if not dta_now:
+        return dash.no_update
+
+    now = models.Now.fromDict(dta_now)
+    if now.pg.sim.taber:
+        # lg.info( f"[sync] from now, taber: {now.pg.sim.taber}" )
+        return now.pg.sim.taber.toDict()
+
+    return dash.no_update
 
 #------------------------------------------------------------------------
 # Update status counters
@@ -332,8 +295,8 @@ def similar_onStatus(dta_now, dta_nfy):
     prevent_initial_call=True
 )
 def update_selected_photos(clks, dta_now, dta_nfy):
-    now = models.Now.fromStore(dta_now)
-    nfy = models.Nfy.fromStore(dta_nfy)
+    now = models.Now.fromDict(dta_now)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     if ctx.triggered and now.pg.sim.assets and len(now.pg.sim.assets) > 1:
         trgId = ctx.triggered_id
@@ -342,7 +305,7 @@ def update_selected_photos(clks, dta_now, dta_nfy):
             ass.selected = ctx.triggered[0]['value']
             # lg.info(f'[select] found: {ass.autoId}, selected: {ass.selected}, trgId: {trgId}')
 
-    return now.toStore()
+    return now.toDict()
 
 
 #========================================================================
@@ -373,10 +336,10 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
 
     trgId = getTriggerId()
 
-    now = models.Now.fromStore(dta_now)
-    mdl = models.Mdl.fromStore(dta_mdl)
-    tsk = models.Tsk.fromStore(dta_tsk)
-    nfy = models.Nfy.fromStore(dta_nfy)
+    now = models.Now.fromDict(dta_now)
+    mdl = models.Mdl.fromDict(dta_mdl)
+    tsk = models.Tsk.fromDict(dta_tsk)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     if tsk.id:
         # 檢查任務是否真的還在運行
@@ -399,7 +362,7 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
         cntRs = db.pics.countHasSimIds()
         if cntOk <= 0 and cntRs <= 0:
             nfy.warn(f"[similar] DB does not contain any similarity records")
-            return noUpd, nfy.toStore(), noUpd, noUpd
+            return noUpd, nfy.toDict(), noUpd, noUpd
 
         mdl.reset()
         mdl.id = ks.pg.similar
@@ -424,7 +387,7 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
         if now.cntVec <= 0:
             nfy.error("No vector data to process")
             now.pg.sim.reset()
-            return mdl.toStore(), nfy.toStore(), now.toStore(), noUpd
+            return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
 
         thMin, thMax = thRange
         thMin = co.valid.float(thMin, 0.80)
@@ -466,12 +429,12 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
             #     f"Begin finding similar?", htm.Br(),
             #     f"threshold[{thMin:.2f}-{thMax:.2f}]]",
             # ]
-            return mdl.toStore(), nfy.toStore(), now.toStore(), tsk.toStore()
+            return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
     # 如果有清除過 tsk.id，需要更新 store
-    return mdl.toStore(), nfy.toStore(), now.toStore(), tsk.toStore() if tsk.id is None else noUpd
+    return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict() if tsk.id is None else noUpd
 
 
 #========================================================================

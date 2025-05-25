@@ -205,7 +205,6 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
         dbc.CardBody([
             dbc.Row([
                 htm.Span("id"), htm.Span(f"{ass.id}", className="badge bg-success text-truncate"),
-                htm.Span("autoId"), htm.Span(f"{ass.autoId}", className="badge bg-success"),
 
             ], class_name="grid"),
 
@@ -215,13 +214,14 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
 
             ], class_name="grid2"),
 
-            htm.Div([
-                dbc.Button(
-                    "Details",
-                    id={"type": "details-btn", "id": assId},
-                    color="secondary",
-                    size="sm"
-                )
-            ], className="d-flex justify-content-between align-items-center"),
+            # htm.Div([
+            #     dbc.Button(
+            #         "Details",
+            #         id={"type": "details-btn", "id": assId},
+            #         color="secondary",
+            #         size="sm"
+            #     )
+            # ], className="d-flex justify-content-between align-items-center"),
+
         ], className="p-2")
     ], className=f"h-100 sim {cssIds}")

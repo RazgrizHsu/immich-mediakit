@@ -197,7 +197,7 @@ def layout():
     prevent_initial_call=False
 )
 def viewGrid_Init(dta_now):
-    now = models.Now.fromStore(dta_now)
+    now = models.Now.fromDict(dta_now)
 
     opts = [{"label": "All Users", "value": ""}]
     if now.usrs and len(now.usrs) > 0:
@@ -302,7 +302,7 @@ def on_pagination_controls(
     prevent_initial_call=False
 )
 def viewGrid_Load(dta_pg, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now):
-    now = models.Now.fromStore(dta_now)
+    now = models.Now.fromDict(dta_now)
 
     page = dta_pg["page"]
     pageSize = dta_pg["per_page"]

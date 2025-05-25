@@ -109,7 +109,7 @@ def layout():
     prevent_initial_call=False
 )
 def photoVec_OnInit(dta_now):
-    now = models.Now.fromStore(dta_now)
+    now = models.Now.fromDict(dta_now)
 
     hasPics = now.cntPic > 0
     hasVecs = now.cntVec > 0
@@ -163,9 +163,9 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     if not trgId or (not nclk_proc and not nclk_clear): return noUpd, noUpd, noUpd, noUpd, noUpd
     if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd, noUpd
 
-    tsk = models.Tsk.fromStore(dta_tsk)
-    now = models.Now.fromStore(dta_now)
-    nfy = models.Nfy.fromStore(dta_nfy)
+    tsk = models.Tsk.fromDict(dta_tsk)
+    now = models.Now.fromDict(dta_now)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     hasPic = now.cntPic > 0
     isTskin = tsk.id is not None
@@ -180,7 +180,7 @@ def photoVec_Status(nclk_proc, nclk_clear, dta_tsk, dta_now, dta_nfy):
     if tsk.id:
         txtBtn = "Task in progress.."
 
-    return txtBtn, disBtnRun, disBtnClr, disSelect, nfy.toStore()
+    return txtBtn, disBtnRun, disBtnClr, disSelect, nfy.toDict()
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
@@ -210,10 +210,10 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, 
     trgId = getTriggerId()
     if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd
 
-    now = models.Now.fromStore(dta_now)
-    mdl = models.Mdl.fromStore(dta_mdl)
-    tsk = models.Tsk.fromStore(dta_tsk)
-    nfy = models.Nfy.fromStore(dta_nfy)
+    now = models.Now.fromDict(dta_now)
+    mdl = models.Mdl.fromDict(dta_mdl)
+    tsk = models.Tsk.fromDict(dta_tsk)
+    nfy = models.Nfy.fromDict(dta_nfy)
 
     if tsk.id: return noUpd, noUpd, noUpd
 
@@ -238,7 +238,7 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_mdl, dta_tsk, 
             mdl.cmd = ks.cmd.vec.clear
             mdl.msg = "Are you sure you want to clear all vectors?"
 
-    return mdl.toStore(), nfy.toStore(), now.toStore()
+    return mdl.toDict(), nfy.toDict(), now.toDict()
 
 
 
