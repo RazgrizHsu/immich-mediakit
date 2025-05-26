@@ -10,6 +10,9 @@ from ui import pager
 
 lg = log.get(__name__)
 
+# Debug flag for verbose logging
+DEBUG = False
+
 dash.register_page(
     __name__,
     path=f'/{ks.pg.similar}',
@@ -141,7 +144,7 @@ def layout(assetId=None, **kwargs):
                 htm.Div([
 
                     # top pager
-                    *pager.createPager( pagerId=k.pagerPnd, idx=0, className="mb-3" ),
+                    *pager.createPager(pgId=k.pagerPnd, idx=0, className="mb-3"),
 
                     # Grid view
                     dbc.Spinner(
@@ -149,10 +152,10 @@ def layout(assetId=None, **kwargs):
                     ),
 
                     # bottom pager
-                    *pager.createPager( pagerId=k.pagerPnd, idx=1 ),
+                    *pager.createPager(pgId=k.pagerPnd, idx=1, className="mt-3"),
 
                     # Main pager (store only)
-                    *pager.createStore( pagerId=k.pagerPnd, page=1, size=20, total=0 ),
+                    *pager.createStore(pgId=k.pagerPnd, page=1, size=20, total=0),
                 ],
                     className="text-center"
                 ),
@@ -208,12 +211,18 @@ def similar_onPagerChanged(dta_pgr, dta_now):
     now = models.Now.fromDict(dta_now)
     pgr = models.Pgr.fromDict(dta_pgr)
 
+    # Check if we're already on this page with same data
+    oldPgr = now.pg.sim.pndPgr
+    if oldPgr and oldPgr.idx == pgr.idx and oldPgr.size == pgr.size and oldPgr.cnt == pgr.cnt:
+        if DEBUG: lg.info(f"[sim:pager] Already on page {pgr.idx}, skipping reload")
+        return dash.no_update
+
     # Save pager state
     now.pg.sim.pndPgr = pgr
 
     # Load data for new page
     paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
-    lg.info(f"[sim:pager] Loading page {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
+    if DEBUG: lg.info(f"[sim:pager] Loading page {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
     now.pg.sim.pndAss = paged
 
     # Update grid
@@ -288,7 +297,7 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
 
     cntAssets = len(now.pg.sim.simAss) if now.pg.sim.simAss else -1
 
-    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now[{cntAssets}]")
+    if DEBUG: lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now[{cntAssets}]")
 
     if cntAssets >= 1:
         #lg.info(f"[sim:status] assets: {now.pg.sim.assets[0]}")
@@ -308,24 +317,27 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
 
     # Update pager total count
     pagerData = None
+    oldCnt = pgr.cnt
     if pgr.cnt != cntRs:
         pgr.cnt = cntRs
-        pgr.idx = 1  # Reset to first page when count changes
+        # Keep current page if still valid, otherwise reset to last valid page
+        totalPages = (cntRs + pgr.size - 1) // pgr.size if cntRs > 0 else 1
+        if pgr.idx > totalPages:
+            pgr.idx = max(1, totalPages)
         now.pg.sim.pndPgr = pgr
-        pagerData = pgr
+        # Only update pager store if count actually changed
+        if oldCnt != cntRs:
+            pagerData = pgr
 
-    # Load pending data based on current page
-    if cntRs:
+    # Load pending data - only if we don't have data for current page
+    if cntRs > 0 and (not now.pg.sim.pndAss or len(now.pg.sim.pndAss) == 0):
         paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
-        lg.info(f"[sim] read pendings page[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
+        if DEBUG: lg.info(f"[sim] Initial load pendings page[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
         now.pg.sim.pndAss = paged
-    else:
-        now.pg.sim.pndAss = []
 
     gvPnd = gvs.mkPndGrid(now.pg.sim.pndAss, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
-
 
     # Update pending tab (index 1) state based on cntRs
     if tar and len(tar.tabs) > 1:
@@ -406,15 +418,15 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
         if mgr and mgr.getInfo(tsk.id):
             task_info = mgr.getInfo(tsk.id)
             if task_info.status in ['pending', 'running']:
-                lg.info(f"[similar] Task already running: {tsk.id}")
+                if DEBUG: lg.info(f"[similar] Task already running: {tsk.id}")
                 return noUpd, noUpd, noUpd, noUpd
 
         # 如果任務已經完成或不存在，清除 tsk.id
-        lg.info(f"[similar] Clearing completed task: {tsk.id}")
+        if DEBUG: lg.info(f"[similar] Clearing completed task: {tsk.id}")
         tsk.id = None
         tsk.cmd = None
 
-    lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
+    if DEBUG: lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
 
     if trgId == k.btnClear:
         cntOk = db.pics.countSimOk(isOk=1)

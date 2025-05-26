@@ -86,7 +86,7 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None, show
 
         rows = [htm.Div(mkImgCardPending(a, showRelated), className="photo-card", style=styItem) for a in assets]
 
-        lg.info( f"[sim-grid] mkPndGrid with assets[{len(assets)}] return rows[{len(rows)}]" )
+        # lg.info( f"[sim-grid] mkPndGrid with assets[{len(assets)}] return rows[{len(rows)}]" )
 
         return htm.Div(rows, style=styGrid)
     except Exception as e:
@@ -289,7 +289,7 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
                 htm.Span(f"score[{si.score:.6f}]", className="tag"),
                 htm.Span(f"{si.id[:8]}...", className="badge bg-primary txt-sm"),
             ]))
-    
+
     # 顯示相關群組
     htmRelated = []
     if hasattr(ass, 'relats') and ass.relats and showRelated:
