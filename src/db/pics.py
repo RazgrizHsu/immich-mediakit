@@ -496,8 +496,12 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
     try:
         if conn is None: raise RuntimeError('the db is not init')
 
-        conn.execute("BEGIN TRANSACTION")
         c = conn.cursor()
+        
+        # Check if we're already in a transaction
+        in_transaction = conn.in_transaction
+        if not in_transaction:
+            conn.execute("BEGIN TRANSACTION")
 
         c.execute("SELECT id, simGID FROM assets WHERE id = ?", (assId,))
         curRow = c.fetchone()
@@ -510,7 +514,8 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
 
         highSimIds = [sim.id for sim in infos if sim.score and sim.score > 0.9 and sim.id != assId]
         if not highSimIds:
-            conn.commit()
+            if not in_transaction:
+                conn.commit()
             lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}]")
             return True
 
@@ -561,11 +566,13 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
         placeholders = ','.join(['?' for _ in highSimIds])
         c.execute(f"UPDATE assets SET simGID = ? WHERE id IN ({placeholders})", [newGID] + highSimIds)
 
-        conn.commit()
+        if not in_transaction:
+            conn.commit()
         lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}], group[{newGID}] with {len(highSimIds)} members")
         return True
     except Exception as e:
-        conn.rollback()
+        if not in_transaction:
+            conn.rollback()
         raise mkErr("Failed to set similar IDs", e)
 
 def clearSimIds():

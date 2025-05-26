@@ -239,7 +239,7 @@ class Asset(BaseDictModel):
 
 
 @dataclass
-class Pager(BaseDictModel):
+class Pgr(BaseDictModel):
     idx: Optional[int] = None
     size: Optional[int] = 0
     cnt: Optional[int] = 0
@@ -255,6 +255,7 @@ class PageSim(BaseDictModel):
     selectIds: List[str] = field(default_factory=list)
 
     pndAss: List[Asset] = field(default_factory=list)
+    pndPgr: Optional[Pgr] = None
 
 
     def reset(self):
