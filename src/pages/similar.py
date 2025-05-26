@@ -410,6 +410,9 @@ def update_selected_photos(clks, dta_now, dta_nfy):
 )
 def sim_SwitchViewGroup(clks, dta_now, dta_tar):
     if not ctx.triggered: return noUpd, noUpd
+    
+    # Check if any button was actually clicked
+    if not any(clks): return noUpd, noUpd
 
     now = models.Now.fromDict(dta_now)
     tar = models.Taber.fromDict(dta_tar)
