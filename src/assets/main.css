@@ -221,17 +221,23 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 @keyframes fadeIn { from { opacity: 0; }
   to { opacity: 1; } }
 
-.pagination { margin: 5px auto 5px auto; border-radius: 6px; display: inline-flex; border: rgba(26, 149, 195, 0.4) 1px solid; box-shadow: 0 0 3px rgba(26, 149, 195, 0.5); }
+.pager-info { display: inline-flex; padding: 2px 10px 4px 10px; margin: 0 0 0 10px; font-size: 0.8rem; border-radius: 6px; background: #1F5C92; border: rgba(195, 195, 195, 0.3) 1px solid; box-shadow: 0 0 2px rgba(195, 195, 195, 0.5); }
 
-.pagination .page-link { background-color: #2D3748; border-color: #4A5568; color: #E2E8F0; }
+.pager { display: inline-flex; list-style: none; padding: 6px 0 6px 0; margin: 5px auto 5px auto; border-radius: 6px; border: rgba(26, 149, 195, 0.4) 1px solid; box-shadow: 0 0 3px rgba(26, 149, 195, 0.5); }
 
-.pagination .page-link:hover { background-color: #62C0FF; border-color: #667EEA; color: #FFFFFF; text-shadow: 0 0 3px #260564, 0 0 3px #2D3748; }
+.pager li:first-child .lnk { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
 
-.pagination .page-link:focus { box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+.pager li:last-child .lnk { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
 
-.pagination .page-item.active .page-link { background-color: #667EEA; border-color: #667EEA; color: #FFFFFF; }
+.pager .item.active .lnk { background-color: #667EEA; border-color: #667EEA; color: #FFFFFF; }
 
-.pagination .page-item.disabled .page-link { background-color: #1A202C; border-color: #2D3748; color: #718096; }
+.pager .item.disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pager .lnk { padding: 0.375rem 0.75rem; background-color: #2D3748; border-color: #4A5568; color: #E2E8F0; cursor: pointer; }
+
+.pager .lnk:hover { background-color: #62C0FF; border-color: #667EEA; color: #FFFFFF; text-shadow: 0 0 3px #260564, 0 0 3px #2D3748; }
+
+.pager .lnk:focus { box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
 
 /*======================== similar card ========================*/
 .sim.has-related { border: 2px solid var(--warn-bs) !important; box-shadow: 0 0 8px rgba(254, 178, 4, 0.3); }

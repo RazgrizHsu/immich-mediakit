@@ -6,6 +6,7 @@ from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
 from util import log
 from mod import models, mapFns, IFnProg, taber
+from ui import pager
 
 lg = log.get(__name__)
 
@@ -28,7 +29,7 @@ class k:
     btnDelChks = "sim-btn-delete-checkeds"
 
     tab = 'sim-taber'
-    pager = "sim-pager"
+    pagerPnd = "sim-pager-pnd"
 
     gvSim = "sim-gvSim"
     gvPnd = 'sim-gvPnd'
@@ -138,10 +139,20 @@ def layout(assetId=None, **kwargs):
                 ],
                 # Pending
                 htm.Div([
+
+                    # top pager
+                    *pager.createPager( pagerId=k.pagerPnd, idx=0, className="mb-3" ),
+
+                    # Grid view
                     dbc.Spinner(
                         htm.Div(id=k.gvPnd), color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
                     ),
-                    dbc.Pagination(id=k.pager, active_page=1, min_value=1, max_value=99, first_last=True, previous_next=True, fully_expanded=False)
+
+                    # bottom pager
+                    *pager.createPager( pagerId=k.pagerPnd, idx=1 ),
+
+                    # Main pager (store only)
+                    *pager.createStore( pagerId=k.pagerPnd, page=1, size=20, total=0 ),
                 ],
                     className="text-center"
                 ),
@@ -169,14 +180,50 @@ def layout(assetId=None, **kwargs):
 # callbacks
 #========================================================================
 
-# Register taber callback
 taber.regCallbacks(k.tab)
+pager.regCallbacks(k.pagerPnd)
 
 #------------------------------------------------------------------------
 # Update status counters
 #------------------------------------------------------------------------
 from ui import gridSimilar as gvs
 
+
+#------------------------------------------------------------------------
+# Handle pager changes - reload pending data
+#------------------------------------------------------------------------
+@callback(
+    [
+        out(k.gvPnd, "children", allow_duplicate=True),
+        out(ks.sto.now, "data", allow_duplicate=True),
+    ],
+    inp(pager.id.store(k.pagerPnd), "data"),
+    ste(ks.sto.now, "data"),
+    prevent_initial_call=True
+)
+def similar_onPagerChanged(dta_pgr, dta_now):
+    if not dta_pgr or not dta_now:
+        return dash.no_update
+
+    now = models.Now.fromDict(dta_now)
+    pgr = models.Pgr.fromDict(dta_pgr)
+
+    # Save pager state
+    now.pg.sim.pndPgr = pgr
+
+    # Load data for new page
+    paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
+    lg.info(f"[sim:pager] Loading page {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
+    now.pg.sim.pndAss = paged
+
+    # Update grid
+    gvPnd = gvs.mkPndGrid(now.pg.sim.pndAss, onEmpty=[
+        dbc.Alert("No pending items on this page", color="secondary", className="text-center"),
+    ])
+
+    return gvPnd, now.toDict()
+
+# The pager initialization is now handled by regCallbacks with secondaryIds
 
 #------------------------------------------------------------------------
 # Sync taber state from now.pg.sim.taber
@@ -191,9 +238,15 @@ def sync_taber_from_now(dta_now):
         lg.warn("[sim:sync] taber is none")
         return dash.no_update
 
-    taber = dta_now['pg']['sim']['taber']
-
-    return taber
+    # Safely access nested dictionary
+    try:
+        taber = dta_now.get('pg', {}).get('sim', {}).get('taber')
+        if not taber:
+            return dash.no_update
+        return taber
+    except Exception as e:
+        lg.error(f"[sim:sync] Error accessing taber: {e}")
+        return dash.no_update
 
 
 #------------------------------------------------------------------------
@@ -210,6 +263,7 @@ def sync_taber_from_now(dta_now):
         out(k.gvPnd, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
+        out(pager.id.store(k.pagerPnd), "data", allow_duplicate=True),
     ],
     inp(ks.sto.now, "data"),
     [
@@ -249,13 +303,25 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
 
-    if cntRs and not now.pg.sim.pndAss:
-        paged = db.pics.getPendingPaged()
+    # Initialize or get pager
+    pgr = now.pg.sim.pndPgr if now.pg.sim.pndPgr else models.Pgr(idx=1, size=20)
 
-        lg.info( f"[sim] read pendings[{paged}]" )
+    # Update pager total count
+    pagerData = None
+    if pgr.cnt != cntRs:
+        pgr.cnt = cntRs
+        pgr.idx = 1  # Reset to first page when count changes
+        now.pg.sim.pndPgr = pgr
+        pagerData = pgr
+
+    # Load pending data based on current page
+    if cntRs:
+        paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
+        lg.info(f"[sim] read pendings page[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
         now.pg.sim.pndAss = paged
+    else:
+        now.pg.sim.pndAss = []
 
-    # lg.info( f"[sim] reading len({paged})" )
     gvPnd = gvs.mkPndGrid(now.pg.sim.pndAss, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
@@ -274,7 +340,7 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
 
             now.pg.sim.taber = tar
 
-    return cntOk, cntRs, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict()
+    return cntOk, cntRs, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else dash.no_update
 
 
 #------------------------------------------------------------------------

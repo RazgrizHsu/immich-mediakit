@@ -5,6 +5,7 @@ from mod import tsk, models
 
 # public for refs
 from . import sidebar
+from . import pager
 
 lg = log.get(__name__)
 
