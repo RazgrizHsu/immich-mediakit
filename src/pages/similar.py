@@ -204,9 +204,8 @@ from ui import gridSimilar as gvs
     ste(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def similar_onPagerChanged(dta_pgr, dta_now):
-    if not dta_pgr or not dta_now:
-        return dash.no_update
+def sim_onPagerChanged(dta_pgr, dta_now):
+    if not dta_pgr or not dta_now: return noUpd
 
     now = models.Now.fromDict(dta_now)
     pgr = models.Pgr.fromDict(dta_pgr)
@@ -215,17 +214,14 @@ def similar_onPagerChanged(dta_pgr, dta_now):
     oldPgr = now.pg.sim.pndPgr
     if oldPgr and oldPgr.idx == pgr.idx and oldPgr.size == pgr.size and oldPgr.cnt == pgr.cnt:
         if DEBUG: lg.info(f"[sim:pager] Already on page {pgr.idx}, skipping reload")
-        return dash.no_update
+        return noUpd
 
-    # Save pager state
     now.pg.sim.pndPgr = pgr
 
-    # Load data for new page
     paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
-    if DEBUG: lg.info(f"[sim:pager] Loading page {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
     now.pg.sim.pndAss = paged
+    if DEBUG: lg.info(f"[sim:pager] Loading page {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
 
-    # Update grid
     gvPnd = gvs.mkPndGrid(now.pg.sim.pndAss, onEmpty=[
         dbc.Alert("No pending items on this page", color="secondary", className="text-center"),
     ])
@@ -242,20 +238,20 @@ def similar_onPagerChanged(dta_pgr, dta_now):
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def sync_taber_from_now(dta_now):
+def sim_syncTaberFromNow(dta_now):
     if not dta_now:
         lg.warn("[sim:sync] taber is none")
-        return dash.no_update
+        return noUpd
 
     # Safely access nested dictionary
     try:
         taber = dta_now.get('pg', {}).get('sim', {}).get('taber')
-        if not taber:
-            return dash.no_update
+        if not taber: return noUpd
+
         return taber
     except Exception as e:
         lg.error(f"[sim:sync] Error accessing taber: {e}")
-        return dash.no_update
+        return noUpd
 
 
 #------------------------------------------------------------------------
@@ -281,7 +277,7 @@ def sync_taber_from_now(dta_now):
     ],
     prevent_initial_call="initial_duplicate"
 )
-def similar_onStatus(dta_now, dta_nfy, dta_tar):
+def sim_onStatus(dta_now, dta_nfy, dta_tar):
     now = models.Now.fromDict(dta_now)
     nfy = models.Nfy.fromDict(dta_nfy)
     tar = models.Taber.fromDict(dta_tar)
@@ -295,7 +291,7 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
     disFind = cntNo <= 0 or (cntRs >= cntNo)
     disCler = cntOk <= 0 and cntRs <= 0
 
-    cntAssets = len(now.pg.sim.simAss) if now.pg.sim.simAss else -1
+    cntAssets = len(now.pg.sim.curAss) if now.pg.sim.curAss else -1
 
     if DEBUG: lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now[{cntAssets}]")
 
@@ -308,7 +304,25 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    gvSim = gvs.mkGrid(now.pg.sim.simAss, now.pg.sim.assId, onEmpty=[
+    # 動態獲取關聯群組
+    # relatedGroups = []
+    # if now.pg.sim.assId:
+    #     asset = db.pics.getById(now.pg.sim.assId)
+    #     if asset and hasattr(asset, 'simGID') and asset.simGID:
+    #         # 找出所有相同群組的其他代表
+    #         relatedAssets = db.pics.getAssetsByGID(asset.simGID)
+    #
+    #         # 對每個關聯群組獲取其完整的相似照片群組
+    #         for ra in relatedAssets:
+    #             if ra.id != now.pg.sim.assId:
+    #                 # 獲取這個群組的所有相似照片
+    #                 groupAssets = db.pics.getSimGroup(ra.id)
+    #                 if groupAssets:
+    #                     # 將群組資訊存儲在第一個元素（主圖）中
+    #                     ra.groupAssets = groupAssets
+    #                     relatedGroups.append(ra)
+
+    gvSim = gvs.mkGrid(now.pg.sim.curAss, now.pg.sim.assId, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
 
@@ -352,7 +366,7 @@ def similar_onStatus(dta_now, dta_nfy, dta_tar):
 
             now.pg.sim.taber = tar
 
-    return cntOk, cntRs, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else dash.no_update
+    return cntOk, cntRs, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else noUpd
 
 
 #------------------------------------------------------------------------
@@ -369,14 +383,54 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     now = models.Now.fromDict(dta_now)
     nfy = models.Nfy.fromDict(dta_nfy)
 
-    if ctx.triggered and now.pg.sim.simAss and len(now.pg.sim.simAss) > 1:
+    if ctx.triggered and now.pg.sim.curAss and len(now.pg.sim.curAss) > 1:
         trgId = ctx.triggered_id
-        ass = next((a for a in now.pg.sim.simAss if a.id == trgId.id), None)
+        ass = next((a for a in now.pg.sim.curAss if a.id == trgId.id), None)
         if ass:
             ass.selected = ctx.triggered[0]['value']
-            # lg.info(f'[select] found: {ass.autoId}, selected: {ass.selected}, trgId: {trgId}')
+            lg.info(f'[select] found: {ass.autoId}, selected: {ass.selected}, trgId: {trgId}')
 
     return now.toDict()
+
+
+#------------------------------------------------------------------------
+# Handle group view button click
+#------------------------------------------------------------------------
+@callback(
+    [
+        out(ks.sto.now, "data", allow_duplicate=True),
+        out(taber.id.store(k.tab), "data", allow_duplicate=True),
+    ],
+    inp({"type": "btn-view-group", "id": ALL}, "n_clicks"),
+    [
+        ste(ks.sto.now, "data"),
+        ste(taber.id.store(k.tab), "data"),
+    ],
+    prevent_initial_call=True
+)
+def sim_SwitchViewGroup(clks, dta_now, dta_tar):
+    if not ctx.triggered: return noUpd, noUpd
+
+    now = models.Now.fromDict(dta_now)
+    tar = models.Taber.fromDict(dta_tar)
+
+    trgId = ctx.triggered_id
+    assId = trgId["id"]
+
+    lg.info(f"[sim:view-group] switch: id[{assId}] clks[{clks}]")
+
+    now.pg.sim.assId = assId
+    now.pg.sim.curAss = db.pics.getSimGroup(assId)
+
+
+    if tar and len(tar.tabs) > 0:
+        tar.tabs[0].active = True  # current tab
+        if len(tar.tabs) > 1:
+            tar.tabs[1].active = False  # pending tab
+
+    if DEBUG: lg.info(f"[sim:view-group] Loaded {len(now.pg.sim.curAss)} assets for group")
+
+    return now.toDict(), tar.toDict()
 
 
 #========================================================================
@@ -402,7 +456,7 @@ def update_selected_photos(clks, dta_now, dta_nfy):
     ],
     prevent_initial_call=True
 )
-def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
+def sim_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
     if not clk_fnd and not clk_clr: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
@@ -413,7 +467,7 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
     nfy = models.Nfy.fromDict(dta_nfy)
 
     if tsk.id:
-        # 檢查任務是否真的還在運行
+        # check tsk is running
         from mod.mgr.tskSvc import mgr
         if mgr and mgr.getInfo(tsk.id):
             task_info = mgr.getInfo(tsk.id)
@@ -421,12 +475,11 @@ def similar_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_n
                 if DEBUG: lg.info(f"[similar] Task already running: {tsk.id}")
                 return noUpd, noUpd, noUpd, noUpd
 
-        # 如果任務已經完成或不存在，清除 tsk.id
-        if DEBUG: lg.info(f"[similar] Clearing completed task: {tsk.id}")
+        # lg.info(f"[similar] Clearing completed task: {tsk.id}")
         tsk.id = None
         tsk.cmd = None
 
-    if DEBUG: lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
+    lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
 
     if trgId == k.btnClear:
         cntOk = db.pics.countSimOk(isOk=1)
@@ -538,7 +591,7 @@ def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnPr
         if hasattr(db.dyn.dto, 'simId'): db.dyn.dto.simId = None
 
         now.pg.sim.pndAss = []
-        now.pg.sim.simAss = []
+        now.pg.sim.curAss = []
         now.pg.sim.assId = None
 
         onUpdate(100, "100%", "Clear completed")
@@ -645,7 +698,7 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         onUpdate(95, "95%", f"Finalizing similar photo relationships")
 
         now.pg.sim.assId = asset.id
-        now.pg.sim.simAss = db.pics.getSimGroup(asset.id)
+        now.pg.sim.curAss = db.pics.getSimGroup(asset.id)
 
         onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
 
