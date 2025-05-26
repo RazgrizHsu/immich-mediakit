@@ -27,14 +27,14 @@ lg = log.get(__name__)
 
 def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=None):
     if not assets or len(assets) == 0:
-        # lg.info( "[sim-grid] return empty grid" )
+        # lg.info( "[sim:gv] return empty grid" )
         if onEmpty:
             if isinstance(onEmpty, str):
                 return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
             else:
                 return onEmpty
 
-        return htm.Div( dbc.Alert("--------", color="warning"), className="text-center" )
+        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
 
     rootSI = next((a.simInfos for a in assets if a.id == rootId), None)
 
@@ -51,23 +51,139 @@ def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=
         styItem.pop("maxWidth")
         styGrid.pop("justifyItems")
 
-    rows = [htm.Div(mkImgCardSim(a, rootSI), className="photo-card", style=styItem) for a in assets]
+    rows = [htm.Div(mkImgCardSim(a, rootSI, isMain=(a.id == rootId)), className="photo-card", style=styItem) for a in assets]
 
-    # lg.info( f"[sim-grid] create with rows[{len(assets)}] return rows[{len(rows)}]" )
+    lg.info( f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]" )
 
-    return htm.Div(rows, style=styGrid)
+    layout = [htm.Div(rows, style=styGrid)]
+
+    return htm.Div(layout)
+
+def mkRelatGroups( assets: list[models.Asset], minW=230, maxW=300 ):
+
+    styItem = {"maxWidth": f"{maxW}px"}
+    styGrid = {
+        "display": "grid",
+        "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+        "gap": "1rem",
+        "justifyItems": "center"
+    }
+    cntAss = len(assets)
+    if cntAss <= 4:
+        styItem.pop("maxWidth")
+        styGrid.pop("justifyItems")
+
+    return htm.Div([
+        htm.Hr(className="my-4"),
+        htm.H5([
+            htm.Span("Related Groups ", className=""),
+            htm.Span(f"({len(assets)})", className="badge bg-warning ms-2")
+        ], className="mb-3"),
+        htm.Div([
+
+            mkGroupCard(rg) for rg in assets
+
+        ], style=styGrid)
+    ])
+
+
+def mkGroupCard(ass: models.Asset):
+    return dbc.Card([
+        dbc.CardHeader([
+            htm.Div([
+                htm.Span(f"#{ass.autoId} - {ass.originalFileName}", className="text-truncate"),
+                dbc.Button(
+                    "View Group",
+                    id={"type": "btn-view-group", "id": ass.id},
+                    color="primary",
+                    size="sm",
+                    className="float-end"
+                )
+            ], className="d-flex justify-content-between align-items-center")
+        ], className="py-2"),
+        dbc.CardBody([
+            # 顯示群組中的所有照片縮圖
+            htm.Div([
+                # 左側主圖
+                htm.Div([
+                    htm.Div([
+                        htm.Img(
+                            src=f"/api/img/{ass.id}" if ass.id else "assets/noimg.png",
+                            className="img-thumbnail",
+                            style={"height": "120px", "width": "120px", "objectFit": "cover"},
+                            title=f"#{ass.autoId} - {ass.originalFileName}"
+                        ),
+                        htm.Span("Main", className="badge bg-warning position-absolute",
+                                 style={"top": "5px", "left": "5px"})
+                    ], className="position-relative")
+                ], className="me-3"),
+
+                # 右側次圖網格
+                htm.Div([
+                    htm.Div([
+                        # 顯示前7張次圖
+                        *[
+                            htm.Div([
+                                htm.Img(
+                                    src=f"/api/img/{si.id}",
+                                    className="img-thumbnail",
+                                    style={"height": "60px", "width": "60px", "objectFit": "cover"},
+                                ),
+                                htm.Span(
+                                    f"{si.score:.3f}",
+                                    className="badge bg-info position-absolute",
+                                    style={"bottom": "2px", "right": "2px", "fontSize": "10px", "padding": "2px 4px"}
+                                )
+                            ], className="position-relative")
+                            for si in (ass.simInfos[1:8] if len(ass.simInfos) > 1 else [])
+                        ],
+                        # 如果超過8張（1主圖+7次圖），第8格顯示更多提示
+                        htm.Div([
+                            htm.Span(
+                                f"...{len(ass.simInfos) - 8} more",
+                                className="text-muted",
+                                style={"fontSize": "11px", "fontWeight": "bold"}
+                            )
+                        ], className="d-flex align-items-center justify-content-center",
+                            style={"height": "60px", "width": "60px", "backgroundColor": "#2a2a2a", "borderRadius": "4px"})
+                        if len(ass.simInfos) > 8 else None
+                    ], style={
+                        "display": "grid",
+                        "gridTemplateColumns": "repeat(4, 1fr)",
+                        "gap": "0.25rem"
+                    })
+                ], className="flex-grow-1")
+            ], className="d-flex align-items-start"),
+            htm.Hr(className="my-2"),
+            htm.Div([
+                htm.Small([
+                    htm.Span("Photos in group: ", className="text-muted"),
+                    htm.Span(f"{len(ass.groupAssets) if hasattr(ass, 'groupAssets') else 0}", className="badge bg-info me-2")
+                ]),
+                htm.Small([
+                    htm.Span("Similarity range: ", className="text-muted"),
+                    htm.Span(
+                        f"{min(s.score for s in ass.simInfos if s.score):.3f} - {max(s.score for s in ass.simInfos if s.score):.3f}"
+                        if ass.simInfos and any(s.score for s in ass.simInfos)
+                        else "N/A",
+                        className="badge bg-secondary"
+                    )
+                ])
+            ], className="d-flex justify-content-between")
+        ], className="p-2")
+    ], className="h-100 related-group")
 
 
 def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None, showRelated=True):
     if not assets or len(assets) == 0:
-        # lg.info( "[sim-grid] return empty grid" )
+        # lg.info( "[sim:gv] return empty grid" )
         if onEmpty:
             if isinstance(onEmpty, str):
                 return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
             else:
                 return onEmpty
 
-        return htm.Div( dbc.Alert("--------", color="warning"), className="text-center" )
+        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
 
     styItem = {"maxWidth": f"{maxW}px"}
     styGrid = {
@@ -83,14 +199,13 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None, show
         styGrid.pop("justifyItems")
 
     try:
-
         rows = [htm.Div(mkImgCardPending(a, showRelated), className="photo-card", style=styItem) for a in assets]
 
-        # lg.info( f"[sim-grid] mkPndGrid with assets[{len(assets)}] return rows[{len(rows)}]" )
+        # lg.info( f"[sim:gv] mkPndGrid with assets[{len(assets)}] return rows[{len(rows)}]" )
 
         return htm.Div(rows, style=styGrid)
     except Exception as e:
-        lg.error( f"[mkPndGrid] Render failed, assets[{assets}], {e}", exc_info=True )
+        lg.error(f"[mkPndGrid] Render failed, assets[{assets}], {e}", exc_info=True)
 
 
 # def create_pair_card(photo1_id, photo2_id, similarity, index, selected_images=None):
@@ -114,75 +229,7 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None, show
 #     ], className="mb-3")
 
 
-def create_base_photo_card(photo: models.Asset):
-    if not photo: return htm.Div("Photo not found")
-
-    thumbnail_path = photo.thumbnail_path
-    preview_path = photo.preview_path
-    fullsize_path = photo.fullsize_path
-
-    image_path = thumbnail_path or preview_path or fullsize_path or ""
-
-    photo_id = photo.id
-    filename = photo.originalFileName
-    created_date = photo.fileCreatedAt
-
-    base_card_style = {"border": "3px solid #007bff", "box-shadow": "0 0 10px rgba(0, 123, 255, 0.5)"}
-
-    return dbc.Card([
-        dbc.CardHeader("Base Photo", className="text-center bg-primary text-white"),
-        dbc.CardImg(
-            src=f"{image_path}",
-            top=True,
-            style={"height": "250px", "objectFit": "contain"}
-        ),
-        dbc.CardBody([
-            htm.H5(
-                filename,
-                className="card-title text-truncate",
-                title=filename,
-                style={"fontSize": "1rem"}
-            ),
-            htm.P(
-                f"ID: {photo_id[:8]}...",
-                className="card-text small",
-                style={"fontSize": "0.8rem"}
-            ),
-            htm.P(
-                created_date,
-                className="card-text small",
-                style={"fontSize": "0.8rem"}
-            ),
-            htm.Div([
-                dbc.Button(
-                    "Find Similar",
-                    id={"type": "find-similar-btn", "id": photo_id},
-                    color="primary",
-                    size="sm",
-                    className="me-2"
-                ),
-                dbc.Button(
-                    "View",
-                    color="info",
-                    size="sm",
-                    className="me-2",
-                    href=fullsize_path,
-                    target="_blank"
-                ),
-                dbc.Button(
-                    "Details",
-                    id={"type": "details-btn", "id": photo_id},
-                    color="secondary",
-                    size="sm"
-                )
-            ], className="d-flex justify-content-between")
-        ], className="p-2")
-    ],
-        className="h-100", style=base_card_style
-    )
-
-
-def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
+def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
@@ -204,6 +251,10 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
     imgW = exi.exifImageWidth
     imgH = exi.exifImageHeight
 
+    cssClass = f"h-100 sim {cssIds}"
+    if isMain:
+        cssClass += " main"
+
     return dbc.Card([
         dbc.CardHeader([
             dbc.Row([
@@ -214,7 +265,8 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
                     )
                 ),
                 dbc.Col([
-                    htm.Span("score: "), htm.Span(f"{si.score:.6f}", className="tag lg ms-1")
+                    htm.Span("Main" if isMain else "score: "),
+                    htm.Span(f"{si.score:.6f}" if not isMain else "", className="tag lg ms-1" if not isMain else "badge bg-warning ms-1")
                 ], className="d-flex justify-content-end")
             ])
 
@@ -256,8 +308,7 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo]):
             # ], className="d-flex justify-content-between align-items-center"),
 
         ], className="p-2")
-    ], className=f"h-100 sim {cssIds}")
-
+    ], className=cssClass)
 
 
 def mkImgCardPending(ass: models.Asset, showRelated=True):
@@ -266,7 +317,7 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
     imgSrc = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
 
     if not ass.id:
-        return htm.Div( "-Render None-" )
+        return htm.Div("-Render None-")
 
     assId = ass.id
     fnm = ass.originalFileName
@@ -275,7 +326,6 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
     checked = ass.selected
     cssIds = "checked" if checked else ""
 
-
     exi = ass.jsonExif
 
     imgW = exi.exifImageWidth if exi else 0
@@ -283,19 +333,19 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
 
     htmSimInfos = []
 
-    for si in ass.simInfos:
-        if not si.isSelf:
-            htmSimInfos.append(htm.Div([
-                htm.Span(f"score[{si.score:.6f}]", className="tag"),
-                htm.Span(f"{si.id[:8]}...", className="badge bg-primary txt-sm"),
-            ]))
+    # for si in ass.simInfos:
+    #     if not si.isSelf:
+    #         htmSimInfos.append(htm.Div([
+    #             htm.Span(f"score[{si.score:.6f}]", className="tag"),
+    #             htm.Span(f"{si.id[:8]}...", className="badge bg-primary txt-sm"),
+    #         ]))
 
     # 顯示相關群組
     htmRelated = []
     if hasattr(ass, 'relats') and ass.relats and showRelated:
         htmRelated.append(htm.Hr(className="my-2"))
         htmRelated.append(htm.Div([
-            htm.Span("相關群組: ", className="text-muted"),
+            htm.Span("Related groups: ", className="text-muted"),
             htm.Span(f"{len(ass.relats)}", className="badge bg-warning")
         ]))
         for ra in ass.relats[:2]:
@@ -305,10 +355,9 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
             ]))
         if len(ass.relats) > 2:
             htmRelated.append(htm.Div(
-                f"... 還有 {len(ass.relats) - 2} 個",
+                f"... {len(ass.relats) - 2} more",
                 className="text-muted small"
             ))
-
 
     return dbc.Card([
         dbc.CardHeader([
@@ -316,7 +365,7 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
                 dbc.Col(
                 ),
                 dbc.Col([
-                    htm.Span("Matches: "), htm.Span(f"{len(ass.simInfos)-1}", className="tag lg ms-1")
+                    htm.Span("Matches: "), htm.Span(f"{len(ass.simInfos) - 1}", className="tag lg ms-1")
                 ], className="d-flex justify-content-end")
             ])
 
@@ -361,6 +410,16 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
             #         size="sm"
             #     )
             # ], className="d-flex justify-content-between align-items-center"),
+
+            htm.Div([
+                dbc.Button(
+                    "View as Group",
+                    id={"type": "btn-view-group", "id": assId},
+                    color="primary",
+                    size="sm",
+                    className="w-100 mt-2"
+                )
+            ]),
 
         ], className="p-2")
     ], className=f"h-100 sim {cssIds}")

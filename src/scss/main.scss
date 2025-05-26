@@ -945,4 +945,39 @@ body {
 			background:linear-gradient(to right, rgba(254, 178, 4, 0.2), transparent);
 		}
 	}
+
+	&.main {
+
+		background: #0B66BC;
+		.card-header {
+			background:linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent);
+		}
+	}
+}
+
+/*======================== related group card ========================*/
+.related-group {
+	border: 1px solid #4a4a4a;
+	transition: all 0.3s ease;
+
+	&:hover {
+		border-color: var(--warning);
+		box-shadow: 0 0 8px rgba(254, 178, 4, 0.2);
+	}
+
+	.card-header {
+		background-color: #2a2a2a;
+		border-bottom: 1px solid #4a4a4a;
+		padding: 0.5rem 1rem;
+	}
+
+	.img-thumbnail {
+		border: 1px solid #555;
+		background-color: #333;
+		padding: 2px;
+
+		&:hover {
+			border-color: var(--primary);
+		}
+	}
 }

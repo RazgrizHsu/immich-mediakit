@@ -109,7 +109,7 @@ class Tab(BaseDictModel):
 
 @dataclass
 class Taber(BaseDictModel):
-    id: str
+    id: str = None
     tabs: List[Tab] = field(default_factory=list)
     # tabActs: List[Any] = field(default_factory=list)
 
@@ -135,6 +135,12 @@ class Taber(BaseDictModel):
 
 
 
+@dataclass
+class Pgr(BaseDictModel):
+    idx: Optional[int] = 1
+    size: Optional[int] = 20
+    cnt: Optional[int] = 0
+
 
 
 @dataclass
@@ -143,6 +149,8 @@ class ProcessInfo(BaseDictModel):
     skip: int = 0
     error: int = 0
     done: int = 0
+
+
 
 @dataclass
 class SimInfo(BaseDictModel):
@@ -217,6 +225,7 @@ class Asset(BaseDictModel):
     isVectored: Optional[int] = 0
     simOk: Optional[int] = 0
     simInfos: List[SimInfo] = field(default_factory=list)
+    simGID: Optional[int] = None
 
     # view only
     selected:Optional[bool] = False
@@ -239,18 +248,12 @@ class Asset(BaseDictModel):
 
 
 @dataclass
-class Pgr(BaseDictModel):
-    idx: Optional[int] = 1
-    size: Optional[int] = 20
-    cnt: Optional[int] = 0
-
-@dataclass
 class PageSim(BaseDictModel):
 
     taber: Optional[Taber] = None
 
     assId: Optional[str] = None
-    simAss: List[Asset] = field(default_factory=list)
+    curAss: List[Asset] = field(default_factory=list)
 
     selectIds: List[str] = field(default_factory=list)
 
@@ -260,7 +263,7 @@ class PageSim(BaseDictModel):
 
     def reset(self):
         self.assId = None
-        self.simAss = []
+        self.curAss = []
         self.selectIds = []
         self.pndAss = []
 
