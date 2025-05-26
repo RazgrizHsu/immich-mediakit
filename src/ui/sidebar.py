@@ -44,7 +44,7 @@ def onUpdateSideBar(_trigger, dta_now, dta_nfy):
                     dbc.Col([htm.Small("Path Test:")], width=5, className=""),
                     dbc.Col([
                         htm.Span(
-                            f"{testDA}", className="tag ok"
+                            f"{testDA}", className="tag info"
                         ) if testDA.startswith("OK") else htm.Span
                         (
                             f"{testDA}", className="tag"

@@ -53,14 +53,13 @@ def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=
 
     rows = [htm.Div(mkImgCardSim(a, rootSI, isMain=(a.id == rootId)), className="photo-card", style=styItem) for a in assets]
 
-    lg.info( f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]" )
+    lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
 
     layout = [htm.Div(rows, style=styGrid)]
 
     return htm.Div(layout)
 
-def mkRelatGroups( assets: list[models.Asset], minW=230, maxW=300 ):
-
+def mkRelatGroups(assets: list[models.Asset], minW=230, maxW=300):
     styItem = {"maxWidth": f"{maxW}px"}
     styGrid = {
         "display": "grid",
@@ -256,21 +255,28 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False
         cssClass += " main"
 
     return dbc.Card([
-        dbc.CardHeader([
-            dbc.Row([
-                dbc.Col(
-                    dbc.Checkbox(
-                        label="select", value=checked,
-                        id={"type": "cbx-select", "id": assId},
-                    )
-                ),
-                dbc.Col([
-                    htm.Span("Main" if isMain else "score: "),
-                    htm.Span(f"{si.score:.6f}" if not isMain else "", className="tag lg ms-1" if not isMain else "badge bg-warning ms-1")
-                ], className="d-flex justify-content-end")
-            ])
+        dbc.CardHeader(
+            htm.Div([
+                dbc.Row([
+                    dbc.Col(
+                        dbc.Checkbox(
+                            label=f"#{ass.autoId}", value=checked,
+                            id={"type": "cbx-select", "id": assId},
+                        )
+                    ),
+                    dbc.Col([
+                                htm.Span(f"Main", className="tag info lg ms-1")
+                            ] if isMain else
+                            [
+                                htm.Span("score: "),
+                                htm.Span(f"{si.score:.6f}", className="tag lg ms-1")
+                            ]
 
-        ], className=""),
+                            , className="d-flex justify-content-end")
+                ])
+            ], id={"type": "card-header-click", "id": assId}),
+            className="p-2 curP"
+        ),
         htm.Div([
             htm.Img(
                 src=imgSrc,

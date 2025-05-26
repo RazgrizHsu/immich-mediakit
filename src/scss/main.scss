@@ -473,7 +473,7 @@ body {
 	font-size:12px;
 	vertical-align:middle;
 
-	&.ok {
+	&.info {
 		background:#78C22A;
 	}
 
@@ -628,110 +628,6 @@ body {
 }
 
 
-//========================================================================
-// similar
-//========================================================================
-.card.sim {
-
-	$show-borders:false;
-	@mixin optional-border($color, $width, $style) {
-		@if $show-borders {
-			border:$color $width $style;
-		}
-	}
-
-	border:dotted 3px #39393A;
-
-	&.checked {
-		border:3px solid var(--info-bs);
-	}
-
-	.img {
-
-		position:relative;
-
-		img {
-			object-fit:contain;
-			height:180px;
-			cursor:pointer !important;
-		}
-
-		//floating on img left-bottom
-		> div:nth-of-type(1) {
-			position:absolute;
-			bottom:5px;
-			left:5px;
-			display:flex;
-			justify-content:start;
-		}
-
-		> div:nth-of-type(2) {
-			position:absolute;
-			bottom:5px;
-			right:5px;
-			//border: red 1px solid;
-			display:flex;
-			justify-content:end;
-			width:100%;
-
-			> span {
-				font-size:18px !important;
-			}
-		}
-
-	}
-
-	.grid {
-		width:96%;
-		@include optional-border(red, 1px, dotted);
-		display:grid;
-		grid-template-columns: 20% 80%;
-		gap:2px 2px;
-		margin:5px 3px 5px 3px;
-		padding:0px;
-
-		> *:nth-child(2n-1) {
-			justify-self:center;
-			white-space:nowrap;
-			font-size:12px;
-			overflow:visible;
-			padding:0px;
-			@include optional-border(white, 1px, dotted);
-		}
-
-		> *:nth-child(2n) {
-			justify-self:start;
-			@include optional-border(white, 1px, dotted);
-		}
-	}
-
-	.grid2 {
-		width:96%;
-		@include optional-border(red, 1px, dotted);
-		display:grid;
-		grid-template-columns: 20% 80%;
-		gap:2px 2px;
-		margin:5px 3px 5px 3px;
-		padding:0px;
-
-		> *:nth-child(2n-1) {
-			justify-self:center;
-			white-space:nowrap;
-			font-size:12px;
-			overflow:visible;
-			padding:0px;
-			@include optional-border(white, 1px, dotted);
-		}
-
-		> *:nth-child(2n) {
-			justify-self:start;
-			@include optional-border(white, 1px, dotted);
-		}
-	}
-
-}
-
-
 .popover {
 	background-color:#2D2D2D !important;
 	border-color:var(--bs-border-color) !important;
@@ -861,14 +757,14 @@ body {
 
 
 .pager-info {
-	display: inline-flex;
+	display:inline-flex;
 
-	padding: 2px 10px 4px 10px;
-	margin: 0 0 0 10px;
-	font-size: 0.8rem;
+	padding:2px 10px 4px 10px;
+	margin:0 0 0 10px;
+	font-size:0.8rem;
 
 	border-radius:6px;
-	background: #1F5C92;
+	background:#1F5C92;
 	border:rgba(195, 195, 195, 0.3) 1px solid;
 	box-shadow:0 0 2px rgba(195, 195, 195, 0.5);
 }
@@ -876,7 +772,7 @@ body {
 .pager {
 	display:inline-flex;
 	list-style:none;
-	padding: 6px 0 6px 0;
+	padding:6px 0 6px 0;
 	margin:5px auto 5px auto;
 
 	border-radius:6px;
@@ -935,8 +831,29 @@ body {
 	}
 }
 
-/*======================== similar card ========================*/
-.sim {
+/*======================== common ========================*/
+.curP {
+	cursor:pointer !important;
+
+	&:hover {
+	}
+}
+
+//========================================================================
+// similar
+//========================================================================
+.card.sim {
+
+	$show-borders:false;
+	@mixin optional-border($color, $width, $style) {
+		@if $show-borders {
+			border:$color $width $style;
+		}
+	}
+
+
+	border:transparent solid 3px;
+
 	&.has-related {
 		border:2px solid var(--warn-bs) !important;
 		box-shadow:0 0 8px rgba(254, 178, 4, 0.3);
@@ -947,37 +864,127 @@ body {
 	}
 
 	&.main {
+		background:#1F5C92;
+		@include bg-gradient(#1F5C92);
 
-		background: #0B66BC;
 		.card-header {
 			background:linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent);
 		}
 	}
+
+
+	&.checked {
+		border:3px solid var(--info-bs);
+	}
+
+	.img {
+
+		position:relative;
+
+		img {
+			object-fit:contain;
+			height:180px;
+			cursor:pointer !important;
+		}
+
+		//floating on img left-bottom
+		> div:nth-of-type(1) {
+			position:absolute;
+			bottom:5px;
+			left:5px;
+			display:flex;
+			justify-content:start;
+		}
+
+		> div:nth-of-type(2) {
+			position:absolute;
+			bottom:5px;
+			right:5px;
+			//border: red 1px solid;
+			display:flex;
+			justify-content:end;
+			width:100%;
+
+			> span {
+				font-size:18px !important;
+			}
+		}
+
+	}
+
+	.grid {
+		width:96%;
+		@include optional-border(red, 1px, dotted);
+		display:grid;
+		grid-template-columns: 20% 80%;
+		gap:2px 2px;
+		margin:5px 3px 5px 3px;
+		padding:0px;
+
+		> *:nth-child(2n-1) {
+			justify-self:center;
+			white-space:nowrap;
+			font-size:12px;
+			overflow:visible;
+			padding:0px;
+			@include optional-border(white, 1px, dotted);
+		}
+
+		> *:nth-child(2n) {
+			justify-self:start;
+			@include optional-border(white, 1px, dotted);
+		}
+	}
+
+	.grid2 {
+		width:96%;
+		@include optional-border(red, 1px, dotted);
+		display:grid;
+		grid-template-columns: 20% 80%;
+		gap:2px 2px;
+		margin:5px 3px 5px 3px;
+		padding:0px;
+
+		> *:nth-child(2n-1) {
+			justify-self:center;
+			white-space:nowrap;
+			font-size:12px;
+			overflow:visible;
+			padding:0px;
+			@include optional-border(white, 1px, dotted);
+		}
+
+		> *:nth-child(2n) {
+			justify-self:start;
+			@include optional-border(white, 1px, dotted);
+		}
+	}
 }
+
 
 /*======================== related group card ========================*/
 .related-group {
-	border: 1px solid #4a4a4a;
-	transition: all 0.3s ease;
+	border:1px solid #4A4A4A;
+	transition:all 0.3s ease;
 
 	&:hover {
-		border-color: var(--warning);
-		box-shadow: 0 0 8px rgba(254, 178, 4, 0.2);
+		border-color:var(--warning);
+		box-shadow:0 0 8px rgba(254, 178, 4, 0.2);
 	}
 
 	.card-header {
-		background-color: #2a2a2a;
-		border-bottom: 1px solid #4a4a4a;
-		padding: 0.5rem 1rem;
+		background-color:#2A2A2A;
+		border-bottom:1px solid #4A4A4A;
+		padding:0.5rem 1rem;
 	}
 
 	.img-thumbnail {
-		border: 1px solid #555;
-		background-color: #333;
-		padding: 2px;
+		border:1px solid #555555;
+		background-color:#333333;
+		padding:2px;
 
 		&:hover {
-			border-color: var(--primary);
+			border-color:var(--primary);
 		}
 	}
 }

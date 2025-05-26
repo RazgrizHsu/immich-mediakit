@@ -113,7 +113,7 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px; background: #2D4A69; border-radius: 5px; font-size: 12px; vertical-align: middle; }
 
-.tag.ok { background: #78C22A; }
+.tag.info { background: #78C22A; }
 
 .tag.lg { font-size: 15px; }
 
@@ -155,32 +155,6 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 @keyframes navHover { 0% { transform: translateY(0); }
   50% { transform: translateY(-3px); }
   100% { transform: translateY(0); } }
-
-.card.sim { border: dotted 3px #39393A; }
-
-.card.sim.checked { border: 3px solid var(--info-bs); }
-
-.card.sim .img { position: relative; }
-
-.card.sim .img img { object-fit: contain; height: 180px; cursor: pointer !important; }
-
-.card.sim .img > div:nth-of-type(1) { position: absolute; bottom: 5px; left: 5px; display: flex; justify-content: start; }
-
-.card.sim .img > div:nth-of-type(2) { position: absolute; bottom: 5px; right: 5px; display: flex; justify-content: end; width: 100%; }
-
-.card.sim .img > div:nth-of-type(2) > span { font-size: 18px !important; }
-
-.card.sim .grid { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
-
-.card.sim .grid > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
-
-.card.sim .grid > *:nth-child(2n) { justify-self: start; }
-
-.card.sim .grid2 { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
-
-.card.sim .grid2 > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
-
-.card.sim .grid2 > *:nth-child(2n) { justify-self: start; }
 
 .popover { background-color: #2D2D2D !important; border-color: var(--bs-border-color) !important; }
 
@@ -239,22 +213,50 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .pager .lnk:focus { box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
 
-/*======================== similar card ========================*/
-.sim.has-related { border: 2px solid var(--warn-bs) !important; box-shadow: 0 0 8px rgba(254, 178, 4, 0.3); }
+/*======================== common ========================*/
+.curP { cursor: pointer !important; }
 
-.sim.has-related .card-header { background: linear-gradient(to right, rgba(254, 178, 4, 0.2), transparent); }
+.card.sim { border: transparent solid 3px; }
 
-.sim.main { background: #0B66BC; }
+.card.sim.has-related { border: 2px solid var(--warn-bs) !important; box-shadow: 0 0 8px rgba(254, 178, 4, 0.3); }
 
-.sim.main .card-header { background: linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent); }
+.card.sim.has-related .card-header { background: linear-gradient(to right, rgba(254, 178, 4, 0.2), transparent); }
+
+.card.sim.main { background: #1F5C92; background-image: linear-gradient(to bottom, #4c7da8, #1F5C92 50%, #194a75); }
+
+.card.sim.main .card-header { background: linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent); }
+
+.card.sim.checked { border: 3px solid var(--info-bs); }
+
+.card.sim .img { position: relative; }
+
+.card.sim .img img { object-fit: contain; height: 180px; cursor: pointer !important; }
+
+.card.sim .img > div:nth-of-type(1) { position: absolute; bottom: 5px; left: 5px; display: flex; justify-content: start; }
+
+.card.sim .img > div:nth-of-type(2) { position: absolute; bottom: 5px; right: 5px; display: flex; justify-content: end; width: 100%; }
+
+.card.sim .img > div:nth-of-type(2) > span { font-size: 18px !important; }
+
+.card.sim .grid { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
+
+.card.sim .grid > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
+
+.card.sim .grid > *:nth-child(2n) { justify-self: start; }
+
+.card.sim .grid2 { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
+
+.card.sim .grid2 > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
+
+.card.sim .grid2 > *:nth-child(2n) { justify-self: start; }
 
 /*======================== related group card ========================*/
-.related-group { border: 1px solid #4a4a4a; transition: all 0.3s ease; }
+.related-group { border: 1px solid #4A4A4A; transition: all 0.3s ease; }
 
 .related-group:hover { border-color: var(--warning); box-shadow: 0 0 8px rgba(254, 178, 4, 0.2); }
 
-.related-group .card-header { background-color: #2a2a2a; border-bottom: 1px solid #4a4a4a; padding: 0.5rem 1rem; }
+.related-group .card-header { background-color: #2A2A2A; border-bottom: 1px solid #4A4A4A; padding: 0.5rem 1rem; }
 
-.related-group .img-thumbnail { border: 1px solid #555; background-color: #333; padding: 2px; }
+.related-group .img-thumbnail { border: 1px solid #555555; background-color: #333333; padding: 2px; }
 
 .related-group .img-thumbnail:hover { border-color: var(--primary); }
