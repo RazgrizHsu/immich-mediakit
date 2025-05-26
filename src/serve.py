@@ -57,7 +57,7 @@ def regBy(app):
                 if path:
                     path = os.path.join(envs.immichPath, path)
                     if os.path.exists(path):
-                        lg.info(f"[api:img] get img cache id[{assetId}] path[{path}]")
+                        # lg.info(f"[api:img] get img cache id[{assetId}] path[{path}]")
                         with open(cache_path, 'wb') as f:
                             with open(path, 'rb') as src: f.write(src.read())
 

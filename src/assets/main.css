@@ -233,7 +233,7 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .pager .item.disabled { opacity: 0.5; cursor: not-allowed; }
 
-.pager .lnk { padding: 0.375rem 0.75rem; background-color: #2D3748; border-color: #4A5568; color: #E2E8F0; cursor: pointer; }
+.pager .lnk { padding: 0.375rem 0.75rem; text-decoration: none; background-color: #2D3748; border-color: #4A5568; color: #E2E8F0; cursor: pointer; }
 
 .pager .lnk:hover { background-color: #62C0FF; border-color: #667EEA; color: #FFFFFF; text-shadow: 0 0 3px #260564, 0 0 3px #2D3748; }
 

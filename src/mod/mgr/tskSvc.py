@@ -22,7 +22,7 @@ class DashTask(BseTsk):
     def execute(self, callback: Optional[Callable[[int, str], None]] = None) -> Any:
         def onUpd(percent: int, label: str, msg: str):
             if callback: callback(percent, f"{label} - {msg}")
-            lg.info(f"[Task] id[{self.tskId}] progress: {percent}% - {label} - {msg}")
+            # lg.info(f"[Task] id[{self.tskId}] progress: {percent}% - {label} - {msg}")
 
         try:
             oid = self.tsk.id

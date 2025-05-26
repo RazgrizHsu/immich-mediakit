@@ -240,8 +240,8 @@ class Asset(BaseDictModel):
 
 @dataclass
 class Pgr(BaseDictModel):
-    idx: Optional[int] = None
-    size: Optional[int] = 0
+    idx: Optional[int] = 1
+    size: Optional[int] = 20
     cnt: Optional[int] = 0
 
 @dataclass
