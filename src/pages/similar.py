@@ -374,21 +374,34 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
 #------------------------------------------------------------------------
 @callback(
     out(ks.sto.now, "data"),
-    inp({"type": "cbx-select", "id": ALL}, "value"),
+    [
+        inp({"type": "cbx-select", "id": ALL}, "value"),
+        inp({"type": "card-header-click", "id": ALL}, "n_clicks"),
+    ],
     ste(ks.sto.now, "data"),
     ste(ks.sto.nfy, "data"),
     prevent_initial_call=True
 )
-def update_selected_photos(clks, dta_now, dta_nfy):
+def update_selected_photos(cbx_vals, hdr_clks, dta_now, dta_nfy):
     now = models.Now.fromDict(dta_now)
     nfy = models.Nfy.fromDict(dta_nfy)
 
     if ctx.triggered and now.pg.sim.curAss and len(now.pg.sim.curAss) > 1:
         trgId = ctx.triggered_id
-        ass = next((a for a in now.pg.sim.curAss if a.id == trgId.id), None)
-        if ass:
-            ass.selected = ctx.triggered[0]['value']
-            lg.info(f'[select] found: {ass.autoId}, selected: {ass.selected}, trgId: {trgId}')
+        trgProp = ctx.triggered[0]['prop_id']
+
+        # Handle card header click
+        if 'card-header-click' in trgProp:
+            ass = next((a for a in now.pg.sim.curAss if a.id == trgId["id"]), None)
+            if ass:
+                ass.selected = not ass.selected
+                lg.info(f'[header-click] toggled: {ass.autoId}, selected: {ass.selected}')
+        # Handle checkbox direct click
+        elif 'cbx-select' in trgProp:
+            ass = next((a for a in now.pg.sim.curAss if a.id == trgId["id"]), None)
+            if ass:
+                ass.selected = ctx.triggered[0]['value']
+                lg.info(f'[cbx-click] found: {ass.autoId}, selected: {ass.selected}')
 
     return now.toDict()
 
@@ -410,7 +423,7 @@ def update_selected_photos(clks, dta_now, dta_nfy):
 )
 def sim_SwitchViewGroup(clks, dta_now, dta_tar):
     if not ctx.triggered: return noUpd, noUpd
-    
+
     # Check if any button was actually clicked
     if not any(clks): return noUpd, noUpd
 
