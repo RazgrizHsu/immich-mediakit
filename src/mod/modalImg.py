@@ -77,7 +77,7 @@ def mdlImg_IsOpen(dta_mdl, is_open):
 
 
 @callback(
-    out(k.store, "data"),
+    out(k.store, "data", allow_duplicate=True),
     inp({"type": "img-pop", "index": dash.ALL}, "n_clicks"),
     ste(k.store, "data"),
     prevent_initial_call=True
@@ -89,6 +89,39 @@ def mdlImg_OnImgPopClicked(clks, dta_mdl):
     if not ctx.triggered: return noUpd
 
     mdl = models.MdlImg.fromDict(dta_mdl)
+
+    trigIdx = ctx.triggered_id
+    if isinstance(trigIdx, dict) and "index" in trigIdx:
+        assId = trigIdx["index"]
+        lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
+
+        if assId:
+            mdl.open = True
+            mdl.imgUrl = f"/api/img/{assId}?q=preview"
+
+    return mdl.toDict()
+
+
+@callback(
+    out(k.store, "data", allow_duplicate=True),
+    inp({"type": "img-pop-multi", "index": dash.ALL}, "n_clicks"),
+    ste(k.store, "data"),
+    prevent_initial_call=True
+)
+def mdlImg_OnImgPopMultiClicked(clks, dta_mdl):
+    if not clks or not any(clks): return noUpd
+
+    ctx = dash.callback_context
+    if not ctx.triggered: return noUpd
+
+    mdl = models.MdlImg.fromDict(dta_mdl)
+
+    idxs = []
+    for i, inp in enumerate(ctx.inputs_list[0]):
+        if 'index' in inp['id']:
+            idxs.append(inp['id']['index'])
+
+    lg.info(f"[mdlImg] all indexes: {idxs}")
 
     trigIdx = ctx.triggered_id
     if isinstance(trigIdx, dict) and "index" in trigIdx:
