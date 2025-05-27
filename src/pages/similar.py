@@ -31,7 +31,8 @@ class k:
 
     btnFind = "sim-btn-find"
     btnClear = "sim-btn-clear"
-    btnDelSels = "sim-btn-delSelect"
+    btnCbxDel = "sim-btn-CbxDel"
+    btnCbxOk = "sim-btn-CbxOk"
 
     tab = 'sim-taber'
     pagerPnd = "sim-pager-pnd"
@@ -135,7 +136,8 @@ def layout(autoId=None, **kwargs):
                 taber.Tab(title="pending", disabled=True),
             ],
             htmActs=[
-                dbc.Button("delete selected (0)", id=k.btnDelSels, color="danger", size="md", className="w-60", disabled=True)
+                dbc.Button("delete selected (0)", id=k.btnCbxDel, color="danger", size="sm", className="w-60", disabled=True),
+                dbc.Button("mark all resolved", id=k.btnCbxOk, color="success", size="sm", className="w-60", disabled=True)
             ],
             tabBodies=[
                 # Current
@@ -309,6 +311,7 @@ def sim_SyncTaberToNow(dta_tbr, dta_now):
         out(k.txtCntNo, "children"),
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
+        out(k.btnCbxOk, "disabled"),
         out(k.gvSim, "children"),
         out(k.gvPnd, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -338,6 +341,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     disCler = cntOk <= 0 and cntPn <= 0
 
     cntAssets = len(now.pg.sim.assCur) if now.pg.sim.assCur else -1
+    disOk = cntAssets <= 0
 
     if cntAssets >= 1:
         #lg.info(f"[sim:status] assets: {now.pg.sim.assets[0]}")
@@ -421,7 +425,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     else:
         lg.warn(f"[sim:status] NoTaber?")
 
-    return cntOk, cntPn, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else noUpd
+    return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else noUpd
 
 
 #------------------------------------------------------------------------
@@ -472,8 +476,8 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
 #------------------------------------------------------------------------
 @callback(
     [
-        out(k.btnDelSels, "children"),
-        out(k.btnDelSels, "disabled"),
+        out(k.btnCbxDel, "children"),
+        out(k.btnCbxDel, "disabled"),
     ],
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
@@ -546,7 +550,7 @@ def sim_OnSwitchViewGroup(clks, dta_now, dta_tar):
     [
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
-        inp(k.btnDelSels, "n_clicks"),
+        inp(k.btnCbxDel, "n_clicks"),
     ],
     [
         ste(k.slideTh, "value"),
@@ -581,7 +585,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
     lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
 
     #------------------------------------------------------------------------
-    if trgId == k.btnDelSels:
+    if trgId == k.btnCbxDel:
         ass = now.pg.sim.assSelect
         cnt = len(ass)
 
