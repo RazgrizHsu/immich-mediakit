@@ -21,7 +21,6 @@ dash.register_page(
 )
 
 class k:
-
     assFromUrl = 'sim-AssFromUrl'
 
     txtCntRs = 'sim-txt-cnt-records'
@@ -45,7 +44,7 @@ class k:
 def layout(autoId=None, **kwargs):
     # return flask.redirect('/target-page') #auth?
 
-    guideAss:Optional[models.Asset] = None
+    guideAss: Optional[models.Asset] = None
 
     if autoId:
         lg.info(f"[sim] from url autoId[{autoId}]")
@@ -53,7 +52,6 @@ def layout(autoId=None, **kwargs):
         guideAss = db.pics.getByAutoId(autoId)
         if guideAss:
             lg.info(f"[sim] =============>>>> set target assetId[{guideAss.id}]")
-
 
     import ui
     return ui.renderBody([
@@ -110,7 +108,7 @@ def layout(autoId=None, **kwargs):
 
                 dbc.Row([
                     dbc.Col([
-                        dbc.Button(f"Find {f'#{guideAss.autoId}' if guideAss else 'Similar' }", id=k.btnFind, color="primary", className="w-100", disabled=True),
+                        dbc.Button(f"Find {f'#{guideAss.autoId}' if guideAss else 'Similar'}", id=k.btnFind, color="primary", className="w-100", disabled=True),
                         htm.Br(),
                         htm.Small("No similar found → auto-mark resolved", className="ms-2 me-2")
                     ], width=8),
@@ -250,7 +248,7 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     now = Now.fromDict(dta_now)
     ass = models.Asset.fromDict(dta_ass)
 
-    lg.info( f"[sim:sync] asset from url: {ass}" )
+    lg.info(f"[sim:sync] asset from url: {ass}")
 
     now.pg.sim.assFromUrl = ass
 
@@ -270,15 +268,36 @@ def sim_SyncTaberFromNow(dta_now):
         return noUpd
 
     try:
-        taber = dta_now.get('pg', {}).get('sim', {}).get('taber')
-        if not taber: return noUpd
-        #lg.info(f"[sim:sync] sync taber from now, taber: {taber}")
+        now = Now.fromDict(dta_now)
+        taber = now.pg.sim.taber
 
-        return taber
+        lg.info(f"[sim:sync] sync taber from now, taber: {taber}")
+
+        return taber.toDict()
     except Exception as e:
         lg.error(f"[sim:sync] Error accessing taber: {e}")
         return noUpd
 
+@callback(
+    out(ks.sto.now, "data", allow_duplicate=True),
+    inp(taber.id.store(k.tab), "data"),
+    ste(ks.sto.now, "data"),
+    prevent_initial_call=True
+)
+def sim_SyncTaberToNow(dta_tbr, dta_now):
+
+    try:
+        tbr = Taber.fromDict(dta_tbr)
+        now = Now.fromDict(dta_now)
+
+        now.pg.sim.taber = tbr
+
+        lg.info(f"[sim:sync] sync taber to now, taber: {tbr}")
+
+        return now.toDict()
+    except Exception as e:
+        lg.error(f"[sim:sync] Error taber to Now: {e}")
+        return noUpd
 
 #------------------------------------------------------------------------
 # onStatus
@@ -309,20 +328,16 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     tar = Taber.fromDict(dta_tar)
 
     # Store taber in page state
-
     if not now.pg.sim.taber:
         now.pg.sim.taber = tar
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
-    cntRs = db.pics.countSimPending()
-    disFind = cntNo <= 0 or (cntRs >= cntNo)
-    disCler = cntOk <= 0 and cntRs <= 0
+    cntPn = db.pics.countSimPending()
+    disFind = cntNo <= 0 or (cntPn >= cntNo)
+    disCler = cntOk <= 0 and cntPn <= 0
 
     cntAssets = len(now.pg.sim.assCur) if now.pg.sim.assCur else -1
-
-    lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now[{cntAssets}]")
 
     if cntAssets >= 1:
         #lg.info(f"[sim:status] assets: {now.pg.sim.assets[0]}")
@@ -360,40 +375,53 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
 
     # Update pager total count
     pagerData = None
-    oldCnt = pgr.cnt
-    if pgr.cnt != cntRs:
-        pgr.cnt = cntRs
+    oldPn = pgr.cnt
+    if pgr.cnt != cntPn:
+        pgr.cnt = cntPn
         # Keep current page if still valid, otherwise reset to last valid page
-        totalPages = (cntRs + pgr.size - 1) // pgr.size if cntRs > 0 else 1
+        totalPages = (cntPn + pgr.size - 1) // pgr.size if cntPn > 0 else 1
         if pgr.idx > totalPages:
             pgr.idx = max(1, totalPages)
         now.pg.sim.pagerPnd = pgr
         # Only update pager store if count actually changed
-        if oldCnt != cntRs:
-            pagerData = pgr
+        if oldPn != cntPn: pagerData = pgr
 
-    # Load pending data - only if we don't have data for current page
-    if cntRs > 0 and (not now.pg.sim.assPend or len(now.pg.sim.assPend) == 0):
+    lg.info(f"--------------------------------------------------------------------------------")
+    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}]")
+
+    # Load pending data - reload if count changed or no data
+    needReload = False
+    if cntPn > 0:
+        if not now.pg.sim.assPend or len(now.pg.sim.assPend) == 0:
+            needReload = True
+        elif oldPn != cntPn:
+            needReload = True
+            lg.info(f"[sim:status] Pending count changed from {oldPn} to {cntPn}, reloading data")
+
+    if needReload:
         paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
-        if DEBUG: lg.info(f"[sim] Initial load pendings page[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
+        lg.info(f"[sim:status] Load pendings page[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
         now.pg.sim.assPend = paged
 
     gvPnd = gvs.mkPndGrid(now.pg.sim.assPend, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
 
-    # Update pending tab (index 1) state based on cntRs
+    # Update pending tab (index 1) state based on cntPn
+    tar = now.pg.sim.taber
     if tar and len(tar.tabs) > 1:
         tab = tar.tabs[1]  # tab (pending)
-        if cntRs >= 1:
+        if cntPn >= 1:
             tab.disabled = False
-            tab.title = f"pending ({cntRs})"
+            tab.title = f"pending ({cntPn})"
         else:
             tab.disabled = True
             tab.title = "pending"
+        lg.info(f"[sim:status] Update Tab title[{tab.title}]")
+    else:
+        lg.warn(f"[sim:status] NoTaber?")
 
-
-    return cntOk, cntRs, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else noUpd
+    return cntOk, cntPn, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else noUpd
 
 
 #------------------------------------------------------------------------
@@ -603,14 +631,14 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
         # asset from url
         isFromUrl = False
         if now.pg.sim.assFromUrl:
-            ass = now.pg.sim.assFromUrl #consider read from db again?
+            ass = now.pg.sim.assFromUrl  #consider read from db again?
             if ass:
                 if ass.simOk != 1:
                     lg.info(f"[sim] use selected asset id[{ass.id}]")
                     asset = ass
                     isFromUrl = True
                 else:
-                    nfy.info( f"[sim] the asset #{ass.autoId} already resolved" )
+                    nfy.info(f"[sim] the asset #{ass.autoId} already resolved")
                     now.pg.sim.assFromUrl = None
                     return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
             else:
@@ -633,7 +661,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
 
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.find
-            mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': isFromUrl }
+            mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': isFromUrl}
             tsk = mdl.mkTsk()
             mdl.reset()
             # mdl.msg = [
@@ -704,7 +732,6 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
     thMin, thMax, isFromUrl = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99), tsk.args.get("isFromUrl", False)
 
     try:
-
         assetId = now.pg.sim.assId
         if not assetId: raise RuntimeError(f"[tsk] sim.assId is empty")
 
@@ -757,7 +784,7 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
                         now.pg.sim.assId = nextAss.id
                         continue
                 else:
-                    lg.info( f"[sim] break bcoz from url" )
+                    lg.info(f"[sim] break bcoz from url")
 
                 now.pg.sim.clearAll()
 
@@ -806,10 +833,10 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
         now.pg.sim.assCur = db.pics.getSimGroup(asset.id)
         now.pg.sim.assSelect = []
 
-        lg.info( f"[sim] done, asset #{asset.autoId}" )
+        lg.info(f"[sim] done, asset #{asset.autoId}")
 
         if not now.pg.sim.assCur:
-            raise RuntimeError( f"the get SimGroup not found by asset.id[{asset.id}]" )
+            raise RuntimeError(f"the get SimGroup not found by asset.id[{asset.id}]")
 
         onUpdate(100, "100%", f"Completed finding similar photos for #{asset.autoId}")
 
@@ -818,10 +845,10 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
         msg = [f"Found {len(infos)} similar photos for #{asset.autoId}"]
 
         if cntAll > cntInfos:
-            msg.extend([ f"include ({cntAll - cntInfos}) asset extra tree in similar tree."])
+            msg.extend([f"include ({cntAll - cntInfos}) asset extra tree in similar tree."])
 
         if processedCount > 1:
-            msg.extend([ f"Auto-processed {processedCount} assets before finding similar photos."])
+            msg.extend([f"Auto-processed {processedCount} assets before finding similar photos."])
 
         nfy.success(msg)
 
@@ -846,8 +873,7 @@ def sim_DelSelected(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
         for a in assets:
             lg.info(f"[sim:delSelects] delete asset #[{a.autoId}] Id[ {a.id} ]")
 
-
-        #清除同個simGID的所有資料讓他重新找
+        #todo: 清除同個simGID的所有資料讓他重新找
 
 
         now.pg.sim.taber.setActiveIdx(1)
