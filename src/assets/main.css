@@ -76,7 +76,9 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .duplicate-group { padding: 15px; margin-bottom: 20px; border: 1px solid #444444; border-radius: 5px; background-color: #3A3A3A; }
 
-.card { border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); transition: all 0.3s ease; margin-bottom: 20px; background-color: #3A3A3A; border: 1px solid #444444; }
+.card { border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); transition: all 0.3s ease; background-color: #3A3A3A; border: 1px solid #444444; }
+
+.card img:hover { opacity: 1; transform: scale(1.02); transition: all 0.3s ease; cursor: pointer; box-shadow: 0 0 10px white; }
 
 .card:hover { box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
 
@@ -122,8 +124,6 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 .tag.info { background: #78C22A; }
 
 .tag.lg { font-size: 15px; }
-
-.photo-card img:hover { opacity: 1; transform: scale(1.02); transition: all 0.3s ease; cursor: pointer; box-shadow: 0 0 10px white; }
 
 /* Exif info tooltip styling */
 .tooltip-exif-info .tooltip-inner { padding: 10px !important; background-color: rgba(20, 20, 20, 0.95) !important; backdrop-filter: blur(5px) !important; border: 1px solid var(--info-dkr) !important; }

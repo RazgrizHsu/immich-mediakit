@@ -344,9 +344,18 @@ body {
 	border-radius:8px;
 	box-shadow:0 2px 10px rgba(0, 0, 0, 0.2);
 	transition:all 0.3s ease;
-	margin-bottom:20px;
 	background-color:#3A3A3A;
 	border:1px solid #444444;
+
+	img {
+		&:hover {
+			opacity:1;
+			transform:scale(1.02);
+			transition:all 0.3s ease;
+			cursor:pointer;
+			box-shadow:0 0 10px rgba(255, 255, 255, 1);
+		}
+	}
 
 	&:hover {
 		box-shadow:0 5px 15px rgba(0, 0, 0, 0.3);
@@ -495,15 +504,6 @@ body {
 	}
 }
 
-.photo-card img {
-	&:hover {
-		opacity:1;
-		transform:scale(1.02);
-		transition:all 0.3s ease;
-		cursor:pointer;
-		box-shadow:0 0 10px rgba(255, 255, 255, 1);
-	}
-}
 
 /* Exif info tooltip styling */
 .tooltip-exif-info .tooltip-inner {

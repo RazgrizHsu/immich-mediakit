@@ -1,5 +1,5 @@
-import dash.html as htm
-import dash_bootstrap_components as dbc
+from dsh import htm, dcc, dbc
+from conf import ks
 from util import log
 from mod import models
 from ui.gridExif import mkTipExif
@@ -14,8 +14,8 @@ def createGrid(assets: list[models.Asset], minW: int = 250) -> htm.Div:
             className="text-center mt-4"
         )
 
-    lg.info( f"create grid: {len(assets)}" )
-    rows = [htm.Div(createPhotoCard(a), className="photo-card") for a in assets]
+    lg.info(f"create grid: {len(assets)}")
+    rows = [createPhotoCard(a) for a in assets]
 
     style = {
         "display": "grid",
@@ -26,24 +26,27 @@ def createGrid(assets: list[models.Asset], minW: int = 250) -> htm.Div:
     return htm.Div(rows, style=style)
 
 
-def createPhotoCard(asset: models.Asset):
-    hasVec = asset.isVectored == 1
-    fnm = asset.originalFileName or '---'
-    dtc = asset.fileCreatedAt or 'Unknown date'
-    isFav = asset.isFavorite == 1
-    assId = asset.id
-    hasEx = asset.jsonExif is not None
+def createPhotoCard(ass: models.Asset):
+    hasVec = ass.isVectored == 1
+    fnm = ass.originalFileName or '---'
+    dtc = ass.fileCreatedAt or 'Unknown date'
+    isFav = ass.isFavorite == 1
+    assId = ass.id
+    hasEx = ass.jsonExif is not None
 
-    image_src = f"/api/img/{asset.id}" if asset.id else "assets/noimg.png"
+    image_src = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
 
     tipExif = None
-    if hasEx and asset.jsonExif is not None:
+    if hasEx and ass.jsonExif is not None:
         try:
-            tipExif = mkTipExif(assId, asset.jsonExif.toDict())
+            tipExif = mkTipExif(assId, ass.jsonExif.toDict())
         except Exception as e:
             lg.error(f"Error processing EXIF data: {e}")
 
-    return dbc.Card([
+    return htm.Div([
+        htm.Div([
+
+        ], className="head"),
         htm.Div([
             dbc.CardImg(
                 src=image_src,
@@ -78,7 +81,28 @@ def createPhotoCard(asset: models.Asset):
                 dbc.Badge(
                     "❤️", color="danger", className="ms-1"
                 ) if isFav else htm.Span(),
+
             ], className="d-flex flex-wrap"),
-            tipExif
+
+            tipExif,
+
+            htm.Div([
+
+                # dbc.Button(
+                #     f"Find Similar #{ass.autoId}",
+                #     id={"type": "btn-useAsAuid", "id": ass.autoId},
+                #     color="primary",
+                #     size="sm",
+                #     className="w-100"
+                # )
+
+                dcc.Link(
+                    f"Find Similar #{ass.autoId}",
+                    href=f"/{ks.pg.similar}/{ass.autoId}",
+                    className="btn btn-primary btn-sm w-100"
+                )
+
+            ], className="mt-2"),
+
         ], className="p-2")
-    ], className="h-100 photo-card")
+    ], className="card")
