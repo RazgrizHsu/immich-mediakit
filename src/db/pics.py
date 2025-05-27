@@ -126,6 +126,20 @@ def count(usrId=None):
 #========================================================================
 # quary
 #========================================================================
+def getByAutoId(autoId) -> Optional[models.Asset]:
+    try:
+        if conn is None: raise mkErr('the db is not init')
+
+        c = conn.cursor()
+        c.execute("Select * From assets Where autoId= ?", (autoId,))
+
+        row = c.fetchone()
+        if row is None: return None
+
+        asset = models.Asset.fromDB(c, row)
+        return asset
+    except Exception as e:
+        raise mkErr("Failed to get asset information", e)
 def getById(assId) -> Optional[models.Asset]:
     try:
         if conn is None: raise mkErr('the db is not init')

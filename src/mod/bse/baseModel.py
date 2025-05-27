@@ -181,78 +181,86 @@ class BaseDictModel:
         return cls._complex_type_cache[cls]
 
     @classmethod
-    def fromDict(cls: Type[T], src: Dict[str, Any]) -> T:
-        if not src: return cls()
-
-        type_hints = cls._get_type_hints()
-        complex_fields = cls._has_complex_types(type_hints)
-
-        processed_data = {}
-        for key, val in src.items():
-            if key not in type_hints: continue
-
-            hint_type = type_hints[key]
-            origin = get_origin(hint_type)
-
-            if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or
-                                         (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
-                processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
-            else:
-                processed_data[key] = val
-
+    def fromDict(cls: Type[T], src: Dict[str, Any]) -> Optional[T]:
         try:
-            return cls(**processed_data)
-        except (TypeError, ValueError) as e:
-            filtered_data = {k: v for k, v in src.items() if k in type_hints}
+            if not src: return cls()
+
+            type_hints = cls._get_type_hints()
+            complex_fields = cls._has_complex_types(type_hints)
+
+            processed_data = {}
+            for key, val in src.items():
+                if key not in type_hints: continue
+
+                hint_type = type_hints[key]
+                origin = get_origin(hint_type)
+
+                if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or
+                                             (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
+                    processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
+                else:
+                    processed_data[key] = val
+
             try:
-                return cls(**filtered_data)
-            except:
-                raise e
+                return cls(**processed_data)
+            except (TypeError, ValueError) as e:
+                filtered_data = {k: v for k, v in src.items() if k in type_hints}
+                try:
+                    return cls(**filtered_data)
+                except:
+                    raise e
+        except Exception as e:
+            lg.error(f"Error converting dict to {cls.__name__}: {e}, src={src}")
+            return None
 
     @classmethod
     def fromDB(cls: Type[T], cursor: sqlite3.Cursor, row: tuple) -> Optional[T]:
-        if not row: return None
-
-        cursor_id = id(cursor)
-        columns = cls._cursor_columns_cache.get(cursor_id)
-        if columns is None:
-            columns = [desc[0] for desc in cursor.description]
-            cls._cursor_columns_cache[cursor_id] = columns
-
-        data = dict(zip(columns, row))
-        type_hints = cls._get_type_hints()
-
-        json_fields = [fname for fname, ftype in type_hints.items()
-                       if ftype == Json and fname in data and isinstance(data[fname], str)]
-
-        if json_fields: data = cls._process_json_fields(data, type_hints)
-
-        complex_fields = cls._has_complex_types(type_hints)
-
-        processed_data = {}
-        for key, val in data.items():
-            if key not in type_hints: continue
-
-            hint_type = type_hints[key]
-            origin = get_origin(hint_type)
-
-            if (key in complex_fields
-                or
-                (
-                    isinstance(val, str) and cls._is_model_subclass(hint_type)
-                    or
-                    (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))
-                )
-            ):
-                processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
-            else:
-                processed_data[key] = val
-
         try:
-            return cls(**processed_data)
-        except (TypeError, ValueError) as e:
-            filtered_data = {k: v for k, v in data.items() if k in type_hints}
+            if not row: return None
+
+            cursor_id = id(cursor)
+            columns = cls._cursor_columns_cache.get(cursor_id)
+            if columns is None:
+                columns = [desc[0] for desc in cursor.description]
+                cls._cursor_columns_cache[cursor_id] = columns
+
+            data = dict(zip(columns, row))
+            type_hints = cls._get_type_hints()
+
+            json_fields = [fname for fname, ftype in type_hints.items()
+                           if ftype == Json and fname in data and isinstance(data[fname], str)]
+
+            if json_fields: data = cls._process_json_fields(data, type_hints)
+
+            complex_fields = cls._has_complex_types(type_hints)
+
+            processed_data = {}
+            for key, val in data.items():
+                if key not in type_hints: continue
+
+                hint_type = type_hints[key]
+                origin = get_origin(hint_type)
+
+                if (key in complex_fields
+                    or
+                    (
+                        isinstance(val, str) and cls._is_model_subclass(hint_type)
+                        or
+                        (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))
+                    )
+                ):
+                    processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
+                else:
+                    processed_data[key] = val
+
             try:
-                return cls(**filtered_data)
-            except:
-                raise e
+                return cls(**processed_data)
+            except (TypeError, ValueError) as e:
+                filtered_data = {k: v for k, v in data.items() if k in type_hints}
+                try:
+                    return cls(**filtered_data)
+                except:
+                    raise e
+        except Exception as e:
+            lg.error(f"Error converting DB row to {cls.__name__}: {e}, row={row}")
+            return None

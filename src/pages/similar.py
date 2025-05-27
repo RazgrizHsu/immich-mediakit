@@ -16,11 +16,14 @@ DEBUG = False
 dash.register_page(
     __name__,
     path=f'/{ks.pg.similar}',
-    path_template=f'/{ks.pg.similar}/<assetId>',
+    path_template=f'/{ks.pg.similar}/<autoId>',
     title=f"{ks.title}: " + ks.pg.similar.name,
 )
 
 class k:
+
+    assFromUrl = 'sim-AssFromUrl'
+
     txtCntRs = 'sim-txt-cnt-records'
     txtCntOk = 'sim-txt-cnt-ok'
     txtCntNo = 'sim-txt-cnt-no'
@@ -39,23 +42,24 @@ class k:
 
 
 #========================================================================
-def layout(assetId=None, **kwargs):
+def layout(autoId=None, **kwargs):
     # return flask.redirect('/target-page') #auth?
 
     guideAss:Optional[models.Asset] = None
 
-    if assetId:
-        lg.info(f"[sim] from url assetId[{assetId}]")
+    if autoId:
+        lg.info(f"[sim] from url autoId[{autoId}]")
 
-        guideAss = db.pics.getById(assetId)
-        if guideAss and db.dyn.dto.simId != assetId:
-            db.dyn.dto.simId = assetId
+        guideAss = db.pics.getByAutoId(autoId)
+        if guideAss:
             lg.info(f"[sim] =============>>>> set target assetId[{guideAss.id}]")
 
 
     import ui
     return ui.renderBody([
         #====== top start =======================================================
+        dcc.Store(id=k.assFromUrl, data=guideAss),
+
         dbc.Row([
             dbc.Col(htm.H3(f"{ks.pg.similar.name}"), width=3),
             dbc.Col(htm.Small(f"{ks.pg.similar.desc}", className="text-muted"))
@@ -106,7 +110,7 @@ def layout(assetId=None, **kwargs):
 
                 dbc.Row([
                     dbc.Col([
-                        dbc.Button("Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
+                        dbc.Button(f"Find {f'#{guideAss.autoId}' if guideAss else 'Similar' }", id=k.btnFind, color="primary", className="w-100", disabled=True),
                         htm.Br(),
                         htm.Small("No similar found → auto-mark resolved", className="ms-2 me-2")
                     ], width=8),
@@ -229,6 +233,30 @@ def sim_onPagerChanged(dta_pgr, dta_now):
 
 # The pager initialization is now handled by regCallbacks with secondaryIds
 
+
+#------------------------------------------------------------------------
+# assert from url
+#------------------------------------------------------------------------
+@callback(
+    out(ks.sto.now, "data", allow_duplicate=True),
+    inp(k.assFromUrl, "data"),
+    ste(ks.sto.now, "data"),
+    prevent_initial_call=True
+)
+def sim_SyncUrlAssetToNow(dta_ass, dta_now):
+    if not dta_ass:
+        lg.warn("[sim:sync] taber is none")
+        return noUpd
+
+    now = Now.fromDict(dta_now)
+    ass = models.Asset.fromDict(dta_ass)
+
+    lg.info( f"[sim:sync] asset from url: {ass}" )
+
+    now.pg.sim.assFromUrl = ass
+
+    return now.toDict()
+
 #------------------------------------------------------------------------
 # Sync taber state from now.pg.sim.taber
 #------------------------------------------------------------------------
@@ -237,7 +265,7 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def sim_syncTaberFromNow(dta_now):
+def sim_SyncTaberFromNow(dta_now):
     if not dta_now:
         lg.warn("[sim:sync] taber is none")
         return noUpd
@@ -245,8 +273,7 @@ def sim_syncTaberFromNow(dta_now):
     try:
         taber = dta_now.get('pg', {}).get('sim', {}).get('taber')
         if not taber: return noUpd
-
-        lg.info(f"[sim:sync] sync taber from now, taber: {taber}")
+        #lg.info(f"[sim:sync] sync taber from now, taber: {taber}")
 
         return taber
     except Exception as e:
@@ -277,7 +304,7 @@ def sim_syncTaberFromNow(dta_now):
     ],
     prevent_initial_call="initial_duplicate"
 )
-def sim_onStatus(dta_now, dta_nfy, dta_tar):
+def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
     tar = Taber.fromDict(dta_tar)
@@ -381,7 +408,7 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
     ste(ks.sto.nfy, "data"),
     prevent_initial_call=True
 )
-def sim_onSelectAsset(clks_crd, dta_now, dta_nfy):
+def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
     hasClk = any(clks_crd)
     if not hasClk: return noUpd
 
@@ -423,12 +450,12 @@ def sim_onSelectAsset(clks_crd, dta_now, dta_nfy):
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def sim_onNowChangeSelects(dta_now):
+def sim_OnNowChangeSelects(dta_now):
     now = Now.fromDict(dta_now)
 
     selCnt = len(now.pg.sim.assSelect)
 
-    lg.info(f"[sim:slect] selCnt[{selCnt}]")
+    if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
 
     btnText = f"delete selected ( {selCnt} )"
     btnDisabled = selCnt == 0
@@ -451,7 +478,7 @@ def sim_onNowChangeSelects(dta_now):
     ],
     prevent_initial_call=True
 )
-def sim_SwitchViewGroup(clks, dta_now, dta_tar):
+def sim_OnSwitchViewGroup(clks, dta_now, dta_tar):
     if not ctx.triggered: return noUpd, noUpd
 
     # Check if any button was actually clicked
@@ -573,17 +600,23 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
 
         asset: Optional[models.Asset] = None
 
-        # if id from url
-        if db.dyn.dto.simId:
-            ass = db.pics.getById(db.dyn.dto.simId)
+        # asset from url
+        isFromUrl = False
+        if now.pg.sim.assFromUrl:
+            ass = now.pg.sim.assFromUrl #consider read from db again?
             if ass:
                 if ass.simOk != 1:
                     lg.info(f"[sim] use selected asset id[{ass.id}]")
                     asset = ass
+                    isFromUrl = True
                 else:
-                    lg.warn(f"[sim] select asset simOk[{ass.simOk}] id[{ass.id}]")
+                    nfy.info( f"[sim] the asset #{ass.autoId} already resolved" )
+                    now.pg.sim.assFromUrl = None
+                    return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
             else:
-                lg.warn(f"[sim] not found dst assetId[{db.dyn.dto.simId}]")
+                nfy.warn(f"[sim] not found dst assetId[{now.pg.sim.assFromUrl}]")
+                now.pg.sim.assFromUrl = None
+                return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
 
         # find from db
         if not asset:
@@ -600,7 +633,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
 
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.find
-            mdl.args = {'thMin': thMin, 'thMax': thMax}
+            mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': isFromUrl }
             tsk = mdl.mkTsk()
             mdl.reset()
             # mdl.msg = [
@@ -642,7 +675,7 @@ def sim_Clear(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
 
         onUpdate(90, "90%", "Updating dynamic data...")
 
-        db.dyn.dto.simId = None
+        now.pg.sim.assFromUrl = None
 
         now.pg.sim.clearAll()
 
@@ -668,7 +701,7 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
         lg.warn(msg)
         return nfy, now, msg
 
-    thMin, thMax = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99)
+    thMin, thMax, isFromUrl = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99), tsk.args.get("isFromUrl", False)
 
     try:
         # todo: 如果資料只包含自已

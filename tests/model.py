@@ -8,7 +8,7 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 from mod.models import Now, Usr, Nfy, Tsk, Mdl, Asset, AssetExif, SimInfo
-from mod.bse.baseModel import Json
+from mod.bse.baseModel import Json, BaseDictModel
 import db.pics as pics
 from util import log
 
@@ -446,6 +446,49 @@ class TestBaseDictModel(unittest.TestCase):
         now = Now()
 
         lg.info( f"pg.sim: {now.pg.sim}" )
+
+    def test_fromDict_error_handling(self):
+        # Test with required field missing (will cause TypeError in __init__)
+        class RequiredFieldModel(BaseDictModel):
+            id: str  # required field
+            name: str  # required field
+            
+            def __init__(self, id: str, name: str):
+                self.id = id
+                self.name = name
+        
+        # Missing required field 'name'
+        invalid_dict = {"id": "test"}
+        result = RequiredFieldModel.fromDict(invalid_dict)
+        self.assertIsNone(result)
+
+        # Test with wrong number of arguments
+        invalid_dict2 = {"id": "test", "name": "test", "extra": "field", "another": "field"}
+        result2 = RequiredFieldModel.fromDict(invalid_dict2)
+        # This should succeed as extra fields are filtered
+        self.assertIsNotNone(result2)
+
+    def test_fromDB_error_handling(self):
+        # Test with required field missing (will cause TypeError in __init__)
+        class RequiredFieldModel(BaseDictModel):
+            id: str  # required field
+            name: str  # required field
+            
+            def __init__(self, id: str, name: str):
+                self.id = id
+                self.name = name
+        
+        # Mock cursor with only 'id' column, missing 'name'
+        mock_cursor = type('MockCursor', (), {'description': [('id',)]})()
+        row = ('test-id',)
+        result = RequiredFieldModel.fromDB(mock_cursor, row)
+        self.assertIsNone(result)
+        
+        # Test with exception in processing
+        mock_cursor2 = type('MockCursor', (), {'description': None})()  # This will cause AttributeError
+        row2 = ('test-id', 'test-name')
+        result2 = RequiredFieldModel.fromDB(mock_cursor2, row2)
+        self.assertIsNone(result2)
 
 
 if __name__ == "__main__":
