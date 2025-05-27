@@ -97,6 +97,10 @@ class Mdl(Cmd):
 class MdlImg(BaseDictModel):
     open: bool = False
     imgUrl: Optional[str] = None
+    isMulti: bool = False
+    curIdx: int = 0
+
+    args: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
