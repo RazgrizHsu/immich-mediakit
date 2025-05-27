@@ -40,7 +40,7 @@ def createStore(
     Returns:
         List containing the store component
     """
-    pgr = models.Pgr(idx=page, size=size, cnt=total)
+    pgr = models.Pager(idx=page, size=size, cnt=total)
     return [dcc.Store(id=id.store(pgId), data=pgr.toDict())]
 
 
@@ -239,7 +239,7 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
 
         if DEBUG: lg.info(f"[pgr:{pgrId}] onClick triggered: {ctx.triggered}, page_clicks: {clks_pg}, nav_clicks: {clks_nv}")
 
-        pgr = models.Pgr.fromDict(dta_pgr)
+        pgr = models.Pager.fromDict(dta_pgr)
 
         # Ensure idx is valid (default to 1 if None)
         if pgr.idx is None:
@@ -307,7 +307,7 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
             if DEBUG: lg.info(f"[pgr:{pgrId}] no store data, returning empty")
             return [[] for _ in dta_pgrs]
 
-        pgr = models.Pgr.fromDict(dta_pgr)
+        pgr = models.Pager.fromDict(dta_pgr)
         if DEBUG: lg.info(f"[pgr:{pgrId}] pgr: page={pgr.idx}, size={pgr.size}, total={pgr.cnt}")
 
         results = []

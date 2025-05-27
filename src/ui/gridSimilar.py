@@ -259,10 +259,7 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False
             htm.Div([
                 dbc.Row([
                     dbc.Col(
-                        dbc.Checkbox(
-                            label=f"#{ass.autoId}", value=checked,
-                            id={"type": "cbx-select", "id": assId},
-                        )
+                        dbc.Checkbox(label=f"#{ass.autoId}", value=checked)
                     ),
                     dbc.Col([
                                 htm.Span(f"Main", className="tag info lg ms-1")
@@ -274,7 +271,7 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False
 
                             , className="d-flex justify-content-end")
                 ])
-            ], id={"type": "card-header-click", "id": assId}),
+            ], id={"type": "card-select", "id": assId}),
             className="p-2 curP"
         ),
         htm.Div([
@@ -366,16 +363,24 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
             ))
 
     return dbc.Card([
-        dbc.CardHeader([
+        htm.Div([
             dbc.Row([
                 dbc.Col(
+                    dbc.Button(
+                        "View as Group",
+                        id={"type": "btn-view-group", "id": assId},
+                        color="info",
+                        size="sm",
+                        className="w-100"
+                    )
                 ),
                 dbc.Col([
-                    htm.Span("Matches: "), htm.Span(f"{len(ass.simInfos) - 1}", className="tag lg ms-1")
-                ], className="d-flex justify-content-end")
-            ])
+                    htm.Span("Matches: ", className="txt-sm"), htm.Span(f"{len(ass.simInfos) - 1}", className="tag lg ms-1")
+                ], className="justify-content-end")
+            ]
+                , className="p-0")
 
-        ], className=""),
+        ], className="pt-2 ps-2 pb-3"),
         htm.Div([
             htm.Img(
                 src=imgSrc,
@@ -416,16 +421,6 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
             #         size="sm"
             #     )
             # ], className="d-flex justify-content-between align-items-center"),
-
-            htm.Div([
-                dbc.Button(
-                    "View as Group",
-                    id={"type": "btn-view-group", "id": assId},
-                    color="primary",
-                    size="sm",
-                    className="w-100 mt-2"
-                )
-            ]),
 
         ], className="p-2")
     ], className=f"h-100 sim {cssIds}")

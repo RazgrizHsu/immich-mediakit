@@ -136,7 +136,7 @@ class Taber(BaseDictModel):
 
 
 @dataclass
-class Pgr(BaseDictModel):
+class Pager(BaseDictModel):
     idx: Optional[int] = 1
     size: Optional[int] = 20
     cnt: Optional[int] = 0
@@ -251,21 +251,19 @@ class Asset(BaseDictModel):
 class PageSim(BaseDictModel):
 
     taber: Optional[Taber] = None
+    pagerPnd: Optional[Pager] = None
 
     assId: Optional[str] = None
-    curAss: List[Asset] = field(default_factory=list)
-
-    selectIds: List[str] = field(default_factory=list)
-
-    pndAss: List[Asset] = field(default_factory=list)
-    pndPgr: Optional[Pgr] = None
+    assCur: List[Asset] = field(default_factory=list)
+    assSelect: List[Asset] = field(default_factory=list)
+    assPend: List[Asset] = field(default_factory=list)
 
 
-    def reset(self):
+    def clearAll(self):
         self.assId = None
-        self.curAss = []
-        self.selectIds = []
-        self.pndAss = []
+        self.assCur = []
+        self.assPend = []
+        self.assSelect = []
 
 @dataclass
 class Pages(BaseDictModel):
