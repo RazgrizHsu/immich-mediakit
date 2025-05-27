@@ -5,7 +5,7 @@ import db
 from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
 from util import log
-from mod import models, mapFns, IFnProg, taber
+from mod import mapFns, IFnProg, taber
 from ui import pager
 
 lg = log.get(__name__)
@@ -29,7 +29,7 @@ class k:
 
     btnFind = "sim-btn-find"
     btnClear = "sim-btn-clear"
-    btnDelChks = "sim-btn-delete-checkeds"
+    btnDelSels = "sim-btn-delSelect"
 
     tab = 'sim-taber'
     pagerPnd = "sim-pager-pnd"
@@ -131,7 +131,7 @@ def layout(assetId=None, **kwargs):
                 taber.Tab(title="pending", disabled=True),
             ],
             htmActs=[
-                dbc.Button("delete checked (0)", id=k.btnDelChks, color="danger", size="md", className="w-60", disabled=True)
+                dbc.Button("delete selected (0)", id=k.btnDelSels, color="danger", size="md", className="w-60", disabled=True)
             ],
             tabBodies=[
                 # Current
@@ -178,18 +178,15 @@ def layout(assetId=None, **kwargs):
 #     )
 #========================================================================
 
-
 #========================================================================
 # callbacks
 #========================================================================
+from ui import gridSimilar as gvs
+from mod import models
+from mod.models import Nfy, Tsk, Now, Mdl, Pager, Taber
 
 taber.regCallbacks(k.tab)
 pager.regCallbacks(k.pagerPnd)
-
-#------------------------------------------------------------------------
-# Update status counters
-#------------------------------------------------------------------------
-from ui import gridSimilar as gvs
 
 
 #------------------------------------------------------------------------
@@ -207,8 +204,8 @@ from ui import gridSimilar as gvs
 def sim_onPagerChanged(dta_pgr, dta_now):
     if not dta_pgr or not dta_now: return noUpd
 
-    now = models.Now.fromDict(dta_now)
-    pgr = models.Pager.fromDict(dta_pgr)
+    now = Now.fromDict(dta_now)
+    pgr = Pager.fromDict(dta_pgr)
 
     # Check if we're already on this page with same data
     oldPgr = now.pg.sim.pagerPnd
@@ -278,9 +275,9 @@ def sim_syncTaberFromNow(dta_now):
     prevent_initial_call="initial_duplicate"
 )
 def sim_onStatus(dta_now, dta_nfy, dta_tar):
-    now = models.Now.fromDict(dta_now)
-    nfy = models.Nfy.fromDict(dta_nfy)
-    tar = models.Taber.fromDict(dta_tar)
+    now = Now.fromDict(dta_now)
+    nfy = Nfy.fromDict(dta_nfy)
+    tar = Taber.fromDict(dta_tar)
 
     # Store taber in page state
     now.pg.sim.taber = tar
@@ -327,7 +324,7 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
     ])
 
     # Initialize or get pager
-    pgr = now.pg.sim.pagerPnd if now.pg.sim.pagerPnd else models.Pager(idx=1, size=20)
+    pgr = now.pg.sim.pagerPnd if now.pg.sim.pagerPnd else Pager(idx=1, size=20)
 
     # Update pager total count
     pagerData = None
@@ -382,14 +379,13 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
     prevent_initial_call=True
 )
 def sim_onSelectAsset(clks_crd, dta_now, dta_nfy):
-
     hasClk = any(clks_crd)
     if not hasClk: return noUpd
 
-    lg.info( f"[sim:select] any[{hasClk}] {clks_crd}" )
+    lg.info(f"[sim:select] any[{hasClk}] {clks_crd}")
 
-    now = models.Now.fromDict(dta_now)
-    nfy = models.Nfy.fromDict(dta_nfy)
+    now = Now.fromDict(dta_now)
+    nfy = Nfy.fromDict(dta_nfy)
 
     selected = []
 
@@ -397,7 +393,7 @@ def sim_onSelectAsset(clks_crd, dta_now, dta_nfy):
         trgId = ctx.triggered_id
 
         tid = trgId['id']
-        lg.info( f"[sim:select] selected[{tid}]" )
+        lg.info(f"[sim:select] selected[{tid}]")
 
         for ass in now.pg.sim.assCur:
             if ass.id == tid:
@@ -406,7 +402,6 @@ def sim_onSelectAsset(clks_crd, dta_now, dta_nfy):
 
             if ass.selected:
                 selected.append(ass)
-
 
     lg.info(f'[sim:select] Selected: {len(selected)}/{len(now.pg.sim.assCur)}')
     now.pg.sim.assSelect = selected
@@ -419,23 +414,20 @@ def sim_onSelectAsset(clks_crd, dta_now, dta_nfy):
 #------------------------------------------------------------------------
 @callback(
     [
-        out(k.btnDelChks, "children"),
-        out(k.btnDelChks, "disabled"),
+        out(k.btnDelSels, "children"),
+        out(k.btnDelSels, "disabled"),
     ],
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
 )
 def sim_onNowChangeSelects(dta_now):
-    now = models.Now.fromDict(dta_now)
+    now = Now.fromDict(dta_now)
 
-    if not now.pg.sim.assCur:
-        return "delete checked (0)", True
+    selCnt = len(now.pg.sim.assSelect)
 
-    selCnt = len(now.pg.sim.assSelect) if hasattr(now.pg.sim, 'selectAss') else 0
+    lg.info(f"[sim:slect] selCnt[{selCnt}]")
 
-    lg.info( f"[sim:slect] selCnt[{selCnt}]" )
-
-    btnText = f"delete checked ({selCnt})"
+    btnText = f"delete selected ( {selCnt} )"
     btnDisabled = selCnt == 0
 
     return btnText, btnDisabled
@@ -462,8 +454,8 @@ def sim_SwitchViewGroup(clks, dta_now, dta_tar):
     # Check if any button was actually clicked
     if not any(clks): return noUpd, noUpd
 
-    now = models.Now.fromDict(dta_now)
-    tar = models.Taber.fromDict(dta_tar)
+    now = Now.fromDict(dta_now)
+    tar = Taber.fromDict(dta_tar)
 
     trgId = ctx.triggered_id
     assId = trgId["id"]
@@ -496,6 +488,7 @@ def sim_SwitchViewGroup(clks, dta_now, dta_tar):
     [
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
+        inp(k.btnDelSels, "n_clicks"),
     ],
     [
         ste(k.slideTh, "value"),
@@ -506,31 +499,47 @@ def sim_SwitchViewGroup(clks, dta_now, dta_tar):
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
-    if not clk_fnd and not clk_clr: return noUpd, noUpd, noUpd, noUpd
+def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
+    if not clk_fnd and not clk_clr and not clk_dse: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
-    now = models.Now.fromDict(dta_now)
-    mdl = models.Mdl.fromDict(dta_mdl)
-    tsk = models.Tsk.fromDict(dta_tsk)
-    nfy = models.Nfy.fromDict(dta_nfy)
+    now = Now.fromDict(dta_now)
+    mdl = Mdl.fromDict(dta_mdl)
+    tsk = Tsk.fromDict(dta_tsk)
+    nfy = Nfy.fromDict(dta_nfy)
 
     if tsk.id:
-        # check tsk is running
         from mod.mgr.tskSvc import mgr
         if mgr and mgr.getInfo(tsk.id):
-            task_info = mgr.getInfo(tsk.id)
-            if task_info.status in ['pending', 'running']:
-                if DEBUG: lg.info(f"[similar] Task already running: {tsk.id}")
+            ti = mgr.getInfo(tsk.id)
+            if ti.status in ['pending', 'running']:
+                nfy.warn(f"[similar] Task already running: {tsk.id}")
                 return noUpd, noUpd, noUpd, noUpd
-
-        # lg.info(f"[similar] Clearing completed task: {tsk.id}")
-        tsk.id = None
-        tsk.cmd = None
+            # lg.info(f"[similar] Clearing completed task: {tsk.id}")
+            tsk.id = None
+            tsk.cmd = None
 
     lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
 
+    #------------------------------------------------------------------------
+    if trgId == k.btnDelSels:
+        ass = now.pg.sim.assSelect
+        cnt = len(ass)
+
+        lg.info(f"[sim:delSels] {cnt} assets selected")
+
+        if cnt > 0:
+            mdl.reset()
+            mdl.id = ks.pg.similar
+            mdl.cmd = ks.cmd.sim.delSels
+            mdl.msg = [
+                f"Are you sure you want to delete select images( {cnt} )?", htm.Br(),
+                htm.B("This operation cannot be undone"),
+            ]
+            mdl.assets = ass
+
+    #------------------------------------------------------------------------
     if trgId == k.btnClear:
         cntOk = db.pics.countSimOk(isOk=1)
         cntRs = db.pics.countHasSimIds()
@@ -548,15 +557,7 @@ def sim_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
             "You may need to perform all similarity searches again."
         ]
 
-    # if trgId == k.btnResume:
-    #     assets = db.pics.getAnySimPending()
-    #     if assets:
-    #         now.pg.sim.isContinued = True
-    #         now.pg.sim.assId = assets[0].id
-    #         now.pg.sim.assets = assets
-    #         nfy.info(f"Loading pending groups, id[{now.pg.sim.assId}] with {len(assets)} similar images")
-
-
+    #------------------------------------------------------------------------
     elif trgId == k.btnFind:
         if now.cntVec <= 0:
             nfy.error("No vector data to process")
@@ -614,7 +615,7 @@ def sim_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
 #========================================================================
 # task acts
 #========================================================================
-def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnProg):
+def sim_Clear(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
     if tsk.id != ks.pg.similar:
         msg = f"[tsk] wrong triggerId[{tsk.id}]"
         lg.warn(msg)
@@ -658,7 +659,7 @@ def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnPr
         return nfy, now, msg
 
 
-def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnProg):
+def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
     if tsk.id != ks.pg.similar:
         msg = f"[tsk] wrong triggerId[{tsk.id}]"
         lg.warn(msg)
@@ -770,8 +771,34 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         return nfy, now, msg
 
 
+def sim_DelSelected(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
+    try:
+        assets = now.pg.sim.assSelect
+        cnt = len(assets)
+        msg = f"[sim] Delete Selected Assets( {cnt} ) Success!"
+
+        if not assets or cnt == 0: raise RuntimeError("Selected not found")
+
+        for a in assets:
+            lg.info(f"[sim:delSelects] delete asset #[{a.autoId}] Id[ {a.id} ]")
+
+        now.pg.sim.taber.setActiveIdx(1)
+        now.pg.sim.clearNow()
+
+        nfy.success(msg)
+
+        return nfy, now, msg
+    except Exception as e:
+        msg = f"Delete selected failed: {str(e)}"
+        nfy.error(msg)
+        lg.error(traceback.format_exc())
+        now.pg.sim.clearAll()
+        return nfy, now, msg
+
+
 #========================================================================
 # Set up global functions
 #========================================================================
 mapFns[ks.cmd.sim.find] = sim_FindSimilar
 mapFns[ks.cmd.sim.clear] = sim_Clear
+mapFns[ks.cmd.sim.delSels] = sim_DelSelected

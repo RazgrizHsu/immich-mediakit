@@ -78,6 +78,7 @@ class cmds:
     class sim(co.to):
         find = co.tit('sim_find', desc='Find Similar vectors')
         clear = co.tit('sim_clear', desc='Clear all similar results')
+        delSels = co.tit('sim_del', desc='Delete Selected assets')
 
 class ks:
     title = "Immich-MediaKit"

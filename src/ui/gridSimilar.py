@@ -231,7 +231,7 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None, show
 def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False):
     if not ass: return htm.Div("Photo not found")
 
-    imgSrc = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
+    imgSrc = f"/api/img/{ass.id}" if ass.id else None
 
     assId = ass.id
     fnm = ass.originalFileName
@@ -279,7 +279,8 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False
                 src=imgSrc,
                 id={"type": "img-pop", "index": assId}, n_clicks=0,
                 className="card-img"
-            ),
+            ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
+            ,
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="badge"),
             ]),
