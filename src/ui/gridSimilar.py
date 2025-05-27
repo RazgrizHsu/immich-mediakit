@@ -277,7 +277,7 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False
         htm.Div([
             htm.Img(
                 src=imgSrc,
-                id={"type": "img-pop-multi", "index": assId}, n_clicks=0,
+                id={"type": "img-pop-multi", "id": ass.id, "autoId": ass.autoId }, n_clicks=0,
                 className="card-img"
             ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
             ,
