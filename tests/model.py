@@ -441,5 +441,12 @@ class TestBaseDictModel(unittest.TestCase):
             pics.close()
 
 
+    def test_modal_basic(self):
+
+        now = Now()
+
+        lg.info( f"pg.sim: {now.pg.sim}" )
+
+
 if __name__ == "__main__":
     unittest.main()

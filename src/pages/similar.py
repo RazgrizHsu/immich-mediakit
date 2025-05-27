@@ -42,14 +42,16 @@ class k:
 def layout(assetId=None, **kwargs):
     # return flask.redirect('/target-page') #auth?
 
+    guideAss:Optional[models.Asset] = None
 
     if assetId:
         lg.info(f"[sim] from url assetId[{assetId}]")
 
-        ass = db.pics.getById(assetId)
-        if ass and db.dyn.dto.simId != assetId:
+        guideAss = db.pics.getById(assetId)
+        if guideAss and db.dyn.dto.simId != assetId:
             db.dyn.dto.simId = assetId
-            lg.info(f"[sim] =============>>>> set target assetId[{assetId}]")
+            lg.info(f"[sim] =============>>>> set target assetId[{guideAss.id}]")
+
 
     import ui
     return ui.renderBody([
@@ -240,10 +242,11 @@ def sim_syncTaberFromNow(dta_now):
         lg.warn("[sim:sync] taber is none")
         return noUpd
 
-    # Safely access nested dictionary
     try:
         taber = dta_now.get('pg', {}).get('sim', {}).get('taber')
         if not taber: return noUpd
+
+        lg.info(f"[sim:sync] sync taber from now, taber: {taber}")
 
         return taber
     except Exception as e:
@@ -280,7 +283,9 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
     tar = Taber.fromDict(dta_tar)
 
     # Store taber in page state
-    now.pg.sim.taber = tar
+
+    if not now.pg.sim.taber:
+        now.pg.sim.taber = tar
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
@@ -353,15 +358,13 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
     # Update pending tab (index 1) state based on cntRs
     if tar and len(tar.tabs) > 1:
         tab = tar.tabs[1]  # tab (pending)
-        if tab:
-            if cntRs >= 1:
-                tab.disabled = False
-                tab.title = f"pending ({cntRs})"
-            else:
-                tab.disabled = True
-                tab.title = "pending"
+        if cntRs >= 1:
+            tab.disabled = False
+            tab.title = f"pending ({cntRs})"
+        else:
+            tab.disabled = True
+            tab.title = "pending"
 
-            now.pg.sim.taber = tar
 
     return cntOk, cntRs, cntNo, disFind, disCler, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else noUpd
 
@@ -639,7 +642,7 @@ def sim_Clear(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
 
         onUpdate(90, "90%", "Updating dynamic data...")
 
-        if hasattr(db.dyn.dto, 'simId'): db.dyn.dto.simId = None
+        db.dyn.dto.simId = None
 
         now.pg.sim.clearAll()
 
@@ -781,6 +784,10 @@ def sim_DelSelected(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
 
         for a in assets:
             lg.info(f"[sim:delSelects] delete asset #[{a.autoId}] Id[ {a.id} ]")
+
+
+        #清除同個simGID的所有資料讓他重新找
+
 
         now.pg.sim.taber.setActiveIdx(1)
         now.pg.sim.clearNow()
