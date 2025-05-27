@@ -106,17 +106,17 @@ def mdlImg_IsOpen(dta_mdl, is_open):
 
     prevStyle = {"display": "none"}
     nextStyle = {"display": "none"}
-    
+
     if mdl.isMulti and len(mdl.args) > 1:
         prevStyle = {"display": "block", "opacity": "0.3" if mdl.curIdx <= 0 else "1"}
         nextStyle = {"display": "block", "opacity": "0.3" if mdl.curIdx >= len(mdl.args) - 1 else "1"}
-    
+
     badgeStyle = {"display": "block", "fontSize": "1.2em"} if mdl.isMulti else {"display": "none"}
     badgeText = ""
-    
+
     if mdl.isMulti and mdl.args and mdl.curIdx < len(mdl.args):
         badgeText = f"#{mdl.args[mdl.curIdx].get('autoId', '')}"
-    
+
     return mdl.open, htms, prevStyle, nextStyle, badgeStyle, badgeText
 
 
@@ -140,6 +140,7 @@ def mdlImg_OnImgPopClicked(clks, dta_mdl):
         lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
 
         if assId:
+            mdl.isMulti = False
             mdl.open = True
             mdl.imgUrl = f"/api/img/{assId}?q=preview"
 
@@ -166,7 +167,6 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl):
         if 'id' in inp['id'] and 'autoId' in inp['id']:
             obj = {'id': inp['id']['id'], 'autoId': inp['id']['autoId']}
             mdl.args.append(obj)
-
 
     lg.info(f"[mdlImg] mdl.args: {mdl.args}")
 
@@ -200,16 +200,16 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl):
 )
 def mdlImg_OnNavClicked(prev_clicks, next_clicks, dta_mdl):
     if not prev_clicks and not next_clicks: return noUpd, noUpd, noUpd, noUpd
-    
+
     ctx = dash.callback_context
     if not ctx.triggered: return noUpd, noUpd, noUpd, noUpd
-    
+
     mdl = models.MdlImg.fromDict(dta_mdl)
-    
+
     if not mdl.isMulti or not mdl.args: return noUpd, noUpd, noUpd, noUpd
-    
+
     trigger_id = getTriggerId()
-    
+
     if trigger_id == k.btnPrev:
         if mdl.curIdx > 0:
             mdl.curIdx = mdl.curIdx - 1
@@ -220,17 +220,17 @@ def mdlImg_OnNavClicked(prev_clicks, next_clicks, dta_mdl):
             mdl.curIdx = mdl.curIdx + 1
         else:
             return noUpd, noUpd, noUpd, noUpd
-    
+
     curAss = mdl.args[mdl.curIdx]
     mdl.imgUrl = f"/api/img/{curAss['id']}?q=preview"
-    
+
     badgeText = f"#{curAss.get('autoId', '')}"
-    
+
     prevStyle = {"display": "block", "opacity": "0.3" if mdl.curIdx <= 0 else "1"}
     nextStyle = {"display": "block", "opacity": "0.3" if mdl.curIdx >= len(mdl.args) - 1 else "1"}
-    
+
     lg.info(f"[mdlImg] nav to idx[{mdl.curIdx}] assId[{curAss['id']}] autoId[{curAss.get('autoId', '')}")
-    
+
     return mdl.toDict(), badgeText, prevStyle, nextStyle
 
 

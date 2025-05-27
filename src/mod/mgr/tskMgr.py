@@ -210,10 +210,19 @@ class TskMgr:
         info.status = TskStatus.RUNNING
         info.dts = time.time()
 
+        lastUpdate = 0
         def fnUpdater(progress: int, message: str):
             if task.hasCB:
                 info.prog = progress
                 info.msg = message
+                
+                nonlocal lastUpdate
+                now = time.time()
+                if now - lastUpdate < 1.0 and progress < 100:
+                    return
+                
+                lastUpdate = now
+                
                 if self.wsLoop:
                     msg_data = {
                         'type': 'progress',
