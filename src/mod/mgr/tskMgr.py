@@ -14,6 +14,8 @@ from util import log
 
 lg = log.get(__name__)
 
+DEBUG = False
+
 class TskStatus(Enum):
     PENDING = "pending"
     RUNNING = "running"
@@ -76,8 +78,7 @@ class TskMgr:
         self.conns.add(conn)
 
         cnt = len(self.conns)
-        if cnt != 1:
-            lg.info(f"[TskMgrWs] connected.. Total[{cnt}]")
+        lg.info(f"[TskMgrWs] connected.. Total[{cnt}] conn[{id(conn)}]")
 
         try:
             await conn.send(json.dumps({
@@ -85,16 +86,18 @@ class TskMgr:
                 'message': 'WebSocket connected to TskMgr'
             }))
 
-            async for message in conn: pass
+            async for message in conn:
+                if DEBUG: lg.info(f"[TskMgrWs] Received message from client: {message}")
+                pass
 
-        except wss.exceptions.ConnectionClosed:
-            pass
+        except wss.exceptions.ConnectionClosed as e:
+            lg.info(f"[TskMgrWs] Connection closed: {e}")
         except Exception as e:
             lg.error(f"[TskMgrWs] HandleError: {e}")
         finally:
             if conn in self.conns:
                 self.conns.remove(conn)
-                lg.info(f"[TskMgrWs] disconnected.. Total[{len(self.conns)}]")
+                lg.info(f"[TskMgrWs] disconnected.. Total[{len(self.conns)}] conn[{id(conn)}]")
 
     #------------------------------------------------
     # thread: ws
@@ -123,18 +126,49 @@ class TskMgr:
     # open fn
     #================================================
     async def broadcast(self, message: dict):
+        msgType = message.get('type')
+        tskId = message.get('tskId')
+        lg.info(f"[TskMgr:broadcast] START type[{msgType}] tskId[{tskId}] conns[{len(self.conns)}]")
+
         if self.conns:
-            msg = json.dumps(message)
+            try:
+                msg = json.dumps(message)
+                if DEBUG: lg.info(f"[TskMgr:broadcast] JSON msg: {msg[:200]}...")
+            except Exception as e:
+                lg.error(f"[TskMgr:broadcast] JSON serialization failed: {e}")
+                lg.error(f"[TskMgr:broadcast] Message type: {msgType}")
+                lg.error(f"[TskMgr:broadcast] Message content: {message}")
+
+                # Log specific field that might be problematic
+                if 'result' in message:
+                    lg.error(f"[TskMgr:broadcast] Result type: {type(message['result'])}")
+                    if isinstance(message['result'], list):
+                        for i, item in enumerate(message['result']):
+                            lg.error(f"[TskMgr:broadcast] Result[{i}] type: {type(item)}, value: {item}")
+                return
+
             disconnected = set()
-            for c in self.conns:
+            sentOk = 0
+            for idx, c in enumerate(self.conns):
                 try:
+                    if DEBUG: lg.info(f"[TskMgr:broadcast] Sending to conn[{idx+1}/{len(self.conns)}]...")
                     await c.send(msg)
+                    sentOk += 1
+
                     if message.get('type') == 'progress':
-                        lg.info(f"[TskMgr] Progress sent: {message.get('progress')}%")
+                        if DEBUG: lg.info(f"[TskMgr] Progress sent: {message.get('progress')}%")
+                    elif message.get('type') == 'complete':
+                        lg.info(f"[TskMgr] Complete sent: status[{message.get('status')}]")
+                    elif message.get('type') == 'start':
+                        lg.info(f"[TskMgr] Start sent: name[{message.get('name')}]")
+
                 except Exception as e:
-                    lg.error(f"[TskMgr] Broadcast error: {e}")
+                    lg.error(f"[TskMgr] Broadcast error for conn[{idx+1}]: {e}")
                     disconnected.add(c)
+
+            if DEBUG: lg.info(f"[TskMgr:broadcast] DONE sent[{sentOk}/{len(self.conns)}] disconnected[{len(disconnected)}]")
             self.conns -= disconnected
+
         elif message.get('type') in ['start', 'progress', 'complete']:
             lg.warning(f"[TskMgr] No clients for [{message.get('type')}] message")
 
@@ -233,7 +267,7 @@ class TskMgr:
                     'result': info.result,
                     'error': info.err
                 }
-                # lg.info(f"[TskMgr] Sending complete message: {complete_msg}")
+                if DEBUG: lg.info(f"[TskMgr] Sending complete message: {complete_msg}")
                 aio.run_coroutine_threadsafe(
                     self.broadcast(complete_msg),
                     self.wsLoop
@@ -250,7 +284,6 @@ class TskMgr:
             lg.warning(f"Task {tskId} already running")
             return False
 
-        lg.info(f"Starting task {tskId}")
         thread = threading.Thread(
             target=self._execute,
             args=(tskId,),
@@ -258,7 +291,7 @@ class TskMgr:
         )
         self.threads[tskId] = thread
         thread.start()
-        lg.info(f"Task {tskId} thread started")
+        if DEBUG: lg.info(f"Task {tskId} thread started")
         return True
 
     def cancel(self, tskId: str) -> bool:

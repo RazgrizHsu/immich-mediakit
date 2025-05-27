@@ -245,7 +245,6 @@ def sim_onPagerChanged(dta_pgr, dta_now):
 )
 def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     if not dta_ass:
-        lg.warn("[sim:sync] taber is none")
         return noUpd
 
     now = Now.fromDict(dta_now)
@@ -322,7 +321,8 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
 
     cntAssets = len(now.pg.sim.assCur) if now.pg.sim.assCur else -1
 
-    if DEBUG: lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now[{cntAssets}]")
+    lg.info(f"--------------------------------------------------------------------------------")
+    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now[{cntAssets}]")
 
     if cntAssets >= 1:
         #lg.info(f"[sim:status] assets: {now.pg.sim.assets[0]}")
@@ -704,9 +704,6 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
     thMin, thMax, isFromUrl = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99), tsk.args.get("isFromUrl", False)
 
     try:
-        # todo: 如果資料只包含自已
-        #   - 如果是無引導id, 應該自動尋找下一筆
-        #   - 如果是有引導id, 告知找不到相似圖片就停止
 
         assetId = now.pg.sim.assId
         if not assetId: raise RuntimeError(f"[tsk] sim.assId is empty")
@@ -718,37 +715,61 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
         if not asset:
             raise RuntimeError(f"[tsk] not found assetId[{assetId}]")
 
-        onUpdate(5, "5%", f"Starting search with thresholds [{thMin:.2f}-{thMax:.2f}]")
+        processedCount = 0
+        while True:
+            onUpdate(5, "5%", f"Starting, thresholds[{thMin:.2f}-{thMax:.2f}]")
 
-        # less will contains self
-        infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
+            # less will contains self
+            infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
 
-        asset.simInfos = infos
+            asset.simInfos = infos
 
-        for idx, info in enumerate(infos):
-            if info.isSelf:
-                lg.info(f"  no.{idx + 1}: ID[{info.id}] (self), score[{info.score:.6f}]")
-            else:
-                lg.info(f"  no.{idx + 1}: ID[{info.id}], score[{info.score:.6f}]")
+            for idx, inf in enumerate(infos):
+                if inf.isSelf:
+                    lg.info(f"  no.{idx + 1}: ID[{inf.id}] (self), score[{inf.score:.6f}]")
+                else:
+                    lg.info(f"  no.{idx + 1}: ID[{inf.id}], score[{inf.score:.6f}]")
 
-        db.pics.setSimIds(asset.id, infos)
+            import time
+            time.sleep(0.1)
+            db.pics.setSimIds(asset.id, infos)
 
-        simIds = [i.id for i in infos if not i.isSelf]
-        doneIds = {asset.id}
+            simIds = [i.id for i in infos if not i.isSelf]
+            doneIds = {asset.id}
 
-        pgBse = 10.0
-        pgMax = 90.0
+            pgBse = 10.0
+            pgMax = 90.0
 
-        pgAll = len(simIds)
-        if pgAll == 0:
-            db.pics.setSimIds(asset.id, infos, isOk=1)
+            pgAll = len(simIds)
+            if pgAll == 0:
+                lg.info(f"[sim] NoFound #{asset.autoId}")
+                time.sleep(0.1)
+                db.pics.setSimIds(asset.id, infos, isOk=1)
+                processedCount += 1
 
-            now.pg.sim.clearAll()
+                #如果是無引導id, 應該自動尋找下一筆
+                if not isFromUrl:
+                    nextAss = db.pics.getAnyNonSim()
+                    if nextAss:
+                        lg.info(f"[sim] Next: #{nextAss.autoId}")
+                        asset = nextAss
+                        assetId = nextAss.id
+                        now.pg.sim.assId = nextAss.id
+                        continue
+                else:
+                    lg.info( f"[sim] break bcoz from url" )
 
-            onUpdate(100, "100%", f"No similar photos found for {asset.originalFileName}")
-            msg = f"No similar photos found for {asset.originalFileName}"
-            nfy.info(msg)
-            return nfy, now, msg
+                now.pg.sim.clearAll()
+
+                onUpdate(100, "100%", f"NoFound #{asset.autoId}")
+                msg = f"No similar photos found for {asset.autoId}"
+                if processedCount > 1:
+                    msg = f"Processed {processedCount} assets without similar. Last: #{asset.autoId}"
+                nfy.info(msg)
+                return nfy, now, msg
+
+            # 找到有相似圖片的，跳出迴圈繼續處理
+            break
 
         cntDone = 0
 
@@ -772,13 +793,12 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
 
                 ass = db.pics.getById(simId)
 
-                for info in cInfos:
-                    if not info.isSelf and info.id not in doneIds:
-                        simIds.append(info.id)
+                for inf in cInfos:
+                    if not inf.isSelf and inf.id not in doneIds:
+                        simIds.append(inf.id)
                         pgAll += 1
             except Exception as ce:
-                lg.warning(f"Error processing similar image {simId}: {ce}")
-                continue
+                raise RuntimeError(f"Error processing similar image {simId}: {ce}")
 
         onUpdate(95, "95%", f"Finalizing similar photo relationships")
 
@@ -786,21 +806,29 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
         now.pg.sim.assCur = db.pics.getSimGroup(asset.id)
         now.pg.sim.assSelect = []
 
-        onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
+        lg.info( f"[sim] done, asset #{asset.autoId}" )
+
+        if not now.pg.sim.assCur:
+            raise RuntimeError( f"the get SimGroup not found by asset.id[{asset.id}]" )
+
+        onUpdate(100, "100%", f"Completed finding similar photos for #{asset.autoId}")
 
         cntInfos = len(infos)
         cntAll = len(doneIds)
-        msg = [f"Found {len(infos)} similar photos for {asset.originalFileName}"]
+        msg = [f"Found {len(infos)} similar photos for #{asset.autoId}"]
 
         if cntAll > cntInfos:
-            msg.extend([htm.Br(), f"include ({cntAll - cntInfos}) asset extra tree in similar tree."])
+            msg.extend([ f"include ({cntAll - cntInfos}) asset extra tree in similar tree."])
+
+        if processedCount > 1:
+            msg.extend([ f"Auto-processed {processedCount} assets before finding similar photos."])
 
         nfy.success(msg)
 
         return nfy, now, msg
 
     except Exception as e:
-        msg = f"Similar photo search failed: {str(e)}"
+        msg = f"[sim] Similar search failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.pg.sim.clearAll()

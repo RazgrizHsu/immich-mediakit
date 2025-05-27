@@ -43,27 +43,27 @@ def regBy(app):
                 rep.headers['Cache-Control'] = 'public, max-age=31536000'  # client 1year
                 return rep
 
-            conn = db.pics.getConn()
-            cursor = conn.cursor()
-            cursor.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", [assetId])
-            row = cursor.fetchone()
+            with db.pics.mkConn() as conn:
+                cursor = conn.cursor()
+                cursor.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", [assetId])
+                row = cursor.fetchone()
 
-            if row:
-                if photoQ == ks.db.preview: path = row[1]
-                elif photoQ == ks.db.fullsize: path = row[2]
-                else:
-                    path = row[0]
+                if row:
+                    if photoQ == ks.db.preview: path = row[1]
+                    elif photoQ == ks.db.fullsize: path = row[2]
+                    else:
+                        path = row[0]
 
-                if path:
-                    path = os.path.join(envs.immichPath, path)
-                    if os.path.exists(path):
-                        # lg.info(f"[api:img] get img cache id[{assetId}] path[{path}]")
-                        with open(cache_path, 'wb') as f:
-                            with open(path, 'rb') as src: f.write(src.read())
+                    if path:
+                        path = os.path.join(envs.immichPath, path)
+                        if os.path.exists(path):
+                            # lg.info(f"[api:img] get img cache id[{assetId}] path[{path}]")
+                            with open(cache_path, 'wb') as f:
+                                with open(path, 'rb') as src: f.write(src.read())
 
-                        rep = make_response(send_file(cache_path, mimetype='image/jpeg'))
-                        rep.headers['Cache-Control'] = 'public, max-age=31536000'
-                        return rep
+                            rep = make_response(send_file(cache_path, mimetype='image/jpeg'))
+                            rep.headers['Cache-Control'] = 'public, max-age=31536000'
+                            return rep
 
             return send_file(noimg_path, mimetype='image/png')
 
