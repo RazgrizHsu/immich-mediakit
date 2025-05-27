@@ -33,6 +33,7 @@ def createPhotoCard(ass: models.Asset):
     isFav = ass.isFavorite == 1
     assId = ass.id
     hasEx = ass.jsonExif is not None
+    simOk = ass.simOk == 1
 
     image_src = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
 
@@ -100,9 +101,9 @@ def createPhotoCard(ass: models.Asset):
                     f"Find Similar #{ass.autoId}",
                     href=f"/{ks.pg.similar}/{ass.autoId}",
                     className="btn btn-primary btn-sm w-100"
-                )
+                ) if not simOk else None
 
-            ], className="mt-2"),
+            ], className="mt-2") if not simOk else None,
 
         ], className="p-2")
     ], className="card")

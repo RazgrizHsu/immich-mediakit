@@ -18,7 +18,7 @@ IFnCall = Callable[[
 # global function map
 mapFns: dict[str, IFnCall] = {}
 
-DEBUG = True
+DEBUG = False
 
 lg = log.get(__name__)
 
@@ -164,7 +164,16 @@ def tsk_OnTskUpdate(msg, dta_tsk):
         if typ == 'progress':
             progress = data.get('progress', 0)
             message = data.get('message', '')
-            return progress, f"{progress}%", message
+            
+            if isinstance(message, list):
+                msgElems = []
+                for idx, line in enumerate(message):
+                    if idx > 0:
+                        msgElems.append(htm.Br())
+                    msgElems.append(line)
+                return progress, f"{progress}%", msgElems
+            else:
+                return progress, f"{progress}%", message
 
         elif typ == 'complete':
             ste = data.get('status')

@@ -6,6 +6,7 @@ from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
 from util import log
 from mod import mapFns, IFnProg, taber
+from mod.models import Mdl, Now, Nfy, Taber, Pager, Tsk
 from ui import pager
 
 lg = log.get(__name__)
@@ -96,7 +97,7 @@ def layout(autoId=None, **kwargs):
                                 dbc.Label("Similarity Threshold Range", className="txt-sm"),
                                 dbc.Row([
                                     dbc.Col([
-                                        dcc.RangeSlider(id=k.slideTh, min=0, max=1, step=0.01, marks=ks.defs.thMarks, value=[0.8, 0.99], className="mb-0"),
+                                        dcc.RangeSlider(id=k.slideTh, min=0, max=1, step=0.01, marks=ks.defs.thMarks, value=[0.92, 1.0], className="mb-0"),
                                     ], className="mt-2"),
                                 ])
                             ]),
@@ -109,7 +110,7 @@ def layout(autoId=None, **kwargs):
 
                 dbc.Row([
                     dbc.Col([
-                        dbc.Button(f"Find {f'#{guideAss.autoId}' if guideAss else 'Similar'}", id=k.btnFind, color="primary", className="w-100", disabled=True),
+                        dbc.Button(f"Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
                         htm.Br(),
                         htm.Small("No similar found → auto-mark resolved", className="ms-2 me-2")
                     ], width=8),
@@ -238,23 +239,39 @@ def sim_onPagerChanged(dta_pgr, dta_now):
 # assert from url
 #------------------------------------------------------------------------
 @callback(
-    out(ks.sto.now, "data", allow_duplicate=True),
+    [
+        out(ks.sto.now, "data", allow_duplicate=True),
+        out(ks.sto.tsk, "data", allow_duplicate=True),
+    ],
     inp(k.assFromUrl, "data"),
-    ste(ks.sto.now, "data"),
+    [
+        ste(ks.sto.now, "data"),
+        ste(k.slideTh, "value"),
+    ],
     prevent_initial_call=True
 )
-def sim_SyncUrlAssetToNow(dta_ass, dta_now):
+def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
     if not dta_ass:
-        return noUpd
+        return noUpd, noUpd
 
     now = Now.fromDict(dta_now)
     ass = models.Asset.fromDict(dta_ass)
 
-    lg.info(f"[sim:sync] asset from url: {ass}")
+    lg.info(f"[sim:sync] asset from url: #{ass.autoId} id[{ass.id}]")
 
     now.pg.sim.assFromUrl = ass
+    now.pg.sim.assId = ass.id
 
-    return now.toDict()
+    thMin, thMax = thVals
+
+    tsk = Tsk()
+    tsk.id = ks.pg.similar
+    tsk.cmd = ks.cmd.sim.find
+    tsk.name = f'Find similar for #{ass.autoId}'
+    tsk.msg = f'Search images similar to {ass.originalFileName} with threshold [{thMin:.2f} - {thMax:.2f}]'
+    tsk.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': True}
+
+    return now.toDict(), tsk.toDict()
 
 #------------------------------------------------------------------------
 # Sync taber state from now.pg.sim.taber
@@ -271,13 +288,14 @@ def sim_SyncTaberFromNow(dta_now):
 
     try:
         now = Now.fromDict(dta_now)
+        if not now.pg.sim.taber: return noUpd
         taber = now.pg.sim.taber
 
         lg.info(f"[sim:sync] sync taber from now, taber: {taber}")
 
         return taber.toDict()
     except Exception as e:
-        lg.error(f"[sim:sync] Error accessing taber: {e}")
+        lg.error(f"[sim:sync] Error taber from now: {e}")
         return noUpd
 
 @callback(
@@ -291,6 +309,10 @@ def sim_SyncTaberToNow(dta_tbr, dta_now):
     try:
         tbr = Taber.fromDict(dta_tbr)
         now = Now.fromDict(dta_now)
+        
+        # Check if taber actually changed
+        if now.pg.sim.taber and now.pg.sim.taber.toDict() == tbr.toDict():
+            return noUpd
 
         now.pg.sim.taber = tbr
 
@@ -329,6 +351,9 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
     tar = Taber.fromDict(dta_tar)
+    
+    trgId = getTriggerId()
+    lg.info(f"[sim:OnStatus] triggered by: {trgId}, assCur len: {len(now.pg.sim.assCur) if now.pg.sim.assCur else 0}, assId: {now.pg.sim.assId}")
 
     # Store taber in page state
     if not now.pg.sim.taber:
@@ -337,7 +362,18 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
     cntPn = db.pics.countSimPending()
-    disFind = cntNo <= 0 or (cntPn >= cntNo)
+    
+    # Disable Find button if task is running
+    from mod.mgr.tskSvc import mgr
+    isTaskRunning = False
+    if mgr:
+        for tskId, info in mgr.list().items():
+            if info.status.value in ['pending', 'running']:
+                lg.info(f"[sim:status] Running task found: {tskId}, status: {info.status.value}")
+                isTaskRunning = True
+                break
+    
+    disFind = cntNo <= 0 or (cntPn >= cntNo) or isTaskRunning
     disCler = cntOk <= 0 and cntPn <= 0
 
     cntAssets = len(now.pg.sim.assCur) if now.pg.sim.assCur else -1
@@ -391,7 +427,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}]")
+    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assId[{now.pg.sim.assId}]")
 
     # Load pending data - reload if count changed or no data
     needReload = False
@@ -425,7 +461,9 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     else:
         lg.warn(f"[sim:status] NoTaber?")
 
-    return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), now.toDict(), pagerData.toDict() if pagerData else noUpd
+    nowDict = now.toDict()
+    lg.info(f"[sim:OnStatus] returning now with assCur len: {len(now.pg.sim.assCur) if now.pg.sim.assCur else 0}")
+    return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd
 
 
 #------------------------------------------------------------------------
@@ -571,8 +609,15 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
     tsk = Tsk.fromDict(dta_tsk)
     nfy = Nfy.fromDict(dta_nfy)
 
+    # Check if any task is already running
+    from mod.mgr.tskSvc import mgr
+    if mgr:
+        for tid, info in mgr.list().items():
+            if info.status.value in ['pending', 'running']:
+                nfy.warn(f"Task already running, please wait for it to complete")
+                return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
+    
     if tsk.id:
-        from mod.mgr.tskSvc import mgr
         if mgr and mgr.getInfo(tsk.id):
             ti = mgr.getInfo(tsk.id)
             if ti.status in ['pending', 'running']:
@@ -657,7 +702,8 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
                 asset = ass
                 lg.info(f"[sim] found non-simOk assetId[{ass.id}]")
 
-        now.pg.sim.clearAll()
+        if not isFromUrl:
+            now.pg.sim.clearAll()
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
         else:
@@ -748,7 +794,10 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
 
         processedCount = 0
         while True:
-            onUpdate(5, "5%", f"Starting, thresholds[{thMin:.2f}-{thMax:.2f}]")
+            progressMsg = f"Searching for #{asset.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
+            if processedCount > 0:
+                progressMsg = f"No similar found for {processedCount} assets, now searching #{asset.autoId}"
+            onUpdate(10, "10%", progressMsg)
 
             # less will contains self
             infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
@@ -786,11 +835,10 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
                         asset = nextAss
                         assetId = nextAss.id
                         now.pg.sim.assId = nextAss.id
+                        onUpdate(5, "5%", f"No similar found for #{asset.autoId-1}, continuing to #{asset.autoId}...")
                         continue
                 else:
                     lg.info(f"[sim] break bcoz from url")
-
-                now.pg.sim.clearAll()
 
                 onUpdate(100, "100%", f"NoFound #{asset.autoId}")
                 msg = f"No similar photos found for {asset.autoId}"
