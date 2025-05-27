@@ -208,21 +208,21 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     if not dta_pgr or not dta_now: return noUpd
 
     now = models.Now.fromDict(dta_now)
-    pgr = models.Pgr.fromDict(dta_pgr)
+    pgr = models.Pager.fromDict(dta_pgr)
 
     # Check if we're already on this page with same data
-    oldPgr = now.pg.sim.pndPgr
+    oldPgr = now.pg.sim.pagerPnd
     if oldPgr and oldPgr.idx == pgr.idx and oldPgr.size == pgr.size and oldPgr.cnt == pgr.cnt:
         if DEBUG: lg.info(f"[sim:pager] Already on page {pgr.idx}, skipping reload")
         return noUpd
 
-    now.pg.sim.pndPgr = pgr
+    now.pg.sim.pagerPnd = pgr
 
     paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
-    now.pg.sim.pndAss = paged
+    now.pg.sim.assPend = paged
     if DEBUG: lg.info(f"[sim:pager] Loading page {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
 
-    gvPnd = gvs.mkPndGrid(now.pg.sim.pndAss, onEmpty=[
+    gvPnd = gvs.mkPndGrid(now.pg.sim.assPend, onEmpty=[
         dbc.Alert("No pending items on this page", color="secondary", className="text-center"),
     ])
 
@@ -291,7 +291,7 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
     disFind = cntNo <= 0 or (cntRs >= cntNo)
     disCler = cntOk <= 0 and cntRs <= 0
 
-    cntAssets = len(now.pg.sim.curAss) if now.pg.sim.curAss else -1
+    cntAssets = len(now.pg.sim.assCur) if now.pg.sim.assCur else -1
 
     if DEBUG: lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntRs[{cntRs}] now[{cntAssets}]")
 
@@ -322,12 +322,12 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
     #                     ra.groupAssets = groupAssets
     #                     relatedGroups.append(ra)
 
-    gvSim = gvs.mkGrid(now.pg.sim.curAss, now.pg.sim.assId, onEmpty=[
+    gvSim = gvs.mkGrid(now.pg.sim.assCur, now.pg.sim.assId, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
 
     # Initialize or get pager
-    pgr = now.pg.sim.pndPgr if now.pg.sim.pndPgr else models.Pgr(idx=1, size=20)
+    pgr = now.pg.sim.pagerPnd if now.pg.sim.pagerPnd else models.Pager(idx=1, size=20)
 
     # Update pager total count
     pagerData = None
@@ -338,18 +338,18 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
         totalPages = (cntRs + pgr.size - 1) // pgr.size if cntRs > 0 else 1
         if pgr.idx > totalPages:
             pgr.idx = max(1, totalPages)
-        now.pg.sim.pndPgr = pgr
+        now.pg.sim.pagerPnd = pgr
         # Only update pager store if count actually changed
         if oldCnt != cntRs:
             pagerData = pgr
 
     # Load pending data - only if we don't have data for current page
-    if cntRs > 0 and (not now.pg.sim.pndAss or len(now.pg.sim.pndAss) == 0):
+    if cntRs > 0 and (not now.pg.sim.assPend or len(now.pg.sim.assPend) == 0):
         paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
         if DEBUG: lg.info(f"[sim] Initial load pendings page[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
-        now.pg.sim.pndAss = paged
+        now.pg.sim.assPend = paged
 
-    gvPnd = gvs.mkPndGrid(now.pg.sim.pndAss, onEmpty=[
+    gvPnd = gvs.mkPndGrid(now.pg.sim.assPend, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
     ])
 
@@ -375,35 +375,70 @@ def sim_onStatus(dta_now, dta_nfy, dta_tar):
 @callback(
     out(ks.sto.now, "data"),
     [
-        inp({"type": "cbx-select", "id": ALL}, "value"),
-        inp({"type": "card-header-click", "id": ALL}, "n_clicks"),
+        inp({"type": "card-select", "id": ALL}, "n_clicks"),
     ],
     ste(ks.sto.now, "data"),
     ste(ks.sto.nfy, "data"),
     prevent_initial_call=True
 )
-def update_selected_photos(cbx_vals, hdr_clks, dta_now, dta_nfy):
+def sim_onSelectAsset(clks_crd, dta_now, dta_nfy):
+
+    hasClk = any(clks_crd)
+    if not hasClk: return noUpd
+
+    lg.info( f"[sim:select] any[{hasClk}] {clks_crd}" )
+
     now = models.Now.fromDict(dta_now)
     nfy = models.Nfy.fromDict(dta_nfy)
 
-    if ctx.triggered and now.pg.sim.curAss and len(now.pg.sim.curAss) > 1:
-        trgId = ctx.triggered_id
-        trgProp = ctx.triggered[0]['prop_id']
+    selected = []
 
-        # Handle card header click
-        if 'card-header-click' in trgProp:
-            ass = next((a for a in now.pg.sim.curAss if a.id == trgId["id"]), None)
-            if ass:
+    if ctx.triggered and now.pg.sim.assCur:
+        trgId = ctx.triggered_id
+
+        tid = trgId['id']
+        lg.info( f"[sim:select] selected[{tid}]" )
+
+        for ass in now.pg.sim.assCur:
+            if ass.id == tid:
                 ass.selected = not ass.selected
                 lg.info(f'[header-click] toggled: {ass.autoId}, selected: {ass.selected}')
-        # Handle checkbox direct click
-        elif 'cbx-select' in trgProp:
-            ass = next((a for a in now.pg.sim.curAss if a.id == trgId["id"]), None)
-            if ass:
-                ass.selected = ctx.triggered[0]['value']
-                lg.info(f'[cbx-click] found: {ass.autoId}, selected: {ass.selected}')
+
+            if ass.selected:
+                selected.append(ass)
+
+
+    lg.info(f'[sim:select] Selected: {len(selected)}/{len(now.pg.sim.assCur)}')
+    now.pg.sim.assSelect = selected
 
     return now.toDict()
+
+
+#------------------------------------------------------------------------
+# Update button state based on selections
+#------------------------------------------------------------------------
+@callback(
+    [
+        out(k.btnDelChks, "children"),
+        out(k.btnDelChks, "disabled"),
+    ],
+    inp(ks.sto.now, "data"),
+    prevent_initial_call=True
+)
+def sim_onNowChangeSelects(dta_now):
+    now = models.Now.fromDict(dta_now)
+
+    if not now.pg.sim.assCur:
+        return "delete checked (0)", True
+
+    selCnt = len(now.pg.sim.assSelect) if hasattr(now.pg.sim, 'selectAss') else 0
+
+    lg.info( f"[sim:slect] selCnt[{selCnt}]" )
+
+    btnText = f"delete checked ({selCnt})"
+    btnDisabled = selCnt == 0
+
+    return btnText, btnDisabled
 
 
 #------------------------------------------------------------------------
@@ -436,15 +471,14 @@ def sim_SwitchViewGroup(clks, dta_now, dta_tar):
     lg.info(f"[sim:view-group] switch: id[{assId}] clks[{clks}]")
 
     now.pg.sim.assId = assId
-    now.pg.sim.curAss = db.pics.getSimGroup(assId)
-
+    now.pg.sim.assCur = db.pics.getSimGroup(assId)
+    now.pg.sim.assSelect = []
 
     if tar and len(tar.tabs) > 0:
         tar.tabs[0].active = True  # current tab
-        if len(tar.tabs) > 1:
-            tar.tabs[1].active = False  # pending tab
+        if len(tar.tabs) > 1: tar.tabs[1].active = False  # pending tab
 
-    if DEBUG: lg.info(f"[sim:view-group] Loaded {len(now.pg.sim.curAss)} assets for group")
+    if DEBUG: lg.info(f"[sim:view-group] Loaded {len(now.pg.sim.assCur)} assets for group")
 
     return now.toDict(), tar.toDict()
 
@@ -526,7 +560,7 @@ def sim_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
     elif trgId == k.btnFind:
         if now.cntVec <= 0:
             nfy.error("No vector data to process")
-            now.pg.sim.reset()
+            now.pg.sim.clearAll()
             return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
 
         thMin, thMax = thRange
@@ -554,7 +588,7 @@ def sim_RunModal(clk_fnd, clk_clr, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
                 asset = ass
                 lg.info(f"[sim] found non-simOk assetId[{ass.id}]")
 
-        now.pg.sim.reset()
+        now.pg.sim.clearAll()
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
         else:
@@ -606,9 +640,7 @@ def sim_Clear(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate: IFnPr
 
         if hasattr(db.dyn.dto, 'simId'): db.dyn.dto.simId = None
 
-        now.pg.sim.pndAss = []
-        now.pg.sim.curAss = []
-        now.pg.sim.assId = None
+        now.pg.sim.clearAll()
 
         onUpdate(100, "100%", "Clear completed")
 
@@ -674,7 +706,7 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         if pgAll == 0:
             db.pics.setSimIds(asset.id, infos, isOk=1)
 
-            now.pg.sim.reset()
+            now.pg.sim.clearAll()
 
             onUpdate(100, "100%", f"No similar photos found for {asset.originalFileName}")
             msg = f"No similar photos found for {asset.originalFileName}"
@@ -714,7 +746,8 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         onUpdate(95, "95%", f"Finalizing similar photo relationships")
 
         now.pg.sim.assId = asset.id
-        now.pg.sim.curAss = db.pics.getSimGroup(asset.id)
+        now.pg.sim.assCur = db.pics.getSimGroup(asset.id)
+        now.pg.sim.assSelect = []
 
         onUpdate(100, "100%", f"Completed finding similar photos for {asset.originalFileName}")
 
@@ -733,7 +766,7 @@ def sim_FindSimilar(nfy: models.Nfy, now: models.Now, tsk: models.Tsk, onUpdate:
         msg = f"Similar photo search failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
-        now.pg.sim.reset()
+        now.pg.sim.clearAll()
         return nfy, now, msg
 
 
