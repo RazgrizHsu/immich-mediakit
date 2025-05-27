@@ -93,6 +93,12 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 .info-value { font-size: 14px; font-weight: 500; color: #E0E0E0; }
 
 /*======================== Modal ========================*/
+.modal .modal-header { padding: 8px; }
+
+.modal .modal-header span:first-child { margin: 0px auto auto 10px; color: #BBBBBB; }
+
+.modal .modal-header button { font-size: 13px; }
+
 .modal .btn-close { color: red; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M1.707 1.707a2 2 0 0 1 2.828 0L8 5.172l3.465-3.465a2 2 0 1 1 2.828 2.828L10.828 8l3.465 3.465a2 2 0 0 1-2.828 2.828L8 10.828l-3.465 3.465a2 2 0 0 1-2.828-2.828L5.172 8 1.707 4.535a2 2 0 0 1 0-2.828'/%3e%3c/svg%3e"); border: 1px solid #BBBBBB; margin-right: 10px; }
 
 .modal-content { border-radius: 12px; box-shadow: 0 0 12px 5px rgba(255, 255, 255, 0.3); background-color: #3A3A3A; border: 1px solid #5DB1FF99; }

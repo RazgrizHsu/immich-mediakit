@@ -2,132 +2,127 @@ from dsh import dash, htm, dcc, dbc, inp, out, ste, callback, noUpd, getTriggerI
 from util import log
 from conf import ks
 
+from mod import models
+
 lg = log.get(__name__)
 
 
-
 class k:
-	class img:
-		modal = "img-modal"
-		modalImg = "img-modal-content"
-		modalStore = ks.sto.mdlImg
-		btnModeChg = "btn-img-mode-chg"
+    modal = "img-modal"
+    store = ks.sto.mdlImg
+    modalContent = "img-modal-content"
+    btnModeChg = "btn-img-mode-chg"
 
-	txtHAuto = "🔄 Auto Height"
-	txtHFix = "🔄 Fixed Height"
-	clsAuto = "auto"
+    txtHAuto = "🔄 Auto Height"
+    txtHFix = "🔄 Fixed Height"
+    clsAuto = "auto"
 
 def render():
-	return [
-		dbc.Modal([
-			dbc.ModalHeader([
-				htm.Span("Image Preview", className="me-auto"),
-				dbc.Button(
-					k.txtHFix,
-					id=k.img.btnModeChg,
-					color="secondary",
-					size="sm",
-					className="me-2",
-					style={"fontSize": "0.85rem"}
-				),
-			], close_button=True),
-			dbc.ModalBody(
-				htm.Img(id=k.img.modalImg)
-			),
-		],
-			id=k.img.modal,
-			size="xl",
-			centered=True,
-			fullscreen=True,
-			className="img-pop",
-		),
+    return [
+        dbc.Modal([
+            dbc.ModalHeader([
+                htm.Span("Image Preview", className="me-auto"),
+                dbc.Button(
+                    k.txtHFix,
+                    id=k.btnModeChg,
+                    color="secondary",
+                    size="sm",
+                ),
+            ], close_button=True),
+            dbc.ModalBody(
+                htm.Div(id=k.modalContent)
+            ),
+        ],
+            id=k.modal,
+            size="xl",
+            centered=True,
+            fullscreen=True,
+            className="img-pop",
+        ),
 
-		# Store for clicked image ID
-		dcc.Store(id=k.img.modalStore, data=None)
-	]
+        # Store for clicked image ID
+        dcc.Store(id=k.store, data=None)
+    ]
 
 #------------------------------------------------------------------------
 # Image Preview Modal Callback
 #------------------------------------------------------------------------
 @callback(
-	out(k.img.modal, "is_open"),
-	[
-		inp(k.img.modalStore, "data"),
-	],
-	ste(k.img.modal, "is_open"),
-	prevent_initial_call=True
+    [
+        out(k.modal, "is_open"),
+        out(k.modalContent, "children"),
+    ],
+    inp(k.store, "data"),
+    ste(k.modal, "is_open"),
+    prevent_initial_call=True
 )
-def toggle_modal_visibility(store_data, is_open):
-	ctx = dash.callback_context
-	if not ctx.triggered: return noUpd
+def mdlImg_IsOpen(dta_mdl, is_open):
+    ctx = dash.callback_context
+    if not ctx.triggered: return noUpd, noUpd
 
-	trigger_id = getTriggerId()
+    trigger_id = getTriggerId()
 
-	if trigger_id == k.img.modalStore:
-		if store_data:
-			return True
-		else:
-			return False
+    lg.info(f"[mdlImg] dta_mdl: {dta_mdl}")
 
-	return noUpd
+    if trigger_id != k.store: return noUpd, noUpd
+
+    mdl = models.MdlImg.fromDict(dta_mdl)
+
+    htms = []
+
+    if mdl.imgUrl:
+        htms.append(htm.Img(src=mdl.imgUrl))
+
+    return mdl.open, htms
 
 
 @callback(
-	out(k.img.modalStore, "data"),
-	inp({"type": "img-pop", "index": dash.ALL}, "n_clicks"),
-	prevent_initial_call=True
+    out(k.store, "data"),
+    inp({"type": "img-pop", "index": dash.ALL}, "n_clicks"),
+    ste(k.store, "data"),
+    prevent_initial_call=True
 )
-def store_clicked_image(all_clicks):
-	if not all_clicks or not any(clicks > 0 for clicks in all_clicks): return noUpd
+def mdlImg_OnImgPopClicked(clks, dta_mdl):
+    if not clks or not any(clks): return noUpd
 
-	ctx = dash.callback_context
-	if not ctx.triggered: return noUpd
+    ctx = dash.callback_context
+    if not ctx.triggered: return noUpd
 
-	trigger_idx = ctx.triggered_id
-	if isinstance(trigger_idx, dict) and "index" in trigger_idx:
-		asset_id = trigger_idx["index"]
-		lg.info(f"Image clicked, asset_id[{asset_id}] clicked[{all_clicks}]")
+    mdl = models.MdlImg.fromDict(dta_mdl)
 
-		if asset_id and str(asset_id).startswith("noimg"):
-			return "assets/noimg.png"
-		else:
-			return f"/api/img/{asset_id}?q=preview"
+    trigIdx = ctx.triggered_id
+    if isinstance(trigIdx, dict) and "index" in trigIdx:
+        assId = trigIdx["index"]
+        lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
 
-	return noUpd
+        if assId:
+            mdl.open = True
+            mdl.imgUrl = f"/api/img/{assId}?q=preview"
 
-@callback(
-	out(k.img.modalImg, "src"),
-	inp(k.img.modalStore, "data"),
-	prevent_initial_call=True
-)
-def update_modal_content(img_src):
-	if img_src:
-		lg.info(f"Setting modal src to: {img_src}")
-		return img_src
-	return noUpd
+    return mdl.toDict()
 
 
 @callback(
-	[
-		out(k.img.modal, "className"),
-		out(k.img.btnModeChg, "children")
-	],
-	[inp(k.img.btnModeChg, "n_clicks")],
-	[ste(k.img.modal, "className")],
-	prevent_initial_call=True
+    [
+        out(k.modal, "className"),
+        out(k.btnModeChg, "children")
+    ],
+    inp(k.btnModeChg, "n_clicks"),
+    ste(k.modal, "className"),
+    prevent_initial_call=True
 )
-def toggle_img_class_and_update_text(n_clicks, classes):
-	if not n_clicks: return [noUpd, noUpd]
+def mdlImg_toggleMode(n_clicks, classes):
+    if not n_clicks: return [noUpd, noUpd]
 
-	if not classes: classes = ""
+    if not classes: classes = ""
 
-	hasClass = k.clsAuto in classes.split()
+    hasClass = k.clsAuto in classes.split()
 
-	if hasClass:
-		new_classes = " ".join([c for c in classes.split() if c != k.clsAuto])
-		button_text = k.txtHFix
-	else:
-		new_classes = classes + f" {k.clsAuto}" if classes else k.clsAuto
-		button_text = k.txtHAuto
+    if hasClass:
+        css = " ".join([c for c in classes.split() if c != k.clsAuto])
+        txt = k.txtHFix
+    else:
+        css = classes + f" {k.clsAuto}" if classes else k.clsAuto
+        txt = k.txtHAuto
 
-	return [new_classes, button_text]
+    return [css, txt]

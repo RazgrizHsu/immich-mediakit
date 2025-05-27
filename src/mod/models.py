@@ -61,10 +61,13 @@ class Mdl(Cmd):
     msg: Optional[str|List[Any]] = None
     ok: bool = False
 
+    assets: List['Asset'] = field(default_factory=list)
+
     def reset(self):
         self.id = self.msg = self.cmd = None
         self.ok = False
         self.args = {}
+        self.assets = []
 
     def mkTsk(self):
         tsk = Tsk()
@@ -90,6 +93,10 @@ class Mdl(Cmd):
         else:
             return None
 
+@dataclass
+class MdlImg(BaseDictModel):
+    open: bool = False
+    imgUrl: Optional[str] = None
 
 
 @dataclass
@@ -119,6 +126,11 @@ class Taber(BaseDictModel):
     def setActive(self, tabId: str):
         for tab in self.tabs:
             tab.active = (tab.id == tabId)
+
+    def setActiveIdx(self, idx: int):
+        for i, tab in enumerate(self.tabs):
+            tab.active = i == idx;
+            if tab.active: lg.info( f"[Taber] set active: {tab.title}" )
 
 
     def cssTabs(self):
@@ -258,12 +270,14 @@ class PageSim(BaseDictModel):
     assSelect: List[Asset] = field(default_factory=list)
     assPend: List[Asset] = field(default_factory=list)
 
-
-    def clearAll(self):
+    def clearNow(self):
         self.assId = None
         self.assCur = []
-        self.assPend = []
         self.assSelect = []
+
+    def clearAll(self):
+        self.clearNow()
+        self.assPend = []
 
 @dataclass
 class Pages(BaseDictModel):

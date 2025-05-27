@@ -267,33 +267,35 @@ def restoreBy(assetIds: List[str]):
         if cnn: cnn.close()
 
 
-from dataclasses import dataclass
-
 def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
     usrId = usr.id
-
-    @dataclass
-    class StageInfo:
-        name: str
-        base: int
-        range: int
 
     # ------------------------------------------------------
     # report fn
     # ------------------------------------------------------
-    def upd(sid, cnow, call, msg, force=False):
+    def report(sid, cnow, call, msg, force=False):
         if not onUpdate: return
 
-        stg = stages.get(sid)
-        if not stg: return
+        pctRanges = {
+            "init": (0, 5),
+            "fetch": (5, 35),
+            "files": (40, 40),
+            "exif": (80, 10),
+            "combine": (90, 10),
+            "complete": (100, 0)
+        }
+
+        if sid not in pctRanges: return
+
+        base, rng = pctRanges[sid]
 
         if call <= 0:
-            pct = stg.base
+            pct = base
             onUpdate(pct, f"{pct}%", msg)
             return pct
 
         fraction = min(1.0, cnow / call)
-        pct = stg.base + int(fraction * stg.range)
+        pct = base + int(fraction * rng)
 
         if force or cnow == call or cnow % 100 == 0: onUpdate(pct, f"{pct}%", msg)
 
@@ -303,16 +305,7 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
     try:
         chk()
 
-        stages = {
-            "init": StageInfo("init", 0, 5),
-            "fetch": StageInfo("fetch db", 5, 35),
-            "files": StageInfo("fetch assetFiels", 40, 40),
-            "exif": StageInfo("fetch exif", 80, 10),
-            "combine": StageInfo("combine", 90, 10),
-            "complete": StageInfo("complete", 100, 0)
-        }
-
-        upd("init", 0, 1, "Start query...", True)
+        report("init", 0, 1, "Start query...", True)
 
         conn = mkConn()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -330,7 +323,7 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
 
         lg.info(f"Found {cntAll} {asType.lower()} assets...")
 
-        upd("init", 1, 1, f"found {cntAll} ({asType.lower()}) assets...", True)
+        report("init", 1, 1, f"found {cntAll} ({asType.lower()}) assets...", True)
 
         # ----------------------------------------------------------------
         # query assets
@@ -347,7 +340,7 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
 
         cursor.execute(sql, params)
 
-        upd("fetch", 0, cntAll, "start reading...", True)
+        report("fetch", 0, cntAll, "start reading...", True)
 
         szBatch = 100
         szChunk = 100
@@ -377,21 +370,21 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
                 else:
                     tmSuffix = "calcuating..."
 
-                upd("fetch", cntFetched, cntAll, f"processed {cntFetched}/{cntAll} ... {tmSuffix}")
+                report("fetch", cntFetched, cntAll, f"processed {cntFetched}/{cntAll} ... {tmSuffix}")
 
         cursor.close()
 
-        upd("fetch", cntAll, cntAll, "main assets done... query for files..", True)
+        report("fetch", cntAll, cntAll, "main assets done... query for files..", True)
 
         # ----------------------------------------------------------------
         # query asset files
         # ----------------------------------------------------------------
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         flsSql = """
-			   Select "assetId", type, path
-			   From asset_files
-			   Where "assetId" In %s
-                   """
+           Select "assetId", type, path
+           From asset_files
+           Where "assetId" In %s
+        """
 
         assetIds = [a['id'] for a in assets]
         afs = []
@@ -403,9 +396,9 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
             afs.extend(chunkResults)
 
             chunkPct = min((idx + 1) * szChunk, len(assetIds))
-            upd("files", chunkPct, len(assetIds), f"query files.. {chunkPct}/{len(assetIds)}...")
+            report("files", chunkPct, len(assetIds), f"query files.. {chunkPct}/{len(assetIds)}...")
 
-        upd("files", len(assetIds), len(assetIds), "files ready, combine data...", True)
+        report("files", len(assetIds), len(assetIds), "files ready, combine data...", True)
 
         dictFiles = {}
         for af in afs:
@@ -418,11 +411,11 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         # ----------------------------------------------------------------
         # query exif
         # ----------------------------------------------------------------
-        upd("exif", 0, len(assetIds), "files ready, query exif data...", True)
+        report("exif", 0, len(assetIds), "files ready, query exif data...", True)
         exifSql = """
-        Select *
-        From exif
-        Where "assetId" In %s
+            Select *
+            From exif
+            Where "assetId" In %s
         """
 
         exifData = {}
@@ -451,14 +444,14 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
                     exifData[assetId] = exifItem
 
             chunkPct = min((idx + 1) * szChunk, len(assetIds))
-            upd("exif", chunkPct, len(assetIds), f"query exif.. {chunkPct}/{len(assetIds)}...")
+            report("exif", chunkPct, len(assetIds), f"query exif.. {chunkPct}/{len(assetIds)}...")
 
         # ----------------------------------------------------------------
         # combine & fetch thumbnail image
         # ----------------------------------------------------------------
-        upd("exif", len(assetIds), len(assetIds), "exif ready, combine data...", True)
+        report("exif", len(assetIds), len(assetIds), "exif ready, combine data...", True)
 
-        processedCount = 0
+        cntOk = 0
         cntErr = 0
 
         rstAssets = []
@@ -485,17 +478,17 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
                 continue
 
 
-            processedCount += 1
+            cntOk += 1
             rstAssets.append(asset)
 
-            if len(assets) > 0 and (processedCount % 100 == 0 or processedCount == len(assets)):
-                upd("combine", processedCount, len(assets), f"processing {processedCount}/{len(assets)}...")
+            if len(assets) > 0 and (cntOk % 100 == 0 or cntOk == len(assets)):
+                report("combine", cntOk, len(assets), f"processing {cntOk}/{len(assets)}...")
 
         cursor.close()
 
         lg.info(f"Successfully fetched {len(rstAssets)} {asType.lower()} assets")
 
-        upd("complete", 1, 1, f"Complete fetched Assets[{len(rstAssets)}] error[{cntErr}]", True)
+        report("complete", 1, 1, f"Complete fetched Assets[{len(rstAssets)}] error[{cntErr}]", True)
 
         return rstAssets
     except Exception as e:

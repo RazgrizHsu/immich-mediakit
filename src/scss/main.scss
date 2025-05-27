@@ -395,6 +395,19 @@ body {
 /*======================== Modal ========================*/
 .modal {
 
+	.modal-header {
+		padding:8px;
+
+		span:first-child {
+			margin: 0px auto auto 10px;
+			color: #BBBBBB;
+		}
+
+		button {
+			font-size: 13px;
+		}
+	}
+
 	$rad:12px;
 
 	.btn-close {
