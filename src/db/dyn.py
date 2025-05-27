@@ -20,9 +20,6 @@ class DtoSets:
     useType = AutoDbField('useType')
     photoQ = AutoDbField('photoQ')
 
-    # similar use AssetId
-    simId = AutoDbField('simId')
-
     @classmethod
     def get(cls, key, default=None):
         value = get(key, default)

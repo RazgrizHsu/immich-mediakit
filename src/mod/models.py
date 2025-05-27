@@ -270,8 +270,10 @@ class PageSim(BaseDictModel):
     assSelect: List[Asset] = field(default_factory=list)
     assPend: List[Asset] = field(default_factory=list)
 
+    assFromUrl: Optional[Asset] = None
+
     def clearNow(self):
-        self.assId = None
+        self.assId = self.assFromUrl = None
         self.assCur = []
         self.assSelect = []
 
