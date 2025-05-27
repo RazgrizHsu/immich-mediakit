@@ -18,7 +18,7 @@ IFnCall = Callable[[
 # global function map
 mapFns: dict[str, IFnCall] = {}
 
-DEBUG_WS = False
+DEBUG = True
 
 lg = log.get(__name__)
 
@@ -48,7 +48,7 @@ def render():
         dbc.Row([
             dbc.Col(htm.Div(id=k.rst), width=6),
             dbc.Col([
-                dbc.Button("Test Ws", id="task-test-ws-btn", className="btn-success", size="sm", style=style_show if DEBUG_WS else style_none),
+                dbc.Button("Test Ws", id="task-test-ws-btn", className="btn-success", size="sm", style=style_show if DEBUG else style_none),
                 dbc.Button("close to continue", id=k.btn, className="btn-info", size="sm", disabled=True),
             ], className="text-end"),
         ]),
@@ -78,7 +78,7 @@ def tsk_PanelStatus(dta_tsk):
     style = style_show if hasTsk else style_none
 
     if tsk.id or tsk.name:
-        lg.info(f"[TaskWS] Update display: {hasTsk} id[{tsk.id}] name[{tsk.name}]")
+        lg.info(f"[TaskWS] PanelStatus: has[{hasTsk}] id[{tsk.id}] name[{tsk.name}]")
 
     return style, tsk.name
 
@@ -146,11 +146,14 @@ def tsk_OnWsConnected(msg):
     prevent_initial_call=True
 )
 def tsk_OnTskUpdate(msg, dta_tsk):
-    if DEBUG_WS: lg.info(f"[TaskWS] WebSocket message received in ws_update_progress: {msg}")
+    if DEBUG: lg.info(f"[TaskWS] WebSocket message received in ws_update_progress: {msg}")
     if not msg: return noUpd, noUpd, noUpd
 
     try:
-        data = json.loads(msg.get('data') if isinstance(msg, dict) else msg)
+        rawData = msg.get('data') if isinstance(msg, dict) else msg
+        if DEBUG: lg.info(f"[TaskWS:OnTskUpdate] Raw data: {rawData[:200]}...")
+        data = json.loads(rawData)
+        if DEBUG: lg.info(f"[TaskWS:OnTskUpdate] Parsed data type[{data.get('type')}] tskId[{data.get('tskId')}]")
         tsk = models.Tsk.fromDict(dta_tsk)
 
         # 暫時不檢查 tskId，因為目前只支援單一任務
@@ -165,7 +168,7 @@ def tsk_OnTskUpdate(msg, dta_tsk):
 
         elif typ == 'complete':
             ste = data.get('status')
-            lg.info(f"[TaskWS] Task completed with status: {ste}")
+            if DEBUG: lg.info(f"[TaskWS] Task completed with status: {ste}")
             if ste == 'completed':
                 return 100, "100%", data.get('result', 'Task completed')
             elif ste == 'failed':
@@ -174,7 +177,7 @@ def tsk_OnTskUpdate(msg, dta_tsk):
                 return data.get('progress', 0), "Cancelled", "Task cancelled"
 
         elif typ == 'start':
-            lg.info(f"[TaskWS] Task starting: {data.get('name', 'task')}")
+            if DEBUG: lg.info(f"[TaskWS] Task starting: {data.get('name', 'task')}")
             return 0, "0%", f"Starting {data.get('name', 'task')}..."
 
     except Exception as e:
@@ -202,7 +205,7 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now):
     if not tsk.id or not tsk.cmd: return noUpd, noUpd, noUpd
 
     from .mgr import tskSvc
-    lg.info(f"[TaskWS] Start.. id[{tsk.id}] name[{tsk.name}] cmd[{tsk.cmd}]")
+    if DEBUG: lg.info(f"[TaskWS] Start.. id[{tsk.id}] name[{tsk.name}] cmd[{tsk.cmd}]")
 
     fn = mapFns.get(tsk.cmd)
 
@@ -217,7 +220,7 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now):
         ok = tskSvc.runBy(tskId)
 
         if ok:
-            lg.info(f"[TaskWS] Task started successfully: {tskId}")
+            if DEBUG: lg.info(f"[TaskWS] Task started successfully: {tskId}")
             return tsk.toDict(), nfy.toDict(), now.toDict()
         else:
             msg = "Failed to start task"
@@ -246,7 +249,11 @@ def tsk_OnComplete(msg, dta_tsk):
     if not msg: return noUpd, noUpd, noUpd
 
     try:
-        data = json.loads(msg.get('data') if isinstance(msg, dict) else msg)
+        if DEBUG: lg.info(f"[TaskWS:Complete] Called with msg: {msg}")
+        rawData = msg.get('data') if isinstance(msg, dict) else msg
+        if DEBUG: lg.info(f"[TaskWS:Complete] Raw data: {rawData[:200]}...")
+        data = json.loads(rawData)
+        lg.info(f"[TaskWS:Complete] Type[{data.get('type')}] tskId[{data.get('tskId')}]")
         tsk = models.Tsk.fromDict(dta_tsk)
 
         if data.get('type') == 'complete':
@@ -254,13 +261,13 @@ def tsk_OnComplete(msg, dta_tsk):
             nfy, now, result = getResultBy(data.get('tskId'))
 
             if nfy and now:
-                lg.info(f"[TaskWS] Task completed, updating stores with results")
+                lg.info(f"[TaskWS:Complete] Task completed, updating stores with results")
                 # 清除任務 ID 以允許執行新任務，但保留名稱供顯示
                 tsk.id = None
                 tsk.cmd = None
                 return nfy.toDict(), now.toDict(), tsk.toDict()
     except Exception as e:
-        lg.error(f"[TaskWS] Error in handle_task_complete: {e}")
+        lg.error(f"[TaskWS] Error in tsk_OnComplete: {e}")
 
     return noUpd, noUpd, noUpd
 
@@ -271,20 +278,23 @@ def tsk_OnComplete(msg, dta_tsk):
     ste(ks.sto.tsk, "data"),
     prevent_initial_call=True
 )
-def enable_close_on_complete(msg, dta_tsk):
-    if DEBUG_WS: lg.info(f"[TaskWS] WebSocket message received in enable_close_on_complete: {msg}")
+def tsk_OnStatusEnableBtnClose(msg, dta_tsk):
+    if DEBUG: lg.info(f"[TaskWS] WebSocket message received in OnStatusEnableBtnClose: {msg}")
 
     if not msg: return noUpd
 
     try:
-        data = json.loads(msg.get('data') if isinstance(msg, dict) else msg)
+        rawData = msg.get('data') if isinstance(msg, dict) else msg
+        if DEBUG: lg.info(f"[TaskWS:OnStatusEnableBtnClose] Raw data: {rawData[:200]}...")
+        data = json.loads(rawData)
+        if DEBUG: lg.info(f"[TaskWS:OnStatusEnableBtnClose] Type[{data.get('type')}] checking for complete...")
         tsk = models.Tsk.fromDict(dta_tsk)
 
         if data.get('type') == 'complete':
-            if DEBUG_WS: lg.info(f"[TaskWS] Enabling close button for completed task")
+            if DEBUG: lg.info(f"[TaskWS] Enabling close button for completed task")
             return False
     except Exception as e:
-        lg.error(f"[TaskWS] Error in enable_close_on_complete: {e}")
+        lg.error(f"[TaskWS] Error in OnStatusEnableBtnClose: {e}")
 
     return noUpd
 
@@ -305,14 +315,14 @@ def enable_close_on_complete(msg, dta_tsk):
     prevent_initial_call=True
 )
 def tsk_Test(n_clicks, dta_tsk):
-    lg.info(f"[Test-WS] Button clicked: {n_clicks}")
+    if DEBUG: lg.info(f"[Test-WS] Button clicked: {n_clicks}")
 
     from .mgr.tskSvc import mgr
     if not n_clicks:
         return noUpd
 
     tsk = models.Tsk.fromDict(dta_tsk)
-    lg.info(f"[Test-WS] Current task: id={tsk.id}, name={tsk.name}")
+    if DEBUG: lg.info(f"[Test-WS] Current task: id={tsk.id}, name={tsk.name}")
 
     if not tsk.id:
         lg.info("[Test-WS] Creating test task for WebSocket test")

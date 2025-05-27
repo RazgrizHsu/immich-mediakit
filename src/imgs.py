@@ -150,53 +150,79 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: IFnProg = None) -> m
     inPct = 15
 
     try:
-        conn = db.pics.getConn()
-        cur = conn.cursor()
+        with db.pics.mkConn() as conn:
+            cur = conn.cursor()
 
-        if onUpdate:
-            onUpdate(inPct, f"{inPct}%", f"Preparing to process {pi.total} photos, quality: {photoQ}")
+            if onUpdate:
+                onUpdate(inPct, f"{inPct}%", f"Preparing to process {pi.total} photos, quality: {photoQ}")
 
-        for idx, asset in enumerate(assets):
-            assetId = asset.id
+            for idx, asset in enumerate(assets):
+                assetId = asset.id
 
-            img = getImg(asset.getImagePath(photoQ))
+                img = getImg(asset.getImagePath(photoQ))
 
-            if not img:
-                lg.error(f"Unable to get photo: assetId[{assetId}], photoQ[{photoQ}]")
-                pi.error += 1
-                continue
+                if not img:
+                    lg.error(f"Unable to get photo: assetId[{assetId}], photoQ[{photoQ}]")
+                    pi.error += 1
+                    continue
 
-            try:
-                result = saveVectorBy(assetId, img)
+                try:
+                    result = saveVectorBy(assetId, img)
 
-                if result is True:
-                    pi.done += 1
+                    if result is True:
+                        pi.done += 1
 
-                    db.pics.updVecBy(asset, cur=cur)
-                elif result is False or result is None:
-                    pi.skip += 1
-            except Exception as e:
-                lg.error(f"Processing failed: {assetId} - {str(e)}")
-                pi.error += 1
+                        db.pics.updVecBy(asset, cur=cur)
+                    elif result is False or result is None:
+                        pi.skip += 1
+                except Exception as e:
+                    lg.error(f"Processing failed: {assetId} - {str(e)}")
+                    pi.error += 1
 
-            if idx > 0:
+                # Calculate remaining time with moving average
+                processedCnt = idx + 1
                 tElapsed = time.time() - tS
-                tPerItem = tElapsed / (idx + 1)
-                remainCnt = pi.total - (idx + 1)
-                remainTime = tPerItem * remainCnt
-                remainMins = int(remainTime / 60)
-            else:
-                remainMins = "Calculating"
 
-            if onUpdate and (idx % 10 == 0 or idx == pi.total - 1):
-                percent = inPct + int((idx + 1) / pi.total * (100 - inPct))
-                onUpdate(percent, f"{percent}%", f"Processing photo {idx + 1}/{pi.total} - (Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}). Estimated remaining time: {remainMins} minutes")
+                if processedCnt >= 5:  # Wait for at least 5 items to get better average
+                    avgTimePerItem = tElapsed / processedCnt
+                    remainCnt = pi.total - processedCnt
+                    remainTimeSec = avgTimePerItem * remainCnt
 
-        conn.commit()
-        if onUpdate:
-            onUpdate(100, "100%", f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
+                    # Add 10% buffer for more realistic estimate
+                    remainTimeSec = remainTimeSec * 1.1
 
-        return pi
+                    # Format time display
+                    if remainTimeSec < 60:
+                        remainStr = f"{int(remainTimeSec)} seconds"
+                    elif remainTimeSec < 3600:
+                        mins = remainTimeSec / 60
+                        if mins < 1:
+                            remainStr = "< 1 minute"
+                        else:
+                            remainStr = f"{mins:.1f} minutes"
+                    else:
+                        hours = int(remainTimeSec / 3600)
+                        mins = int((remainTimeSec % 3600) / 60)
+                        remainStr = f"{hours}h {mins}m"
+                else:
+                    remainStr = "Calculating..."
+
+                # Update more frequently for better user experience
+                if onUpdate and (idx % 5 == 0 or idx == pi.total - 1 or idx < 10):
+                    percent = inPct + int(processedCnt / pi.total * (100 - inPct))
+                    # Also show items/sec for transparency
+                    if tElapsed > 0:
+                        itemsPerSec = processedCnt / tElapsed
+                        speedStr = f" ({itemsPerSec:.1f} items/sec)"
+                    else:
+                        speedStr = ""
+                    onUpdate(percent, f"{percent}%", f"Processing photo {processedCnt}/{pi.total} - (Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}). Estimated remaining: {remainStr}{speedStr}")
+
+            conn.commit()
+            if onUpdate:
+                onUpdate(100, "100%", f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
+
+            return pi
 
     except Exception as e:
         raise mkErr("Failed to generate vectors for assets", e)

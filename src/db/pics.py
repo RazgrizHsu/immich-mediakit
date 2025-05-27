@@ -2,6 +2,7 @@ import json
 import sqlite3
 from sqlite3 import Cursor
 from typing import Optional, List
+from contextlib import contextmanager
 
 from conf import envs
 from util import log
@@ -10,38 +11,35 @@ from mod.bse.baseModel import BaseDictModel
 from util.err import mkErr, tracebk
 
 lg = log.get(__name__)
-conn: Optional[sqlite3.dbapi2.Connection] = None
 
-def getConn():
-    global conn
-    pathDb = envs.mkitData + 'pics.db'
-    if conn is None:
-        conn = sqlite3.connect(pathDb, check_same_thread=False)
-        lg.info(f"[pics] connected db: {pathDb}")
-    return conn
-
+@contextmanager
+def mkConn():
+    """Context manager for database connections"""
+    conn = None
+    try:
+        pathDb = envs.mkitData + 'pics.db'
+        conn = sqlite3.connect(pathDb, check_same_thread=False, timeout=30.0)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        yield conn
+    finally:
+        if conn:
+            conn.close()
 
 def close():
-    global conn
-    try:
-        if conn is not None: conn.close()
-        conn = None
-        return True
-    except Exception as e:
-        raise mkErr("Failed to close database connection", e)
+    # Deprecated - connections are now managed by context manager
+    return True
 
 
 def init():
-    global conn
     try:
-        if conn is not None:
-            conn.close()
-            conn = None
+        with mkConn() as conn:
+            c = conn.cursor()
 
-        conn = getConn()
-        c = conn.cursor()
-
-        c.execute('''
+            c.execute('''
                 Create Table If Not Exists assets (
                     autoId           INTEGER Primary Key AUTOINCREMENT,
                     id               TEXT Unique,
@@ -67,7 +65,7 @@ def init():
                 )
                 ''')
 
-        c.execute('''
+            c.execute('''
                 Create Table If Not Exists users (
                     id     TEXT Primary Key,
                     name   TEXT,
@@ -76,26 +74,18 @@ def init():
                 )
                 ''')
 
-        try:
-            c.execute("ALTER TABLE assets ADD COLUMN simGID INTEGER")
-        except sqlite3.OperationalError:
-            pass
-
-        conn.commit()
-        return True
+            conn.commit()
+            return True
     except Exception as e:
         raise mkErr("Failed to initialize duplicate photo database", e)
 
 def clear():
     try:
-        if conn is not None:
+        with mkConn() as conn:
             c = conn.cursor()
-
             c.execute("Drop Table If Exists assets")
             c.execute("Drop Table If Exists users")
-
             conn.commit()
-
         return init()
     except Exception as e:
         raise mkErr("Failed to clear database", e)
@@ -106,20 +96,16 @@ def hasData(): return count() > 0
 
 def count(usrId=None):
     try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-
-        sql = "Select Count(*) From assets"
-
-        if usrId:
-            sql += " Where ownerId = ?"
-            c.execute(sql, (usrId,))
-        else:
-            c.execute(sql)
-
-        cnt = c.fetchone()[0]
-        return cnt
+        with mkConn() as conn:
+            c = conn.cursor()
+            sql = "Select Count(*) From assets"
+            if usrId:
+                sql += " Where ownerId = ?"
+                c.execute(sql, (usrId,))
+            else:
+                c.execute(sql)
+            cnt = c.fetchone()[0]
+            return cnt
     except Exception as e:
         raise mkErr("Failed to get asset count", e)
 
@@ -128,69 +114,56 @@ def count(usrId=None):
 #========================================================================
 def getByAutoId(autoId) -> Optional[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-        c.execute("Select * From assets Where autoId= ?", (autoId,))
-
-        row = c.fetchone()
-        if row is None: return None
-
-        asset = models.Asset.fromDB(c, row)
-        return asset
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("Select * From assets Where autoId= ?", (autoId,))
+            row = c.fetchone()
+            if row is None: return None
+            asset = models.Asset.fromDB(c, row)
+            return asset
     except Exception as e:
         raise mkErr("Failed to get asset information", e)
 def getById(assId) -> Optional[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-        c.execute("Select * From assets Where id = ?", (assId,))
-
-        row = c.fetchone()
-        if row is None: return None
-
-        asset = models.Asset.fromDB(c, row)
-        return asset
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("Select * From assets Where id = ?", (assId,))
+            row = c.fetchone()
+            if row is None: return None
+            asset = models.Asset.fromDB(c, row)
+            return asset
     except Exception as e:
         raise mkErr("Failed to get asset information", e)
 
 def getAllByIds(ids: List[str]) -> List[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
         if not ids: return []
-
-        c = conn.cursor()
-        placeholders = ','.join(['?' for _ in ids])
-        c.execute(f"Select * From assets Where id IN ({placeholders})", ids)
-
-        rows = c.fetchall()
-        if not rows: return []
-
-        assets = [models.Asset.fromDB(c, row) for row in rows]
-        return assets
+        with mkConn() as conn:
+            c = conn.cursor()
+            placeholders = ','.join(['?' for _ in ids])
+            c.execute(f"Select * From assets Where id IN ({placeholders})", ids)
+            rows = c.fetchall()
+            if not rows: return []
+            assets = [models.Asset.fromDB(c, row) for row in rows]
+            return assets
     except Exception as e:
         raise mkErr(f"Failed to get asset by ids[{ids}]", e)
 
 
 def getAll(count=0) -> list[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-
-        if not count:
-            sql = "Select * From assets"
-            c.execute(sql)
-        else:
-            sql = "Select * From assets LIMIT ?"
-            c.execute(sql, (count,))
-
-        rows = c.fetchall()
-        if not rows: return []
-
-        assets = [models.Asset.fromDB(c, row) for row in rows]
-        return assets
+        with mkConn() as conn:
+            c = conn.cursor()
+            if not count:
+                sql = "Select * From assets"
+                c.execute(sql)
+            else:
+                sql = "Select * From assets LIMIT ?"
+                c.execute(sql, (count,))
+            rows = c.fetchall()
+            if not rows: return []
+            assets = [models.Asset.fromDB(c, row) for row in rows]
+            return assets
     except Exception as e:
         raise mkErr("Failed to get all asset information", e)
 
@@ -230,16 +203,14 @@ def getFiltered(
         query += f" ORDER BY {sort} {'DESC' if sortOrd == 'desc' else 'ASC'}"
         query += f" LIMIT {pageSize} OFFSET {(page - 1) * pageSize}"
 
-        conn = getConn()
-        cursor = conn.cursor()
-        cursor.execute(query, pms)
-
-        assets = []
-        for row in cursor.fetchall():
-            asset = models.Asset.fromDB(cursor, row)
-            assets.append(asset)
-
-        return assets
+        with mkConn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, pms)
+            assets = []
+            for row in cursor.fetchall():
+                asset = models.Asset.fromDB(cursor, row)
+                assets.append(asset)
+            return assets
     except Exception as e:
         lg.error(f"Error fetching assets: {str(e)}")
         return []
@@ -269,11 +240,10 @@ def countFiltered(usrId="", opts="all", search="", favOnly=False):
         query = "Select Count(*) From assets"
         if cds: query += " WHERE " + " AND ".join(cds)
 
-        conn = getConn()
-        cursor = conn.cursor()
-        cursor.execute(query, pms)
-
-        return cursor.fetchone()[0]
+        with mkConn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, pms)
+            return cursor.fetchone()[0]
     except Exception as e:
         lg.error(f"Error counting assets: {str(e)}")
         return 0
@@ -285,101 +255,100 @@ def countFiltered(usrId="", opts="all", search="", favOnly=False):
 
 def updVecBy(asset: models.Asset, done=1, cur: Cursor = None):
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = cur if cur else conn.cursor()
-
-        c.execute("UPDATE assets SET isVectored=? WHERE id = ?", (done, asset.id))
-
-        if not cur: conn.commit()
-
+        if cur:
+            # Use provided cursor (for transactions)
+            cur.execute("UPDATE assets SET isVectored=? WHERE id = ?", (done, asset.id))
+        else:
+            # Use context manager for standalone operation
+            with mkConn() as conn:
+                c = conn.cursor()
+                c.execute("UPDATE assets SET isVectored=? WHERE id = ?", (done, asset.id))
+                conn.commit()
     except Exception as e:
         raise mkErr(f"Failed to updateVecBy: {asset}", e)
 
 def saveBy(asset: dict):
     try:
-        if conn is None: raise RuntimeError('the db is not init')
+        with mkConn() as conn:
+            c = conn.cursor()
+            assId = asset.get('id')
+            if not assId: return False
 
-        c = conn.cursor()
+            exifInfo = asset.get('exifInfo', {})
+            jsonExif = None
+            if exifInfo:
+                try:
+                    jsonExif = json.dumps(exifInfo, ensure_ascii=False, default=BaseDictModel.jsonSerializer)
+                    # lg.info(f"json: {jsonExif}")
+                except Exception as e:
+                    raise mkErr("[pics.save] Error converting EXIF to JSON", e)
 
-        assId = asset.get('id')
-        if not assId: return False
+            c.execute("Select autoId, id From assets Where id = ?", (assId,))
+            row = c.fetchone()
 
-        exifInfo = asset.get('exifInfo', {})
-        jsonExif = None
-        if exifInfo:
-            try:
-                jsonExif = json.dumps(exifInfo, ensure_ascii=False, default=BaseDictModel.jsonSerializer)
-                # lg.info(f"json: {jsonExif}")
-            except Exception as e:
-                raise mkErr("[pics.save] Error converting EXIF to JSON", e)
+            if row is None:
+                c.execute('''
+                    Insert Into assets (id, ownerId, deviceId, type, originalFileName,
+                    fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
+                    libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
+                    Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    assId,
+                    asset.get('ownerId'),
+                    asset.get('deviceId'),
+                    asset.get('type'),
+                    asset.get('originalFileName'),
+                    asset.get('fileCreatedAt'),
+                    asset.get('fileModifiedAt'),
+                    1 if asset.get('isFavorite') else 0,
+                    1 if asset.get('isVisible') else 0,
+                    1 if asset.get('isArchived') else 0,
+                    asset.get('libraryId'),
+                    asset.get('localDateTime'),
+                    asset.get('thumbnail_path'),
+                    asset.get('preview_path'),
+                    asset.get('fullsize_path', asset.get('originalPath')),
+                    jsonExif,
+                ))
 
-        c.execute("Select autoId, id From assets Where id = ?", (assId,))
-        row = c.fetchone()
+            elif asset.get('thumbnail_path') or asset.get('preview_path') or asset.get('fullsize_path') or jsonExif:
+                updFields = []
+                updValues = []
 
-        if row is None:
-            c.execute('''
-                Insert Into assets (id, ownerId, deviceId, type, originalFileName,
-                fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
-                libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
-                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                assId,
-                asset.get('ownerId'),
-                asset.get('deviceId'),
-                asset.get('type'),
-                asset.get('originalFileName'),
-                asset.get('fileCreatedAt'),
-                asset.get('fileModifiedAt'),
-                1 if asset.get('isFavorite') else 0,
-                1 if asset.get('isVisible') else 0,
-                1 if asset.get('isArchived') else 0,
-                asset.get('libraryId'),
-                asset.get('localDateTime'),
-                asset.get('thumbnail_path'),
-                asset.get('preview_path'),
-                asset.get('fullsize_path', asset.get('originalPath')),
-                jsonExif,
-            ))
+                c.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", (assId,))
+                paths = c.fetchone()
 
-        elif asset.get('thumbnail_path') or asset.get('preview_path') or asset.get('fullsize_path') or jsonExif:
-            updFields = []
-            updValues = []
+                # If thumbnail path is provided and existing path is empty
+                if asset.get('thumbnail_path') and (not paths or not paths[0]):
+                    updFields.append("thumbnail_path = ?")
+                    updValues.append(asset.get('thumbnail_path'))
 
-            c.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", (assId,))
-            paths = c.fetchone()
+                # If preview path is provided and existing path is empty
+                if asset.get('preview_path') and (not paths or not paths[1]):
+                    updFields.append("preview_path = ?")
+                    updValues.append(asset.get('preview_path'))
 
-            # If thumbnail path is provided and existing path is empty
-            if asset.get('thumbnail_path') and (not paths or not paths[0]):
-                updFields.append("thumbnail_path = ?")
-                updValues.append(asset.get('thumbnail_path'))
+                # If original path is provided and existing path is empty
+                fullsize = asset.get('fullsize_path', asset.get('originalPath'))
+                if fullsize and (not paths or not paths[2]):
+                    updFields.append("fullsize_path = ?")
+                    updValues.append(fullsize)
 
-            # If preview path is provided and existing path is empty
-            if asset.get('preview_path') and (not paths or not paths[1]):
-                updFields.append("preview_path = ?")
-                updValues.append(asset.get('preview_path'))
+                # Check EXIF updates
+                if jsonExif:
+                    c.execute("Select jsonExif From assets Where id = ?", (assId,))
+                    existing_exif = c.fetchone()
+                    if not existing_exif or not existing_exif[0]:
+                        updFields.append("jsonExif = ?")
+                        updValues.append(jsonExif)
 
-            # If original path is provided and existing path is empty
-            fullsize = asset.get('fullsize_path', asset.get('originalPath'))
-            if fullsize and (not paths or not paths[2]):
-                updFields.append("fullsize_path = ?")
-                updValues.append(fullsize)
+                if updFields:
+                    update_query = f"UPDATE assets SET {', '.join(updFields)} WHERE id = ?"
+                    updValues.append(assId)
+                    c.execute(update_query, updValues)
 
-            # Check EXIF updates
-            if jsonExif:
-                c.execute("Select jsonExif From assets Where id = ?", (assId,))
-                existing_exif = c.fetchone()
-                if not existing_exif or not existing_exif[0]:
-                    updFields.append("jsonExif = ?")
-                    updValues.append(jsonExif)
-
-            if updFields:
-                update_query = f"UPDATE assets SET {', '.join(updFields)} WHERE id = ?"
-                updValues.append(assId)
-                c.execute(update_query, updValues)
-
-        conn.commit()
-        return True
+            conn.commit()
+            return True
     except Exception as e:
         raise mkErr("Failed to save asset information", e)
 
@@ -387,23 +356,16 @@ def saveBy(asset: dict):
 def deleteForUsr(usrId):
     import db.vecs as vecs
     try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-
-        c.execute("Select id From assets Where ownerId = ?", (usrId,))
-        assIds = [row[0] for row in c.fetchall()]
-
-        lg.info(f"[pics] delete pics[{len(assIds)}] for usrId[{usrId}]")
-
-        c.execute("Delete From assets Where ownerId = ?", (usrId,))
-
-        conn.commit()
-
-        lg.info(f"[pics] delete vectors for usrId[{usrId}]")
-        for assId in assIds: vecs.deleteBy(assId)
-
-        return True
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("Select id From assets Where ownerId = ?", (usrId,))
+            assIds = [row[0] for row in c.fetchall()]
+            lg.info(f"[pics] delete pics[{len(assIds)}] for usrId[{usrId}]")
+            c.execute("Delete From assets Where ownerId = ?", (usrId,))
+            conn.commit()
+            lg.info(f"[pics] delete vectors for usrId[{usrId}]")
+            for assId in assIds: vecs.deleteBy(assId)
+            return True
     except Exception as e:
         raise mkErr("Failed to delete user assets", e)
 
@@ -414,51 +376,42 @@ def deleteForUsr(usrId):
 
 def getAnyNonSim() -> Optional[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-        c.execute("Select * From assets Where simOk!=1 AND json_array_length(simINfos) == 0")
-
-        row = c.fetchone()
-        if row is None: return None
-
-        asset = models.Asset.fromDB(c, row)
-        return asset
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("Select * From assets Where simOk!=1 AND json_array_length(simINfos) == 0")
+            row = c.fetchone()
+            if row is None: return None
+            asset = models.Asset.fromDB(c, row)
+            return asset
     except Exception as e:
         raise mkErr("Failed to get asset information", e)
 
 def countSimOk(isOk=0):
     try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM assets WHERE isVectored = 1 AND simOk = ?", (isOk,))
-        count = c.fetchone()[0]
-
-        # lg.info(f"[pics] count isOk[{isOk}] cnt[{count}]")
-
-        return count
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("SELECT COUNT(*) FROM assets WHERE isVectored = 1 AND simOk = ?", (isOk,))
+            count = c.fetchone()[0]
+            # lg.info(f"[pics] count isOk[{isOk}] cnt[{count}]")
+            return count
     except Exception as e:
         raise mkErr(f"Failed to count assets with simOk[{isOk}]", e)
 
 
 def getAssetsByGID(gid: int) -> list[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-        c.execute("""
-            SELECT * FROM assets 
-            WHERE simGID = ? AND json_array_length(simInfos) > 1
-            ORDER BY json_array_length(simInfos) DESC, autoId
-        """, (gid,))
-
-        assets = []
-        for row in c.fetchall():
-            asset = models.Asset.fromDB(c, row)
-            assets.append(asset)
-
-        return assets
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("""
+                SELECT * FROM assets 
+                WHERE simGID = ? AND json_array_length(simInfos) > 1
+                ORDER BY json_array_length(simInfos) DESC, autoId
+            """, (gid,))
+            assets = []
+            for row in c.fetchall():
+                asset = models.Asset.fromDB(c, row)
+                assets.append(asset)
+            return assets
     except Exception as e:
         lg.error(f"Error fetching assets by GID: {str(e)}")
         return []
@@ -466,61 +419,44 @@ def getAssetsByGID(gid: int) -> list[models.Asset]:
 
 def getSimGroup(assId: str) -> Optional[List[models.Asset]]:
     try:
-        if conn is None: raise mkErr('the db is not init')
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM assets WHERE id = ?", (assId,))
+            row = c.fetchone()
+            if row is None:
+                lg.warn(f"[pics] SimGroup Root asset {assId} not found")
+                return None
 
-        c = conn.cursor()
-        c.execute("SELECT * FROM assets WHERE id = ?", (assId,))
-        row = c.fetchone()
-        if row is None:
-            lg.warn(f"Root asset {assId} not found")
-            return None
+            rootAsset = models.Asset.fromDB(c, row)
+            rst = [rootAsset]
 
-        rootAsset = models.Asset.fromDB(c, row)
-        rst = [rootAsset]
+            if not rootAsset.simInfos or len(rootAsset.simInfos) <= 1: return rst
 
-        if not rootAsset.simInfos or len(rootAsset.simInfos) <= 1: return rst
+            simIds = [info.id for info in rootAsset.simInfos]
+            if not simIds: return [rootAsset]
 
-        simIds = [info.id for info in rootAsset.simInfos]
-        if not simIds: return [rootAsset]
+            placeholders = ','.join(['?' for _ in simIds])
+            c.execute(f"SELECT * FROM assets WHERE id IN ({placeholders})", simIds)
 
-        placeholders = ','.join(['?' for _ in simIds])
-        c.execute(f"SELECT * FROM assets WHERE id IN ({placeholders})", simIds)
+            rows = c.fetchall()
 
-        rows = c.fetchall()
+            assets = [models.Asset.fromDB(c, row) for row in rows]
 
-        assets = [models.Asset.fromDB(c, row) for row in rows]
+            assetMap = {asset.id: asset for asset in assets}
 
-        assetMap = {asset.id: asset for asset in assets}
+            # rootAsset.simInfos score, desc
+            sortAss = []
+            for simInfo in sorted(rootAsset.simInfos, key=lambda x: x.score or 0, reverse=True):
+                if simInfo.id in assetMap:
+                    sortAss.append(assetMap[simInfo.id])
 
-        # rootAsset.simInfos score, desc
-        sortAss = []
-        for simInfo in sorted(rootAsset.simInfos, key=lambda x: x.score or 0, reverse=True):
-            if simInfo.id in assetMap:
-                sortAss.append(assetMap[simInfo.id])
+            rst.extend(sortAss)
 
-        rst.extend(sortAss)
-
-        return sortAss
+            return sortAss
     except Exception as e:
         raise mkErr(f"Failed to get similar group for root {assId}", e)
 
 
-def setSimOk(assId: str, isOk: int = 0):
-    try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-
-        c.execute("SELECT id FROM assets WHERE id = ?", (assId,))
-        if not c.fetchone(): raise RuntimeError(f"Asset {assId} not found")
-
-        c.execute("UPDATE assets SET simOk = ? WHERE id = ?", (isOk, assId))
-        conn.commit()
-
-        # lg.info(f"Updated asset {assId}, simOk[{isOk}]")
-        return True
-    except Exception as e:
-        raise mkErr(f"Failed to set simOK[{isOk}] assId[{assId}]", e)
 
 
 def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
@@ -529,118 +465,109 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
         return
 
     try:
-        if conn is None: raise RuntimeError('the db is not init')
+        with mkConn() as conn:
+            c = conn.cursor()
 
-        c = conn.cursor()
-
-        # Check if we're already in a transaction
-        in_transaction = conn.in_transaction
-        if not in_transaction:
             conn.execute("BEGIN TRANSACTION")
 
-        c.execute("SELECT id, simGID FROM assets WHERE id = ?", (assId,))
-        curRow = c.fetchone()
-        if not curRow: raise RuntimeError(f"Asset {assId} not found")
+            try:
+                c.execute("SELECT id, simGID FROM assets WHERE id = ?", (assId,))
+                curRow = c.fetchone()
+                if not curRow: raise RuntimeError(f"Asset {assId} not found")
 
-        curGID = curRow[1]
+                curGID = curRow[1]
 
-        simDicts = [sim.toDict() for sim in infos] if infos else []
-        c.execute("UPDATE assets SET simInfos = ?, simOk = ? WHERE id = ?", (json.dumps(simDicts), isOk, assId))
+                simDicts = [sim.toDict() for sim in infos] if infos else []
+                c.execute("UPDATE assets SET simInfos = ?, simOk = ? WHERE id = ?", (json.dumps(simDicts), isOk, assId))
 
-        highSimIds = [sim.id for sim in infos if sim.score and sim.score > 0.9 and sim.id != assId]
-        if not highSimIds:
-            if not in_transaction:
+                highSimIds = [sim.id for sim in infos if sim.score and sim.score > 0.9 and sim.id != assId]
+                if not highSimIds:
+                    conn.commit()
+                    lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}]")
+                    return True
+
+                highSimIds.append(assId)
+
+                placeholders = ','.join(['?' for _ in highSimIds])
+                c.execute(f"SELECT id, simGID, simInfos FROM assets WHERE id IN ({placeholders})", highSimIds)
+
+                grpAssets = {}
+                existGIDs = set()
+                for row in c.fetchall():
+                    aId, gid, simJson = row
+                    grpAssets[aId] = {
+                        'gid': gid,
+                        'simInfos': json.loads(simJson) if simJson else []
+                    }
+                    if gid: existGIDs.add(gid)
+
+                if len(existGIDs) > 1:
+                    minGID = min(existGIDs)
+                    otherGIDs = existGIDs - {minGID}
+                    placeholders = ','.join(['?' for _ in otherGIDs])
+                    c.execute(f"UPDATE assets SET simGID = ? WHERE simGID IN ({placeholders})", [minGID] + list(otherGIDs))
+
+                    for aId in grpAssets:
+                        if grpAssets[aId]['gid'] in otherGIDs:
+                            grpAssets[aId]['gid'] = minGID
+
+                connCounts = {}
+                for aId in highSimIds:
+                    cnt = 0
+                    if aId in grpAssets:
+                        for sim in grpAssets[aId]['simInfos']:
+                            if sim.get('score', 0) > 0.9 and sim.get('id') in highSimIds:
+                                cnt += 1
+                    connCounts[aId] = cnt
+
+                repId = max(highSimIds, key=lambda x: (connCounts.get(x, 0), x))
+
+                newGID = None
+                if existGIDs:
+                    newGID = min(existGIDs) if existGIDs else None
+                else:
+                    c.execute("SELECT MAX(simGID) FROM assets")
+                    maxGID = c.fetchone()[0]
+                    newGID = (maxGID or 0) + 1
+
+                placeholders = ','.join(['?' for _ in highSimIds])
+                c.execute(f"UPDATE assets SET simGID = ? WHERE id IN ({placeholders})", [newGID] + highSimIds)
+
                 conn.commit()
-            lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}]")
-            return True
-
-        highSimIds.append(assId)
-
-        placeholders = ','.join(['?' for _ in highSimIds])
-        c.execute(f"SELECT id, simGID, simInfos FROM assets WHERE id IN ({placeholders})", highSimIds)
-
-        grpAssets = {}
-        existGIDs = set()
-        for row in c.fetchall():
-            aId, gid, simJson = row
-            grpAssets[aId] = {
-                'gid': gid,
-                'simInfos': json.loads(simJson) if simJson else []
-            }
-            if gid: existGIDs.add(gid)
-
-        if len(existGIDs) > 1:
-            minGID = min(existGIDs)
-            otherGIDs = existGIDs - {minGID}
-            placeholders = ','.join(['?' for _ in otherGIDs])
-            c.execute(f"UPDATE assets SET simGID = ? WHERE simGID IN ({placeholders})", [minGID] + list(otherGIDs))
-
-            for aId in grpAssets:
-                if grpAssets[aId]['gid'] in otherGIDs:
-                    grpAssets[aId]['gid'] = minGID
-
-        connCounts = {}
-        for aId in highSimIds:
-            cnt = 0
-            if aId in grpAssets:
-                for sim in grpAssets[aId]['simInfos']:
-                    if sim.get('score', 0) > 0.9 and sim.get('id') in highSimIds:
-                        cnt += 1
-            connCounts[aId] = cnt
-
-        repId = max(highSimIds, key=lambda x: (connCounts.get(x, 0), x))
-
-        newGID = None
-        if existGIDs:
-            newGID = min(existGIDs) if existGIDs else None
-        else:
-            c.execute("SELECT MAX(simGID) FROM assets")
-            maxGID = c.fetchone()[0]
-            newGID = (maxGID or 0) + 1
-
-        placeholders = ','.join(['?' for _ in highSimIds])
-        c.execute(f"UPDATE assets SET simGID = ? WHERE id IN ({placeholders})", [newGID] + highSimIds)
-
-        if not in_transaction:
-            conn.commit()
-        lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}], group[{newGID}] with {len(highSimIds)} members")
-        return True
+                lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}], group[{newGID}] with {len(highSimIds)} members")
+                return True
+            except Exception as e:
+                conn.rollback()
+                raise e
     except Exception as e:
-        if not in_transaction:
-            conn.rollback()
         raise mkErr("Failed to set similar IDs", e)
 
 def clearSimIds():
     try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-        c.execute("UPDATE assets SET simOk = 0, simInfos = '[]'")
-        conn.commit()
-
-        count = c.rowcount
-        lg.info(f"Cleared similarity results for {count} assets")
-        return True
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("UPDATE assets SET simOk = 0, simInfos = '[]'")
+            conn.commit()
+            count = c.rowcount
+            lg.info(f"Cleared similarity results for {count} assets")
+            return True
     except Exception as e:
         raise mkErr("Failed to clear similarity results:", e)
 
 
 def countHasSimIds(isOk=0):
     try:
-        if conn is None: raise RuntimeError('the db is not init')
-
-        c = conn.cursor()
-        sql = '''
-            SELECT COUNT(*) FROM assets 
-            WHERE simOk = ? AND json_array_length(simInfos) > 0
-        '''
-        c.execute(sql, (isOk,))
-        row = c.fetchone()
-        count = row[0] if row else 0
-
-        lg.info(f"[pics] count have simInfos and type[{isOk}] cnt[{count}]")
-
-        return count
+        with mkConn() as conn:
+            c = conn.cursor()
+            sql = '''
+                SELECT COUNT(*) FROM assets 
+                WHERE simOk = ? AND json_array_length(simInfos) > 0
+            '''
+            c.execute(sql, (isOk,))
+            row = c.fetchone()
+            count = row[0] if row else 0
+            lg.info(f"[pics] count have simInfos and type[{isOk}] cnt[{count}]")
+            return count
     except Exception as e:
         raise mkErr(f"Failed to count assets have simInfos with simOk[{isOk}]", e)
 
@@ -648,43 +575,33 @@ def countHasSimIds(isOk=0):
 # simOk mean that already resolve by user
 def getAnySimPending() -> Optional[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-
-        c.execute("""
-            SELECT * FROM assets 
-            WHERE
-                simOk = 0 AND json_array_length(simInfos) > 1
-            LIMIT 1
-        """)
-
-        row = c.fetchone()
-
-        return models.Asset.fromDB(c, row)
-
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("""
+                SELECT * FROM assets 
+                WHERE
+                    simOk = 0 AND json_array_length(simInfos) > 1
+                LIMIT 1
+            """)
+            row = c.fetchone()
+            return models.Asset.fromDB(c, row) if row else None
     except Exception as e:
         raise mkErr("Failed to get pending assets", e)
 
 def getAllSimOks(isOk=0) -> List[models.Asset]:
     try:
-        if conn is None: raise mkErr('the db is not init')
-
-        c = conn.cursor()
-
-        c.execute("""
-            SELECT * FROM assets 
-            WHERE
-                simOk = ? AND json_array_length(simInfos) > 1
-            ORDER BY autoId
-        """, (isOk,))
-
-        rows = c.fetchall()
-        if not rows: return []
-
-        assets = [models.Asset.fromDB(c, row) for row in rows]
-        return assets
-
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("""
+                SELECT * FROM assets 
+                WHERE
+                    simOk = ? AND json_array_length(simInfos) > 1
+                ORDER BY autoId
+            """, (isOk,))
+            rows = c.fetchall()
+            if not rows: return []
+            assets = [models.Asset.fromDB(c, row) for row in rows]
+            return assets
     except Exception as e:
         raise mkErr("Failed to get all simOk assets", e)
 
@@ -692,45 +609,44 @@ def getAllSimOks(isOk=0) -> List[models.Asset]:
 # select have simInfos and simInfos not only isSelf
 def countSimPending():
     try:
-        if conn is None: raise RuntimeError('the db is not init')
+        with mkConn() as cnn:
+            c = cnn.cursor()
+            # auto-marks
+            c.execute("""
+                UPDATE assets 
+                SET simOk = 1
+                WHERE
+                    simOk = 0 AND json_array_length(simInfos) = 1
+                    AND EXISTS 
+                    (
+                        SELECT 1 FROM json_each(simInfos) si
+                            WHERE json_extract(si.value, '$.isSelf') = 1
+                    )
+            """)
+            cnn.commit()
 
-        c = conn.cursor()
-
-        # auto-marks
-        c.execute("""
-            UPDATE assets 
-            SET simOk = 1
-            WHERE
-                simOk = 0 AND json_array_length(simInfos) = 1
-                AND EXISTS 
-                (
-                    SELECT 1 FROM json_each(simInfos) si
-                        WHERE json_extract(si.value, '$.isSelf') = 1
+        with mkConn() as conn:
+            c = conn.cursor()
+            sql = '''
+                WITH grpReps AS (
+                    SELECT simGID, MIN(autoId) as repAutoId
+                    FROM assets
+                    WHERE simOk = 0 AND json_array_length(simInfos) > 1 AND simGID IS NOT NULL
+                    GROUP BY simGID
                 )
-        """)
-        conn.commit()
-
-        sql = '''
-            WITH grpReps AS (
-                SELECT simGID, MIN(autoId) as repAutoId
-                FROM assets
-                WHERE simOk = 0 AND json_array_length(simInfos) > 1 AND simGID IS NOT NULL
-                GROUP BY simGID
-            )
-            SELECT COUNT(*) FROM (
-                SELECT a.autoId FROM assets a
-                LEFT JOIN grpReps g ON a.simGID = g.simGID
-                WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
-                AND (
-                    (a.simGID IS NULL) OR 
-                    (a.simGID IS NOT NULL AND a.autoId = g.repAutoId)
+                SELECT COUNT(*) FROM (
+                    SELECT a.autoId FROM assets a
+                    LEFT JOIN grpReps g ON a.simGID = g.simGID
+                    WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
+                    AND (
+                        (a.simGID IS NULL) OR 
+                        (a.simGID IS NOT NULL AND a.autoId = g.repAutoId)
+                    )
                 )
-            )
-        '''
-        c.execute(sql)
-        cnt = c.fetchone()[0]
-
-        return cnt
+            '''
+            c.execute(sql)
+            cnt = c.fetchone()[0]
+            return cnt
     except Exception as e:
         raise mkErr(f"Failed to count assets pending", e)
 
@@ -755,40 +671,40 @@ def getPendingPaged(page=1, size=20) -> list[models.Asset]:
             LIMIT ? OFFSET ?
         '''
 
-        conn = getConn()
-        cursor = conn.cursor()
-        offset = (page - 1) * size
-        cursor.execute(sql, (size, offset))
+        with mkConn() as conn:
+            cursor = conn.cursor()
+            offset = (page - 1) * size
+            cursor.execute(sql, (size, offset))
 
-        leaders = []
-        for row in cursor.fetchall():
-            asset = models.Asset.fromDB(cursor, row)
-            leaders.append(asset)
-
-        if not leaders: return []
-
-        allRelIds = set()
-        for leader in leaders:
-            for sim in leader.simInfos:
-                if sim.id and not sim.isSelf: allRelIds.add(sim.id)
-
-        if allRelIds:
-            placeholders = ','.join(['?' for _ in allRelIds])
-            cursor.execute(f"SELECT * FROM assets WHERE id IN ({placeholders})", list(allRelIds))
-
-            relatMap = {}
+            leaders = []
             for row in cursor.fetchall():
-                relAsset = models.Asset.fromDB(cursor, row)
-                relatMap[relAsset.id] = relAsset
+                asset = models.Asset.fromDB(cursor, row)
+                leaders.append(asset)
 
+            if not leaders: return []
+
+            allRelIds = set()
             for leader in leaders:
-                seen = {leader.id}
                 for sim in leader.simInfos:
-                    if sim.id and sim.id in relatMap and sim.id not in seen:
-                        leader.relats.append(relatMap[sim.id])
-                        seen.add(sim.id)
+                    if sim.id and not sim.isSelf: allRelIds.add(sim.id)
 
-        return leaders
+            if allRelIds:
+                placeholders = ','.join(['?' for _ in allRelIds])
+                cursor.execute(f"SELECT * FROM assets WHERE id IN ({placeholders})", list(allRelIds))
+
+                relatMap = {}
+                for row in cursor.fetchall():
+                    relAsset = models.Asset.fromDB(cursor, row)
+                    relatMap[relAsset.id] = relAsset
+
+                for leader in leaders:
+                    seen = {leader.id}
+                    for sim in leader.simInfos:
+                        if sim.id and sim.id in relatMap and sim.id not in seen:
+                            leader.relats.append(relatMap[sim.id])
+                            seen.add(sim.id)
+
+            return leaders
     except Exception as e:
         lg.error(f"Error fetching assets: {str(e)}")
         return []
