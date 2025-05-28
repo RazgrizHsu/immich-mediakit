@@ -41,7 +41,7 @@ def createStore(
         List containing the store component
     """
     pgr = models.Pager(idx=page, size=size, cnt=total)
-    return [dcc.Store(id=id.store(pgId), data=pgr.toDict())]
+    return [dcc.Store(id=id.store(pgId), data=pgr.toDict(), storage_type="session")]
 
 
 def createPager(pgId: str, idx: int = 0, className: str = None, showInfo: bool = True, avFirstLast: bool = True, avPrevNext: bool = True, btnSize: int = 5, page: int = 1, size: int = 20, total: int = 0) -> List:
@@ -298,7 +298,7 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
             inp(id.store(pgrId), "data"),
             ste({"type": f"pgr-{pgrId}-store", "idx": ALL}, "data")
         ],
-        prevent_initial_call=True
+        prevent_initial_call=False
     )
     def pager_updateUI(dta_pgr, dta_pgrs):
         if DEBUG: lg.info(f"[pgr:{pgrId}] updateUI called - store_data: {dta_pgr}, pgr_stores count: {len(dta_pgrs)}")
