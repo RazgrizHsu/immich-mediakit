@@ -19,11 +19,9 @@ assets = []
 timeout = 5000
 urlApi:str = envs.immichUrl
 
+if not urlApi: raise KeyError('[api] the urlApi environment variable is not set')
 if not urlApi.endswith('/'): urlApi += '/'
 if not urlApi.endswith('api'): urlApi = urlApi + 'api'
-
-
-if not urlApi: raise KeyError('[api] the urlApi environment variable is not set')
 
 def _get(endpoint: str, apiKey: str, headers=None, params=None, stream=False):
     if not apiKey: raise KeyError('muse have ApiKey')

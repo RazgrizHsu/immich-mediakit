@@ -96,19 +96,19 @@ def renderBody(top, bottom):
     out(k.nav.photoVec, 'disabled'),
     out(k.nav.searchDups, 'disabled'),
     out(k.nav.viewGrid, 'disabled'),
-    inp(ks.sto.now, 'data')
+    inp(ks.sto.cnt, 'data')
 )
-def onUpdateMenus(dta_now):
-    if not dta_now: return True, True, True
+def onUpdateMenus(dta_cnt):
+    if not dta_cnt: return True, True, True
 
     # lg.info("Registered pages:")
     # for page, config in dash.page_registry.items(): lg.info(f"- {page}: {config['path']}")
 
-    now = models.Now.fromDict(dta_now)
+    cnt = models.Cnt.fromDict(dta_cnt)
 
-    disVec = now.cntPic <= 0
+    disVec = cnt.ass <= 0
     disGrd = disVec
-    disDup = now.cntVec <= 0
+    disDup = cnt.vec <= 0
 
     return disVec, disDup, disGrd
 

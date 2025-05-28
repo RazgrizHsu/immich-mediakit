@@ -3,6 +3,7 @@ import json
 import sqlite3
 from dataclasses import dataclass, asdict, astuple
 from datetime import datetime
+from enum import Enum
 from typing import Dict, Any, Optional, Type, Tuple, TypeVar, Union, get_type_hints, get_origin, get_args
 
 from util import log
@@ -63,6 +64,7 @@ class BaseDictModel:
     @staticmethod
     def jsonSerializer(obj: Any) -> Any:
         if isinstance(obj, datetime): return obj.isoformat()
+        if hasattr(obj, 'value'): return obj.value  # Handle Enum
         return str(obj)
 
     # noinspection PyTypeChecker
@@ -110,6 +112,14 @@ class BaseDictModel:
                             return hint_type.fromDict(json_data)
                     except:
                         pass
+            elif inspect.isclass(hint_type) and issubclass(hint_type, Enum):
+                if isinstance(val, str):
+                    # Try to convert string to enum
+                    for member in hint_type:
+                        if member.value == val:
+                            return member
+                    # If not found by value, return as is
+                    return val
             return val
 
         if origin is list:
@@ -172,16 +182,33 @@ class BaseDictModel:
                     complex_fields.add(key)
                     continue
 
-                if origin is None and cls._is_model_subclass(hint_type):
-                    complex_fields.add(key)
-                    continue
+                if origin is None:
+                    if cls._is_model_subclass(hint_type):
+                        complex_fields.add(key)
+                        continue
+                    if inspect.isclass(hint_type) and issubclass(hint_type, Enum):
+                        complex_fields.add(key)
+                        continue
 
             cls._complex_type_cache[cls] = complex_fields
 
         return cls._complex_type_cache[cls]
 
     @classmethod
-    def fromDict(cls: Type[T], src: Dict[str, Any]) -> Optional[T]:
+    def fromStr(cls: Type[T], src: str) -> T:
+        try:
+            data = json.loads(src)
+            if not isinstance(data, dict):
+                raise ValueError(f"Expected dict after JSON parse, got {type(data).__name__}")
+            result = cls.fromDict(data)
+            if result is None:
+                raise ValueError(f"Failed to create {cls.__name__} from data")
+            return result
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON string: {e}")
+
+    @classmethod
+    def fromDict(cls: Type[T], src: Dict[str, Any]) -> T:
         try:
             if not src: return cls()
 
@@ -195,8 +222,7 @@ class BaseDictModel:
                 hint_type = type_hints[key]
                 origin = get_origin(hint_type)
 
-                if key in complex_fields or (isinstance(val, str) and cls._is_model_subclass(hint_type) or
-                                             (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))):
+                if key in complex_fields:
                     processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
                 else:
                     processed_data[key] = val
@@ -210,8 +236,9 @@ class BaseDictModel:
                 except:
                     raise e
         except Exception as e:
-            lg.error(f"Error converting dict to {cls.__name__}: {e}, src={src}")
-            return None
+            lg.exception(e)
+            raise RuntimeError(f"Error converting dict to {cls.__name__}: {e}, src={src}")
+
 
     @classmethod
     def fromDB(cls: Type[T], cursor: sqlite3.Cursor, row: tuple) -> Optional[T]:

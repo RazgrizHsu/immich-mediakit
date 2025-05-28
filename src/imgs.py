@@ -17,7 +17,7 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
 
 import db, conf
 from util import log
-from mod import models, IFnProg
+from mod import models
 from util.err import mkErr
 from conf import envs
 
@@ -143,7 +143,7 @@ def getImgB64(path) -> Optional[str]:
     return toB64(path) if os.path.exists(path) else None
 
 
-def toVectors(assets: List[models.Asset], photoQ, onUpdate: IFnProg = None) -> models.ProcessInfo:
+def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = None) -> models.ProcessInfo:
     tS = time.time()
     pi = models.ProcessInfo(total=len(assets), done=0, skip=0, error=0)
 
@@ -154,7 +154,7 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: IFnProg = None) -> m
             cur = conn.cursor()
 
             if onUpdate:
-                onUpdate(inPct, f"{inPct}%", f"Preparing to process {pi.total} photos, quality: {photoQ}")
+                onUpdate(inPct, f"Preparing to process {pi.total} photos, quality: {photoQ}")
 
             for idx, asset in enumerate(assets):
                 assetId = asset.id
@@ -216,11 +216,11 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: IFnProg = None) -> m
                         speedStr = f" ({itemsPerSec:.1f} items/sec)"
                     else:
                         speedStr = ""
-                    onUpdate(percent, f"{percent}%", f"Processing photo {processedCnt}/{pi.total} - (Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}). Estimated remaining: {remainStr}{speedStr}")
+                    onUpdate(percent, f"Processing photo {processedCnt}/{pi.total} - (Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}). Estimated remaining: {remainStr}{speedStr}")
 
             conn.commit()
             if onUpdate:
-                onUpdate(100, "100%", f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
+                onUpdate(100, f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
 
             return pi
 

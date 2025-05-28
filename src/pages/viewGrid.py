@@ -1,9 +1,9 @@
 import db
-from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, noUpd, ctx, getTriggerId, ALL
-from util import log
-from mod import models
 from conf import ks
+from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId
+from mod import models
 from ui.grid import createGrid
+from util import log
 
 lg = log.get(__name__)
 
@@ -193,17 +193,19 @@ def layout():
         out(K.inp.selectUsrId, "options"),
         out(K.div.dataPaged, "data"),
     ],
+    inp(ks.sto.cnt, "data"),
     inp(ks.sto.now, "data"),
     prevent_initial_call=False
 )
-def viewGrid_Init(dta_now):
+def viewGrid_Init(dta_cnt, dta_now):
+    cnt = models.Cnt.fromDict(dta_cnt)
     now = models.Now.fromDict(dta_now)
 
     opts = [{"label": "All Users", "value": ""}]
     if now.usrs and len(now.usrs) > 0:
         for usr in now.usrs: opts.append({"label": usr.name, "value": usr.id})
 
-    data = {"page": 1, "per_page": 24, "total": now.cntPic or 0}
+    data = {"page": 1, "per_page": 24, "total": cnt.ass or 0}
 
     return opts, data
 
@@ -299,16 +301,18 @@ def on_pagination_controls(
         inp(K.inp.checkFavorites, "value"),
     ],
     ste(ks.sto.now, "data"),
+    ste(ks.sto.cnt, "data"),
     prevent_initial_call=False
 )
-def viewGrid_Load(dta_pg, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now):
+def viewGrid_Load(dta_pg, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now, dta_cnt):
     now = models.Now.fromDict(dta_now)
+    cnt = models.Cnt.fromDict(dta_cnt)
 
     page = dta_pg["page"]
     pageSize = dta_pg["per_page"]
     total = dta_pg["total"]
 
-    if now.cntPic <= 0: return htm.Div("No photos available"), "0", 1, 1, True, True
+    if cnt.ass <= 0: return htm.Div("No photos available"), "0", 1, 1, True, True
 
     total_pages = max(1, (total + pageSize - 1) // pageSize)
 

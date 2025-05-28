@@ -1,52 +1,84 @@
-from dsh import htm, dbc, inp, out, ste, callback
+from dsh import htm, dcc, dbc, inp, out, ste, callback
 from mod import models
 from conf import ks, envs
 from db import psql
-
+import core
 
 class k:
-    sideState = 'div-side-state'
     connInfo = 'div-conn-info'
+    sideState = 'div-side-state'
 
 def layout():
-    return htm.Div(
-        htm.Div(id=k.sideState),
-        className="sidebar")
+    return htm.Div([
 
+        htm.Div(id=k.sideState),
+    ],
+        className="sidebar"
+    )
 
 
 @callback(
     [
         out(k.sideState, "children"),
-        out(ks.sto.nfy, "data", allow_duplicate=True ),
+        out(ks.sto.nfy, "data", allow_duplicate=True),
     ],
     inp(ks.sto.init, "children"),
-    inp(ks.sto.now, "data"),
-    ste(ks.sto.nfy, "data" ),
-    #
+    inp(ks.sto.cnt, "data"),
+    ste(ks.sto.nfy, "data"),
+
     prevent_initial_call="initial_duplicate",
 )
-def onUpdateSideBar(_trigger, dta_now, dta_nfy):
-    now = models.Now.fromDict(dta_now)
+def onUpdateSideBar(_trigger, dta_count, dta_nfy):
+    cnt = models.Cnt.fromDict(dta_count)
     nfy = models.Nfy.fromDict(dta_nfy)
 
     testIP = envs.immichPath if envs.immichPath else '--none--'
     testDA = psql.testAssetsPath()
 
+    chkDel = core.checkLogicDelete()
+    chkRst = core.checkLogicRestore()
+
+    logicOk = chkDel and chkRst
+
+    if not logicOk:
+        if not chkDel:
+            nfy.error([
+                f"[system]", htm.Br(),
+                f" the immich source code check failed,", htm.Br(),
+                f" the Delete logic may changed, please check it before usage system"
+            ])
+        if not chkRst:
+            nfy.error([
+                f"[system]", htm.Br(),
+                f" the immich source code check failed,", htm.Br(),
+                f" the Restore logic may changed, please check it before usage system"
+            ])
+
     if testDA and not testDA.startswith("OK"):
-        nfy.warn( f"[system] the direct access to IMMICH_PATH is Failed[ {testDA} ]" )
+        nfy.warn(f"[system] the direct access to IMMICH_PATH is Failed[ {testDA} ]")
 
     htmCnts = htm.Div([
         dbc.Card([
             dbc.CardHeader("env"),
             dbc.CardBody([
                 dbc.Row([
+                    dbc.Col([htm.Small("logic check:")], width=5, className=""),
+                    dbc.Col([
+                        htm.Span(
+                            f"Github checked!", className="tag info"
+                        ) if logicOk else htm.Span
+                            (
+                            f"Fail!!", className="tag"
+                        )
+                    ]),
+                ], className="mb-2"),
+                dbc.Row([
                     dbc.Col([htm.Small("Path Test:")], width=5, className=""),
                     dbc.Col([
                         htm.Span(
                             f"{testDA}", className="tag info"
                         ) if testDA.startswith("OK") else htm.Span
-                        (
+                            (
                             f"{testDA}", className="tag"
                         )
                     ]),
@@ -59,11 +91,11 @@ def onUpdateSideBar(_trigger, dta_now, dta_nfy):
             dbc.CardBody([
                 dbc.Row([
                     dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=6),
-                    dbc.Col(dbc.Alert(f"{now.cntPic}", color="info", className="py-0 px-2 mb-2 text-center")),
+                    dbc.Col(dbc.Alert(f"{cnt.ass}", color="info", className="py-0 px-2 mb-2 text-center")),
                 ]),
                 dbc.Row([
                     dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=6),
-                    dbc.Col(dbc.Alert(f"{now.cntVec}", color="info", className="py-0 px-2 mb-2 text-center")),
+                    dbc.Col(dbc.Alert(f"{cnt.vec}", color="info", className="py-0 px-2 mb-2 text-center")),
                 ]),
             ])
         ]),

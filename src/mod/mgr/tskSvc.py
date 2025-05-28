@@ -1,45 +1,56 @@
 from typing import Any, Callable, Optional, Tuple
-import uuid
+from dataclasses import dataclass, field
+from util import log
 
 from mod.mgr.tskMgr import BseTsk, TskMgr
-from util import log
-from mod import models
+from mod.models import Tsk, ITaskStore, IFnProg
 
 lg = log.get(__name__)
 
 mgr: Optional[TskMgr] = None
 
+@dataclass
 class DashTask(BseTsk):
-    def __init__(self, tskId: str, name: str, cmd: str, fn: Callable, nfy: models.Nfy, now: models.Now, tsk: models.Tsk):
-        super().__init__(tskId, name, hasCB=True)
-        self.cmd = cmd
-        self.fn = fn
-        self.nfy = nfy
-        self.now = now
-        self.tsk = tsk
-        self.origTskId = tsk.id
+    tsk: Optional[Tsk] = None
+    fn: Optional[Callable] = None
+    store: Optional[ITaskStore] = None
 
-    def execute(self, callback: Optional[Callable[[int, str], None]] = None) -> Any:
-        def onUpd(percent: int, label: str, msg: str):
-            if callback: callback(percent, f"{label} - {msg}")
+    # def __init__(self, tsk: models.Tsk, fn: Callable, store: ITaskStore):
+    #     super().__init__(tsk.name)
+    #     self.fn = fn
+    #     self.store = store
+    #     self.tsk = tsk
+
+    @classmethod
+    def mk(cls, tsk: Tsk, fn: Callable, store: ITaskStore):
+        return cls(
+            name=tsk.name,
+            tsk=tsk,
+            fn=fn,
+            store=store
+        )
+
+    def run(self, doReport: Optional[IFnProg] = None) -> Any:
+
+        #------------------------------------
+        # adapter
+        #------------------------------------
+        def report(pct: int, msg: str):
+            if doReport: doReport(pct, f"{msg}")
             # lg.info(f"[Task] id[{self.tskId}] progress: {percent}% - {label} - {msg}")
 
+        #------------------------------------
         try:
-            oid = self.tsk.id
-            self.tsk.id = self.origTskId
+            sto = self.fn(report, self.store)
 
-            nfy, now, msg = self.fn(self.nfy, self.now, self.tsk, onUpd)
+            # always return store
+            return sto if sto else self.store
 
-            self.tsk.id = oid
-
-            self.nfy = nfy
-            self.now = now
-            return msg
         except Exception as e:
-            lg.error(f"[Task] id[{self.tskId}] failed: {str(e)}")
+            lg.error(f"[Task] name[{self.name}] call fn failed: {str(e)}")
             raise
 
-def init(port: int = 8765, forceInit = False):
+def init(port: int = 8765, forceInit=False):
     import os
     if forceInit or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         global mgr
@@ -49,11 +60,11 @@ def init(port: int = 8765, forceInit = False):
                 mgr.start()
                 lg.info(f"[TskMgr] Started on port {port}")
             except Exception as e:
-                lg.error( f"[TskMgr] Init Failed: {str(e)}")
+                lg.error(f"[TskMgr] Init Failed: {str(e)}")
                 raise RuntimeError(f"[TskMgr] Start failed, port[{port}]: {str(e)}")
         return mgr
     else:
-        lg.warn( "[TskMgr] Ignore init.." )
+        lg.warn("[TskMgr] Ignore init..")
 
 def stop():
     global mgr
@@ -62,35 +73,27 @@ def stop():
         mgr = None
         lg.info("[TskMgr] Stopped")
 
-def mkTask(name: str, cmd: str, fn: Callable, nfy: models.Nfy, now: models.Now, tsk: models.Tsk) -> str:
+def mkTask(tsk: Tsk, fn: Callable, sto: ITaskStore) -> str:
     if not mgr: raise RuntimeError("TskMgr not initialized")
 
-    tskId = str(uuid.uuid4())
-    task = DashTask(tskId, name, cmd, fn, nfy, now, tsk)
-    mgr.regBy(task)
+    tskSn = mgr.regBy(DashTask.mk(tsk, fn, sto))
 
-    tsk.id = tskId
-    tsk.name = name
-    tsk.cmd = cmd
-
-    return tskId
+    return tskSn
 
 def runBy(tskId: str) -> bool:
     if not mgr: raise RuntimeError("TskMgr not initialized")
 
     return mgr.run(tskId)
 
-def cancelBy(tskId: str) -> bool:
-    if not mgr: raise RuntimeError("TskMgr not initialized")
 
-    return mgr.cancel(tskId)
+def getResultBy(tskId: str) -> Optional[ITaskStore]:
+    if not mgr: return None
 
-def getResultBy(tskId: str) -> Tuple[Optional[models.Nfy], Optional[models.Now], Optional[str]]:
-    if not mgr: return None, None, None
+    ti = mgr.getInfo(tskId)
+    if ti and tskId in mgr.tsks:
+        dTsk = mgr.tsks[tskId]
+        if isinstance(dTsk, DashTask):
+            return dTsk.store
 
-    task_info = mgr.getInfo(tskId)
-    if task_info and tskId in mgr.tsks:
-        task = mgr.tsks[tskId]
-        if isinstance(task, DashTask): return task.nfy, task.now, task_info.result
-
-    return None, None, None
+    lg.error(f"[TskSvc] failed get result from tskId[{tskId}]")
+    return None
