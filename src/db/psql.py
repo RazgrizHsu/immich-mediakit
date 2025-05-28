@@ -8,7 +8,7 @@ import psycopg2.extras
 import imgs
 from conf import ks, envs
 from util import log
-from mod import models, IFnProg
+from mod import models
 from util.err import mkErr
 
 lg = log.get(__name__)
@@ -76,7 +76,30 @@ def chk():
     finally:
         if conn: conn.close()
 
-def fetchUsers():
+
+def fetchUser(usrId: str) -> Optional[models.Usr]:
+    conn = None
+    try:
+        conn = mkConn()
+        sql = """
+        Select
+            u.id,
+            u.name,
+            u.email
+        From users u
+        """
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cursor.execute(sql)
+        row = cursor.fetchone()
+
+        if row:
+            return models.Usr.fromDict(dict(row))
+
+        return None
+    except Exception as e:
+        raise mkErr(f"Failed to fetch userId[{usrId}]", e)
+
+def fetchUsers() -> List[models.Usr]:
     conn = None
     try:
         conn = mkConn()
@@ -85,19 +108,18 @@ def fetchUsers():
             u.id,
             u.name,
             u.email,
-            a.key As ak 
+            a.key
         From users u
         Join api_keys a On u.id = a."userId"
         """
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cursor.execute(sql)
-        users = [dict(row) for row in cursor.fetchall()]
-        cursor.close()
+        dics = [dict(row) for row in cursor.fetchall()]
+        users = [models.Usr.fromDict(d) for d in dics]
+
         return users
     except Exception as e:
         raise mkErr(f"Failed to fetch users", e)
-    finally:
-        if conn: conn.close()
 
 
 def count(usrId=None, assetType="IMAGE"):
@@ -240,7 +262,7 @@ def deleteBy(assetIds: List[str]):
 # This function restores multiple assets from trash by updating their status back to 'active' and clearing deletedAt
 # Note: This implementation follows Immich's API flow which may change in future versions
 # restore flow
-# https://github.com/immich-app/immich/blob/main/server/src/controllers/trash.controller.ts
+# https://github.com/immich-app/immich/blob/main/server/src/repositories/trash.repository.ts#L15
 #------------------------------------------------------------------------
 def restoreBy(assetIds: List[str]):
     cnn = None
@@ -267,45 +289,14 @@ def restoreBy(assetIds: List[str]):
         if cnn: cnn.close()
 
 
-def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
+def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: models.IFnProg = None):
     usrId = usr.id
-
-    # ------------------------------------------------------
-    # report fn
-    # ------------------------------------------------------
-    def report(sid, cnow, call, msg, force=False):
-        if not onUpdate: return
-
-        pctRanges = {
-            "init": (0, 5),
-            "fetch": (5, 35),
-            "files": (40, 40),
-            "exif": (80, 10),
-            "combine": (90, 10),
-            "complete": (100, 0)
-        }
-
-        if sid not in pctRanges: return
-
-        base, rng = pctRanges[sid]
-
-        if call <= 0:
-            pct = base
-            onUpdate(pct, f"{pct}%", msg)
-            return pct
-
-        fraction = min(1.0, cnow / call)
-        pct = base + int(fraction * rng)
-
-        if force or cnow == call or cnow % 100 == 0: onUpdate(pct, f"{pct}%", msg)
-
-        return pct
 
     conn = None
     try:
         chk()
 
-        report("init", 0, 1, "Start query...", True)
+        onUpdate(11, f"start querying {usrId}")
 
         conn = mkConn()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -321,9 +312,8 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         cursor.execute(cntSql, cntArs)
         cntAll = cursor.fetchone()[0]
 
-        lg.info(f"Found {cntAll} {asType.lower()} assets...")
-
-        report("init", 1, 1, f"found {cntAll} ({asType.lower()}) assets...", True)
+        # lg.info(f"Found {cntAll} {asType.lower()} assets...")
+        onUpdate(15, f"start querying {cntAll}")
 
         # ----------------------------------------------------------------
         # query assets
@@ -339,8 +329,6 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         sql += " ORDER BY \"createdAt\" DESC"
 
         cursor.execute(sql, params)
-
-        report("fetch", 0, cntAll, "start reading...", True)
 
         szBatch = 100
         szChunk = 100
@@ -370,11 +358,11 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
                 else:
                     tmSuffix = "calcuating..."
 
-                report("fetch", cntFetched, cntAll, f"processed {cntFetched}/{cntAll} ... {tmSuffix}")
+                # report("fetch", cntFetched, cntAll, f"processed {cntFetched}/{cntAll} ... {tmSuffix}")
 
         cursor.close()
 
-        report("fetch", cntAll, cntAll, "main assets done... query for files..", True)
+        onUpdate(30, "main assets done... query for files..")
 
         # ----------------------------------------------------------------
         # query asset files
@@ -396,9 +384,8 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
             afs.extend(chunkResults)
 
             chunkPct = min((idx + 1) * szChunk, len(assetIds))
-            report("files", chunkPct, len(assetIds), f"query files.. {chunkPct}/{len(assetIds)}...")
 
-        report("files", len(assetIds), len(assetIds), "files ready, combine data...", True)
+        onUpdate(40, "files ready, combine data...")
 
         dictFiles = {}
         for af in afs:
@@ -411,7 +398,6 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
         # ----------------------------------------------------------------
         # query exif
         # ----------------------------------------------------------------
-        report("exif", 0, len(assetIds), "files ready, query exif data...", True)
         exifSql = """
             Select *
             From exif
@@ -444,12 +430,11 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
                     exifData[assetId] = exifItem
 
             chunkPct = min((idx + 1) * szChunk, len(assetIds))
-            report("exif", chunkPct, len(assetIds), f"query exif.. {chunkPct}/{len(assetIds)}...")
 
         # ----------------------------------------------------------------
         # combine & fetch thumbnail image
         # ----------------------------------------------------------------
-        report("exif", len(assetIds), len(assetIds), "exif ready, combine data...", True)
+        onUpdate(45, "files ready, combine data...")
 
         cntOk = 0
         cntErr = 0
@@ -474,26 +459,23 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: IFnProg = None):
             pathThumbnail = asset.get('thumbnail_path')
             if not pathThumbnail:
                 cntErr += 1
-                lg.warn( f"[psql] ignore asset: {asset}" )
+                lg.warn(f"[psql] ignore asset: {asset}")
                 continue
-
 
             cntOk += 1
             rstAssets.append(asset)
 
-            if len(assets) > 0 and (cntOk % 100 == 0 or cntOk == len(assets)):
-                report("combine", cntOk, len(assets), f"processing {cntOk}/{len(assets)}...")
+            # if len(assets) > 0 and (cntOk % 100 == 0 or cntOk == len(assets)):
+            #     report("combine", cntOk, len(assets), f"processing {cntOk}/{len(assets)}...")
 
         cursor.close()
 
         lg.info(f"Successfully fetched {len(rstAssets)} {asType.lower()} assets")
-
-        report("complete", 1, 1, f"Complete fetched Assets[{len(rstAssets)}] error[{cntErr}]", True)
+        onUpdate(5, f"Successfully fetched {len(rstAssets)} {asType.lower()} assets")
 
         return rstAssets
     except Exception as e:
         msg = f"Failed to FetchAssets: {str(e)}"
-        if onUpdate: onUpdate(100, "Erorr", msg)
         raise mkErr(msg, e)
     finally:
         if conn: conn.close()

@@ -20,7 +20,7 @@ def mkConn():
         pathDb = envs.mkitData + 'pics.db'
         conn = sqlite3.connect(pathDb, check_same_thread=False, timeout=30.0)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
+        #conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=30000")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA temp_store=MEMORY")
@@ -75,7 +75,8 @@ def init():
                 ''')
 
             conn.commit()
-            return True
+
+        return True
     except Exception as e:
         raise mkErr("Failed to initialize duplicate photo database", e)
 
@@ -108,6 +109,7 @@ def count(usrId=None):
             return cnt
     except Exception as e:
         raise mkErr("Failed to get asset count", e)
+
 
 #========================================================================
 # quary
@@ -606,12 +608,11 @@ def getAllSimOks(isOk=0) -> List[models.Asset]:
         raise mkErr("Failed to get all simOk assets", e)
 
 
-# select have simInfos and simInfos not only isSelf
-def countSimPending():
+# auto mark simOk=1 if simInfos only includes self
+def simAutoMark():
     try:
         with mkConn() as cnn:
             c = cnn.cursor()
-            # auto-marks
             c.execute("""
                 UPDATE assets 
                 SET simOk = 1
@@ -624,7 +625,12 @@ def countSimPending():
                     )
             """)
             cnn.commit()
+    except Exception as e:
+        raise mkErr(f"Failed to count assets pending", e)
 
+# select have simInfos and simInfos not only isSelf
+def countSimPending():
+    try:
         with mkConn() as conn:
             c = conn.cursor()
             sql = '''

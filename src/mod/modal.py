@@ -42,7 +42,7 @@ def mdl_Status(dta_mdl):
 
     trigId = getTriggerId()
 
-    lg.info(f"[modal] Trigger[{trigId}] mdl: id[{mdl.id}]")
+    # lg.info(f"[modal] Trigger[{trigId}] mdl: id[{mdl.id}]")
 
     return isOpen, mdl.msg, mdl.toDict()
 

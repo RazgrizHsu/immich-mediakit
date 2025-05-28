@@ -1,7 +1,7 @@
 from typing import Any
-from db import pics, psql, vecs
 from db.dyn import dto
 from dsh import htm, dcc
+
 from util import log
 from mod import models
 from conf import ks
@@ -28,39 +28,26 @@ def render():
     tsk: models.Tsk = models.Tsk()
     mdl: models.Mdl = models.Mdl()
 
-    if not now.usrs:
-        uss = []
-        try:
-            rows = psql.fetchUsers()
-            for r in rows:
-                usr = models.Usr(r.get('id'), r.get('name'), r.get('email'), r.get('ak'))
-                uss.append(usr)
-        except:
-            pass
 
-        lg.info(f"[session] load usrs: {len(uss)}")
-        now.usrs = uss
+    now.usrId = dto.usrId
 
-    usrId = dto.usrId
-    if usrId:
-        now.switchUsr(usrId)
-        # lg.info( f"[session] set usrId[{usrId}] now.usr: {now.usr}" )
+    photoQ = dto.photoQ
+    if not photoQ: photoQ = dto.photoQ = ks.db.thumbnail
 
-    now.useType = dto.useType
-    if not now.photoQ:
-        now.photoQ = dto.photoQ = ks.db.thumbnail
+    now.photoQ = photoQ
 
-    now.cntPic = pics.count()
-    now.cntVec = vecs.count()
 
-    if not now.useType:
-        now.useType = dto.useType = 'API'
+
+    cnt = models.Cnt()
+    cnt.refreshFromDB()
+
 
     mk(ks.sto.now, now.toDict())
-
     mk(ks.sto.nfy, nfy.toDict())
     mk(ks.sto.tsk, tsk.toDict())
     mk(ks.sto.mdl, mdl.toDict())
+    mk(ks.sto.cnt, cnt.toDict())
+
 
     items.append(htm.Div(id=ks.sto.init, children='init'))
 

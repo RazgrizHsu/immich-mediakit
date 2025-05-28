@@ -1,14 +1,23 @@
 import os
 import uuid
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable, Tuple
 
 from conf import ks, envs
 from util import log
-from mod.bse.baseModel import BaseDictModel
+from .bse.baseModel import BaseDictModel
 
 lg = log.get(__name__)
 
+# ------------------------------------------------------------------------
+# types
+# ------------------------------------------------------------------------
+IFnProg = Callable[[int, str], None]
+IFnRst = Tuple['ITaskStore', Optional[str | List[str]]]
+IFnCall = Callable[[IFnProg, 'ITaskStore'], IFnRst]
+
+
+# ------------------------------------------------------------------------
 @dataclass
 class Nfy(BaseDictModel):
     msgs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
@@ -19,19 +28,19 @@ class Nfy(BaseDictModel):
         if nid in self.msgs: del self.msgs[nid]
 
     def info(self, msg, to=5000):
-        lg.info(f"notify: {msg}")
+        lg.info(f"[notify] {msg}")
         self._add(msg, "info", to)
 
     def success(self, msg, to=5000):
-        lg.info(f"notify: {msg}")
+        lg.info(f"[notify] {msg}")
         self._add(msg, "success", to)
 
     def warn(self, msg, to=8000):
-        lg.warning(f"notify: {msg}")
+        lg.warning(f"[notify] {msg}")
         self._add(msg, "warning", to)
 
     def error(self, msg, to=0):
-        lg.error(f"notify: {msg}")
+        lg.error(f"[notify] {msg}")
         self._add(msg, "danger", to)
 
     def _add(self, msg, typ, to):
@@ -48,6 +57,7 @@ class Cmd(BaseDictModel):
 
 @dataclass
 class Tsk(Cmd):
+    tsn: Optional[str] = None
     name: Optional[str] = None
     msg: Optional[str] = None
 
@@ -55,10 +65,12 @@ class Tsk(Cmd):
         self.id = self.name = self.cmd = self.msg = None
         self.args = {}
 
+        self.tsn = None
+
 
 @dataclass
 class Mdl(Cmd):
-    msg: Optional[str|List[Any]] = None
+    msg: Optional[str | List[Any]] = None
     ok: bool = False
 
     assets: List['Asset'] = field(default_factory=list)
@@ -74,20 +86,20 @@ class Mdl(Cmd):
 
         tit = ks.pg.find(self.id)
         if tit:
-            lg.info( f"tit.cmds({type(tit.cmds)}) => {tit.cmds}" )
+            # lg.info( f"tit.cmds({type(tit.cmds)}) => {tit.cmds}" )
             if not self.cmd in tit.cmds.values():
                 lg.error(f'the MDL.cmd[{self.cmd}] not in [{tit.cmds}]')
                 return None
 
             cmd = next(v for k, v in tit.cmds.items() if v == self.cmd)
-            lg.info( f"cmd => type({type(cmd)}) v:{cmd}" )
+            # lg.info( f"cmd => type({type(cmd)}) v:{cmd}" )
 
             tsk.id = self.id
             tsk.name = tit.name
             tsk.cmd = self.cmd
             tsk.args |= self.args
 
-            if hasattr( cmd, 'desc' ): tsk.msg = cmd.desc
+            if hasattr(cmd, 'desc'): tsk.msg = cmd.desc
 
             return tsk
         else:
@@ -122,6 +134,7 @@ class Tab(BaseDictModel):
 class Taber(BaseDictModel):
     id: str = None
     tabs: List[Tab] = field(default_factory=list)
+
     # tabActs: List[Any] = field(default_factory=list)
 
     def getTab(self, tabId: str) -> Optional[Tab]:
@@ -134,7 +147,7 @@ class Taber(BaseDictModel):
     def setActiveIdx(self, idx: int):
         for i, tab in enumerate(self.tabs):
             tab.active = i == idx;
-            if tab.active: lg.info( f"[Taber] set active: {tab.title}" )
+            if tab.active: lg.info(f"[Taber] set active: {tab.title}")
 
 
     def cssTabs(self):
@@ -150,13 +163,11 @@ class Taber(BaseDictModel):
         return tits
 
 
-
 @dataclass
 class Pager(BaseDictModel):
     idx: Optional[int] = 1
     size: Optional[int] = 20
     cnt: Optional[int] = 0
-
 
 
 @dataclass
@@ -165,7 +176,6 @@ class ProcessInfo(BaseDictModel):
     skip: int = 0
     error: int = 0
     done: int = 0
-
 
 
 @dataclass
@@ -244,11 +254,10 @@ class Asset(BaseDictModel):
     simGID: Optional[int] = None
 
     # view only
-    selected:Optional[bool] = False
+    selected: Optional[bool] = False
     relats: List['Asset'] = field(default_factory=list)
 
     def getImagePath(self, photoQ=None):
-
         if photoQ == ks.db.fullsize:
             path = self.fullsize_path
         elif photoQ == ks.db.preview:
@@ -258,14 +267,37 @@ class Asset(BaseDictModel):
 
         if not path: path = self.thumbnail_path
 
-        if not path: raise RuntimeError( f"the thumbnail path is empty, assetId[{self.id}]" )
+        if not path: raise RuntimeError(f"the thumbnail path is empty, assetId[{self.id}]")
 
         return os.path.join(envs.immichPath, path)
 
 
 @dataclass
-class PageSim(BaseDictModel):
+class Cnt(BaseDictModel):
+    ass: int = 0  # 總資產數
+    vec: int = 0  # 已向量化數
+    simOk: int = 0  # 已處理相似數
+    simPend: int = 0  # 待處理相似數
 
+    def reset(self):
+        self.ass = self.vec = self.simOk = self.simPend = 0
+
+    def refreshFromDB(self):
+        import db
+        self.ass = db.pics.count()
+        self.vec = db.vecs.count()
+        self.simOk = db.pics.countSimOk(1)
+        self.simPend = db.pics.countSimPending();
+
+    @classmethod
+    def mkNewCnt(cls) -> 'Cnt':
+        cnt = cls()
+        cnt.refreshFromDB()
+        return cnt
+
+
+@dataclass
+class PageSim(BaseDictModel):
     taber: Optional[Taber] = None
     pagerPnd: Optional[Pager] = None
 
@@ -291,16 +323,32 @@ class Pages(BaseDictModel):
 
 @dataclass
 class Now(BaseDictModel):
-    usrs: List[Usr] = field(default_factory=list)
-    usr: Optional[Usr] = None
-    useType: Optional[str] = None
+    usrId: Optional[str] = None
     photoQ: Optional[str] = None
-    cntPic: int = 0
-    cntVec: int = 0
 
     pg: Pages = field(default_factory=Pages)
 
-    def switchUsr(self, usrId):
-        if self.usrs:
-            # lg.info( f"[switch] usr[{self.usrs[0]}]({type(self.usrs[0])})" )
-            self.usr = next((u for u in self.usrs if u.id == usrId), None)
+from enum import Enum
+
+class TskStatus(Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+@dataclass
+class WsMsg(BaseDictModel):
+    tsn: str = None
+    type: str = None
+    name: str = None
+    message: str = None
+    status: TskStatus = None
+
+
+@dataclass
+class ITaskStore:
+    nfy: Nfy = None
+    now: Now = None
+    cnt: Cnt = None
+    tsk: Tsk = None

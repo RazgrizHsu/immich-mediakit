@@ -5,8 +5,10 @@ import db
 from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
 from util import log
-from mod import mapFns, IFnProg, taber
-from mod.models import Mdl, Now, Nfy, Taber, Pager, Tsk
+from mod import mapFns, taber
+from ui import gridSimilar as gvs
+from mod import models, tskSvc
+from mod.models import Mdl, Now, Cnt, Nfy, Taber, Pager, Tsk
 from ui import pager
 
 lg = log.get(__name__)
@@ -188,9 +190,6 @@ def layout(autoId=None, **kwargs):
 #========================================================================
 # callbacks
 #========================================================================
-from ui import gridSimilar as gvs
-from mod import models
-from mod.models import Nfy, Tsk, Now, Mdl, Pager, Taber
 
 taber.regCallbacks(k.tab)
 pager.regCallbacks(k.pagerPnd)
@@ -273,55 +272,6 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
 
     return now.toDict(), tsk.toDict()
 
-#------------------------------------------------------------------------
-# Sync taber state from now.pg.sim.taber
-#------------------------------------------------------------------------
-@callback(
-    out(taber.id.store(k.tab), "data", allow_duplicate=True),
-    inp(ks.sto.now, "data"),
-    prevent_initial_call=True
-)
-def sim_SyncTaberFromNow(dta_now):
-    if not dta_now:
-        lg.warn("[sim:sync] taber is none")
-        return noUpd
-
-    try:
-        now = Now.fromDict(dta_now)
-        if not now.pg.sim.taber: return noUpd
-        taber = now.pg.sim.taber
-
-        lg.info(f"[sim:sync] sync taber from now, taber: {taber}")
-
-        return taber.toDict()
-    except Exception as e:
-        lg.error(f"[sim:sync] Error taber from now: {e}")
-        return noUpd
-
-@callback(
-    out(ks.sto.now, "data", allow_duplicate=True),
-    inp(taber.id.store(k.tab), "data"),
-    ste(ks.sto.now, "data"),
-    prevent_initial_call=True
-)
-def sim_SyncTaberToNow(dta_tbr, dta_now):
-
-    try:
-        tbr = Taber.fromDict(dta_tbr)
-        now = Now.fromDict(dta_now)
-        
-        # Check if taber actually changed
-        if now.pg.sim.taber and now.pg.sim.taber.toDict() == tbr.toDict():
-            return noUpd
-
-        now.pg.sim.taber = tbr
-
-        lg.info(f"[sim:sync] sync taber to now, taber: {tbr}")
-
-        return now.toDict()
-    except Exception as e:
-        lg.error(f"[sim:sync] Error taber to Now: {e}")
-        return noUpd
 
 #------------------------------------------------------------------------
 # onStatus
@@ -339,6 +289,7 @@ def sim_SyncTaberToNow(dta_tbr, dta_now):
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
         out(pager.id.store(k.pagerPnd), "data", allow_duplicate=True),
+        out(taber.id.store(k.tab), "data", allow_duplicate=True),
     ],
     inp(ks.sto.now, "data"),
     [
@@ -351,18 +302,14 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
     tar = Taber.fromDict(dta_tar)
-    
+
     trgId = getTriggerId()
     lg.info(f"[sim:OnStatus] triggered by: {trgId}, assCur len: {len(now.pg.sim.assCur) if now.pg.sim.assCur else 0}, assId: {now.pg.sim.assId}")
-
-    # Store taber in page state
-    if not now.pg.sim.taber:
-        now.pg.sim.taber = tar
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
     cntPn = db.pics.countSimPending()
-    
+
     # Disable Find button if task is running
     from mod.mgr.tskSvc import mgr
     isTaskRunning = False
@@ -372,7 +319,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
                 lg.info(f"[sim:status] Running task found: {tskId}, status: {info.status.value}")
                 isTaskRunning = True
                 break
-    
+
     disFind = cntNo <= 0 or (cntPn >= cntNo) or isTaskRunning
     disCler = cntOk <= 0 and cntPn <= 0
 
@@ -448,7 +395,6 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     ])
 
     # Update pending tab (index 1) state based on cntPn
-    tar = now.pg.sim.taber
     if tar and len(tar.tabs) > 1:
         tab = tar.tabs[1]  # tab (pending)
         if cntPn >= 1:
@@ -463,7 +409,8 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
 
     nowDict = now.toDict()
     lg.info(f"[sim:OnStatus] returning now with assCur len: {len(now.pg.sim.assCur) if now.pg.sim.assCur else 0}")
-    return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd
+
+    return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd, tar.toDict()
 
 
 #------------------------------------------------------------------------
@@ -593,18 +540,20 @@ def sim_OnSwitchViewGroup(clks, dta_now, dta_tar):
     [
         ste(k.slideTh, "value"),
         ste(ks.sto.now, "data"),
+        ste(ks.sto.cnt, "data"),
         ste(ks.sto.mdl, "data"),
         ste(ks.sto.tsk, "data"),
         ste(ks.sto.nfy, "data"),
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, dta_nfy):
+def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy):
     if not clk_fnd and not clk_clr and not clk_dse: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
     now = Now.fromDict(dta_now)
+    cnt = Cnt.fromDict(dta_cnt)
     mdl = Mdl.fromDict(dta_mdl)
     tsk = Tsk.fromDict(dta_tsk)
     nfy = Nfy.fromDict(dta_nfy)
@@ -616,7 +565,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
             if info.status.value in ['pending', 'running']:
                 nfy.warn(f"Task already running, please wait for it to complete")
                 return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
-    
+
     if tsk.id:
         if mgr and mgr.getInfo(tsk.id):
             ti = mgr.getInfo(tsk.id)
@@ -666,7 +615,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
 
     #------------------------------------------------------------------------
     elif trgId == k.btnFind:
-        if now.cntVec <= 0:
+        if cnt.vec <= 0:
             nfy.error("No vector data to process")
             now.pg.sim.clearAll()
             return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
@@ -729,14 +678,12 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_mdl, dta_tsk, 
 #========================================================================
 # task acts
 #========================================================================
-def sim_Clear(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
-    if tsk.id != ks.pg.similar:
-        msg = f"[tsk] wrong triggerId[{tsk.id}]"
-        lg.warn(msg)
-        return nfy, now, msg
+from mod.models import IFnProg
+def sim_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
+    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
 
     try:
-        onUpdate(10, "10%", "Preparing to clear similarity records...")
+        doReport(10, "Preparing to clear similarity records...")
 
         cntOk = db.pics.countSimOk(isOk=1)
         cntRs = db.pics.countHasSimIds()
@@ -747,45 +694,47 @@ def sim_Clear(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
             nfy.info(msg)
             return nfy, now, msg
 
-        onUpdate(30, "30%", "Clearing similarity records from database...")
+        doReport(30, "Clearing similarity records from database...")
 
         db.pics.clearSimIds()
 
-        onUpdate(90, "90%", "Updating dynamic data...")
+        doReport(90, "Updating dynamic data...")
 
         now.pg.sim.assFromUrl = None
 
         now.pg.sim.clearAll()
 
-        onUpdate(100, "100%", "Clear completed")
+        doReport(100, "Clear completed")
 
         msg = f"Successfully cleared {cntOk + cntRs} similarity records"
         lg.info(f"[sim_Clear] {msg}")
         nfy.success(msg)
 
-        return nfy, now, msg
+        return sto, msg
 
     except Exception as e:
         msg = f"Failed to clear similarity records: {str(e)}"
         lg.error(f"[sim_Clear] {msg}")
         lg.error(traceback.format_exc())
         nfy.error(msg)
-        return nfy, now, msg
+        raise RuntimeError(msg)
 
 
-def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
-    if tsk.id != ks.pg.similar:
-        msg = f"[tsk] wrong triggerId[{tsk.id}]"
-        lg.warn(msg)
-        return nfy, now, msg
+def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
+    nfy, now, cnt, tsk = sto.nfy, sto.now, sto.cnt, sto.tsk
 
-    thMin, thMax, isFromUrl = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99), tsk.args.get("isFromUrl", False)
+    thMin, thMax, isFromUrl = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99), tsk.args.get("fromUrl", False)
+
+    # 如果是從 URL 進入，清除引導避免重複搜尋
+    if isFromUrl and now.pg.sim.assFromUrl:
+        lg.info(f"[sim] Clearing URL guidance for asset {now.pg.sim.assFromUrl.autoId if now.pg.sim.assFromUrl else 'unknown'}")
+        now.pg.sim.assFromUrl = None
 
     try:
         assetId = now.pg.sim.assId
         if not assetId: raise RuntimeError(f"[tsk] sim.assId is empty")
 
-        onUpdate(1, "1%", f"prepare..")
+        doReport(1, f"prepare..")
 
         asset = db.pics.getById(assetId)
 
@@ -797,7 +746,7 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
             progressMsg = f"Searching for #{asset.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
             if processedCount > 0:
                 progressMsg = f"No similar found for {processedCount} assets, now searching #{asset.autoId}"
-            onUpdate(10, "10%", progressMsg)
+            doReport(10, progressMsg)
 
             # less will contains self
             infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
@@ -835,12 +784,12 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
                         asset = nextAss
                         assetId = nextAss.id
                         now.pg.sim.assId = nextAss.id
-                        onUpdate(5, "5%", f"No similar found for #{asset.autoId-1}, continuing to #{asset.autoId}...")
+                        doReport(5, f"No similar found for #{asset.autoId - 1}, continuing to #{asset.autoId}...")
                         continue
                 else:
                     lg.info(f"[sim] break bcoz from url")
 
-                onUpdate(100, "100%", f"NoFound #{asset.autoId}")
+                doReport(100, f"NoFound #{asset.autoId}")
                 msg = f"No similar photos found for {asset.autoId}"
                 if processedCount > 1:
                     msg = f"Processed {processedCount} assets without similar. Last: #{asset.autoId}"
@@ -862,7 +811,7 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
 
             prog = pgBse + (pgMax - pgBse) * (cntDone / pgAll)
             prog = min(prog, pgMax)
-            onUpdate(prog, f"{prog:.0f}%", f"Processing similar photo {cntDone}/{pgAll}")
+            doReport(prog, f"Processing similar photo {cntDone}/{pgAll}")
 
             try:
                 lg.info(f"[sim] search child id[{simId}]")
@@ -879,7 +828,10 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
             except Exception as ce:
                 raise RuntimeError(f"Error processing similar image {simId}: {ce}")
 
-        onUpdate(95, "95%", f"Finalizing similar photo relationships")
+        # auto mark
+        db.pics.simAutoMark()
+
+        doReport(95, f"Finalizing similar photo relationships")
 
         now.pg.sim.assId = asset.id
         now.pg.sim.assCur = db.pics.getSimGroup(asset.id)
@@ -890,31 +842,33 @@ def sim_FindSimilar(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
         if not now.pg.sim.assCur:
             raise RuntimeError(f"the get SimGroup not found by asset.id[{asset.id}]")
 
-        onUpdate(100, "100%", f"Completed finding similar photos for #{asset.autoId}")
+        doReport(100, f"Completed finding similar photos for #{asset.autoId}")
 
         cntInfos = len(infos)
         cntAll = len(doneIds)
         msg = [f"Found {len(infos)} similar photos for #{asset.autoId}"]
 
         if cntAll > cntInfos:
-            msg.extend([f"include ({cntAll - cntInfos}) asset extra tree in similar tree."])
+            msg.append(f"include ({cntAll - cntInfos}) asset extra tree in similar tree.")
 
         if processedCount > 1:
-            msg.extend([f"Auto-processed {processedCount} assets before finding similar photos."])
+            msg.append(f"Auto-processed {processedCount} assets before finding similar photos.")
 
         nfy.success(msg)
 
-        return nfy, now, msg
+        return sto, msg
 
     except Exception as e:
         msg = f"[sim] Similar search failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.pg.sim.clearAll()
-        return nfy, now, msg
+        raise RuntimeError(msg)
 
 
-def sim_DelSelected(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
+def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
+
+    nfy, now = sto.nfy, sto.now
     try:
         assets = now.pg.sim.assSelect
         cnt = len(assets)
@@ -928,18 +882,18 @@ def sim_DelSelected(nfy: Nfy, now: Now, tsk: Tsk, onUpdate: IFnProg):
         #todo: 清除同個simGID的所有資料讓他重新找
 
 
-        now.pg.sim.taber.setActiveIdx(1)
         now.pg.sim.clearNow()
 
         nfy.success(msg)
 
-        return nfy, now, msg
+        return sto, msg
     except Exception as e:
-        msg = f"Delete selected failed: {str(e)}"
+        msg = f"[sim] Delete selected failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.pg.sim.clearAll()
-        return nfy, now, msg
+
+        raise RuntimeError(msg)
 
 
 #========================================================================

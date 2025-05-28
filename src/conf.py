@@ -1,5 +1,5 @@
 import os
-from typing import Dict
+from typing import Dict, Callable, Optional
 
 import dotenv
 import torch
@@ -11,6 +11,7 @@ dotenv.load_dotenv()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 pathRoot = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 isDock = os.path.exists('/.dockerenv')
+
 
 # ------------------------------------------------------------------------
 # code helper
@@ -118,6 +119,8 @@ class ks:
         nfy = 'store-nfy'
         mdl = 'store-mdl'
         mdlImg = 'store-mdl-img'
+
+        cnt = 'store-count'
 
     class defs:
         exif = {
