@@ -1,8 +1,10 @@
 import db
 from conf import ks
-from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId
+from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
 from mod import models
+from mod.models import Pager
 from ui.grid import createGrid
+from ui import pager
 from util import log
 
 lg = log.get(__name__)
@@ -25,17 +27,19 @@ class K:
 
     class div:
         grid = "div-photo-grid"
-        pagination = "div-grid-pagination"
-        pgIdx = "vg-pg-idx"
-        loadingIndicator = "div-grid-loading"
-        btnNextPage = "btn-grid-next-page"
-        btnPrevPage = "btn-grid-prev-page"
-        dataPaged = "store-grid-pagination"
+        pagerMain = "vg-pager-main"
 
 
 #========================================================================
 def layout():
     import ui
+    
+    # Get initial total for display
+    try:
+        total = db.pics.count()
+    except:
+        total = 0
+    
     return ui.renderBody([
         #====== top start =======================================================
         dbc.Row([
@@ -148,6 +152,10 @@ def layout():
     ], [
         #====== bottom start=====================================================
 
+        # Top pager
+        *pager.createPager(pgId=K.div.pagerMain, idx=0, className="mb-3 text-center", showInfo=True),
+
+        # Grid
         dbc.Spinner(
             htm.Div(id=K.div.grid, className="mb-4"),
             color="primary",
@@ -155,46 +163,29 @@ def layout():
             spinner_style={"width": "3rem", "height": "3rem"}
         ),
 
-        # Pagination
-        dbc.Row([
-            dbc.Col([
-                dbc.Button("Previous", id=K.div.btnPrevPage, color="primary", disabled=True, className="w-100")
-            ], width=4),
+        # Bottom pager
+        *pager.createPager(pgId=K.div.pagerMain, idx=1, className="mt-3 text-center", showInfo=True),
 
-            dbc.Col([
-                htm.Div([
-                    htm.Span("Page: "),
-                    dbc.Input(id=K.div.pgIdx, type="number", min=1, value=1, style={"width": "80px", "display": "inline-block"}, className="mx-2"),
-                    htm.Span("of "),
-                    htm.Span(id=K.div.pagination, className="ms-2")
-                ], className="text-center")
-            ], width=4),
-
-            dbc.Col([
-                dbc.Button(
-                    "Next",
-                    id=K.div.btnNextPage,
-                    color="primary",
-                    className="w-100"
-                )
-            ], width=4),
-        ], className="mt-3 mb-4"),
-
-        dcc.Store(id=K.div.dataPaged, data={"page": 1, "per_page": 24, "total": 0}),
+        # Main pager store
+        *pager.createStore(pgId=K.div.pagerMain, page=1, size=24, total=total),
 
         #====== bottom end ======================================================
     ])
 
 #========================================================================
-# Page initialization
+# Register pager callbacks
+#========================================================================
+pager.regCallbacks(K.div.pagerMain)
+
+#========================================================================
+# Page initialization - initialize user options
 #========================================================================
 @callback(
+    out(K.inp.selectUsrId, "options"),
     [
-        out(K.inp.selectUsrId, "options"),
-        out(K.div.dataPaged, "data"),
+        inp(ks.sto.cnt, "data"),
+        inp(ks.sto.now, "data"),
     ],
-    inp(ks.sto.cnt, "data"),
-    inp(ks.sto.now, "data"),
     prevent_initial_call=False
 )
 def viewGrid_Init(dta_cnt, dta_now):
@@ -202,97 +193,60 @@ def viewGrid_Init(dta_cnt, dta_now):
     now = models.Now.fromDict(dta_now)
 
     opts = [{"label": "All Users", "value": ""}]
-    if now.usrs and len(now.usrs) > 0:
-        for usr in now.usrs: opts.append({"label": usr.name, "value": usr.id})
+    usrs = db.psql.fetchUsers()
+    if usrs and len(usrs) > 0:
+        for usr in usrs:
+            opts.append({"label": usr.name, "value": usr.id})
 
-    data = {"page": 1, "per_page": 24, "total": cnt.ass or 0}
-
-    return opts, data
+    return opts
 
 
 #========================================================================
-# Handle filter changes and pagination controls
+# Handle filter changes - reset to page 1
 #========================================================================
 @callback(
-    out(K.div.dataPaged, "data", allow_duplicate=True),
+    out(pager.id.store(K.div.pagerMain), "data", allow_duplicate=True),
     [
         inp(K.inp.selectUsrId, "value"),
         inp(K.inp.selectFilter, "value"),
         inp(K.inp.checkFavorites, "value"),
         inp(K.inp.searchKeyword, "value"),
         inp(K.inp.selectPerPage, "value"),
-        inp(K.div.btnNextPage, "n_clicks"),
-        inp(K.div.btnPrevPage, "n_clicks"),
-        inp(K.div.pgIdx, "value"),
     ],
-    [
-        ste(K.div.dataPaged, "data"),
-        ste(K.inp.selectUsrId, "value"),
-        ste(K.inp.selectFilter, "value"),
-        ste(K.inp.checkFavorites, "value"),
-        ste(K.inp.searchKeyword, "value"),
-    ],
+    ste(pager.id.store(K.div.pagerMain), "data"),
     prevent_initial_call=True
 )
-def on_pagination_controls(
+def viewGrid_OnFilterChange(
     usrId, filterOption, favoritesOnly, schKey, pgSize,
-    clks_next, clks_prev, currentPage,
-    dta_pgd, stateUsrId, stateFilterOption, stateFavoritesOnly, stateSearchKeyword
+    dta_pgr
 ):
-    trigger = getTriggerId()
+    pgr = Pager.fromDict(dta_pgr)
 
-    filter_triggers = [
-        K.inp.selectUsrId, K.inp.selectFilter,
-        K.inp.checkFavorites, K.inp.searchKeyword,
-        K.inp.selectPerPage
-    ]
+    # Update total count based on filters
+    total = db.pics.countFiltered(
+        usrId=usrId,
+        opts=filterOption,
+        search=schKey,
+        favOnly=favoritesOnly
+    )
 
-    if trigger in filter_triggers:
-        dta_pgd["page"] = 1
-        dta_pgd["per_page"] = pgSize
+    # Reset to page 1 and update size
+    pgr.idx = 1
+    pgr.size = pgSize
+    pgr.cnt = total
 
-        total = db.pics.countFiltered(
-            usrId=usrId,
-            opts=filterOption,
-            search=schKey,
-            favOnly=favoritesOnly
-        )
-        dta_pgd["total"] = total
+    lg.info(f"[viewGrid] Filter changed, total: {total}, size: {pgSize}")
 
-        return dta_pgd
-
-    page = dta_pgd["page"]
-    per_page = dta_pgd["per_page"]
-    total = dta_pgd["total"]
-
-    total_pages = max(1, (total + per_page - 1) // per_page)
-
-    if trigger == K.div.btnNextPage and clks_next:
-        page = min(page + 1, total_pages)
-    elif trigger == K.div.btnPrevPage and clks_prev:
-        page = max(1, page - 1)
-    elif trigger == K.div.pgIdx:
-        page = max(1, min(currentPage, total_pages)) if currentPage else 1
-
-    dta_pgd["page"] = page
-
-    return dta_pgd
+    return pgr.toDict()
 
 
 #========================================================================
-# Handle photo grid loading
+# Handle photo grid loading when pager changes
 #========================================================================
 @callback(
+    out(K.div.grid, "children"),
     [
-        out(K.div.grid, "children"),
-        out(K.div.pagination, "children"),
-        out(K.div.pgIdx, "value"),
-        out(K.div.pgIdx, "max"),
-        out(K.div.btnPrevPage, "disabled"),
-        out(K.div.btnNextPage, "disabled"),
-    ],
-    [
-        inp(K.div.dataPaged, "data"),
+        inp(pager.id.store(K.div.pagerMain), "data"),
         inp(K.inp.selectUsrId, "value"),
         inp(K.inp.selectSortBy, "value"),
         inp(K.inp.selectSortOrder, "value"),
@@ -304,31 +258,25 @@ def on_pagination_controls(
     ste(ks.sto.cnt, "data"),
     prevent_initial_call=False
 )
-def viewGrid_Load(dta_pg, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now, dta_cnt):
+def viewGrid_Load(dta_pgr, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now, dta_cnt):
+    if not dta_pgr: return noUpd
+
     now = models.Now.fromDict(dta_now)
     cnt = models.Cnt.fromDict(dta_cnt)
+    pgr = Pager.fromDict(dta_pgr)
 
-    page = dta_pg["page"]
-    pageSize = dta_pg["per_page"]
-    total = dta_pg["total"]
+    if cnt.ass <= 0:
+        return dbc.Alert("No photos available", color="secondary", className="text-center")
 
-    if cnt.ass <= 0: return htm.Div("No photos available"), "0", 1, 1, True, True
-
-    total_pages = max(1, (total + pageSize - 1) // pageSize)
-
-    pageIdx = min(total_pages, max(1, page))
-
-    photos = db.pics.getFiltered(usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, pageIdx, pageSize)
+    photos = db.pics.getFiltered(usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, pgr.idx, pgr.size)
 
     if photos and len(photos) > 0:
-        lg.info(f"Loaded {len(photos)} photos")
+        lg.info(f"[viewGrid] Loaded {len(photos)} photos for page {pgr.idx}")
     else:
-        lg.info("No photos loaded")
+        lg.info(f"[viewGrid] No photos found for page {pgr.idx}")
+        return dbc.Alert("No photos found matching your criteria", color="info", className="text-center")
 
     grid = createGrid(photos)
 
-    prev_disabled = pageIdx <= 1
-    next_disabled = pageIdx >= total_pages
-
-    return grid, f"{total_pages}", pageIdx, total_pages, prev_disabled, next_disabled
+    return grid
 
