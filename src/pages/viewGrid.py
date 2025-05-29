@@ -256,14 +256,12 @@ def viewGrid_OnFilterChange(
         inp(K.inp.searchKeyword, "value"),
         inp(K.inp.checkFavorites, "value"),
     ],
-    ste(ks.sto.now, "data"),
     ste(ks.sto.cnt, "data"),
     prevent_initial_call=False
 )
-def viewGrid_Load(dta_pgr, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_now, dta_cnt):
+def viewGrid_Load(dta_pgr, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_cnt):
     if not dta_pgr: return noUpd
 
-    now = models.Now.fromDict(dta_now)
     cnt = models.Cnt.fromDict(dta_cnt)
     pgr = Pager.fromDict(dta_pgr)
 

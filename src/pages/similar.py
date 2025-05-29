@@ -5,10 +5,10 @@ import db
 from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
 from util import log
-from mod import mapFns, taber
+from mod import mapFns
 from ui import gridSimilar as gvs
 from mod import models, tskSvc
-from mod.models import Mdl, Now, Cnt, Nfy, Taber, Pager, Tsk
+from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk
 from ui import pager
 
 lg = log.get(__name__)
@@ -37,7 +37,7 @@ class k:
     btnCbxRm = "sim-btn-CbxRm"
     btnCbxOk = "sim-btn-CbxOk"
 
-    tab = 'sim-taber'
+    tabs = 'sim-tabs'
     pagerPnd = "sim-pager-pnd"
 
     gvSim = "sim-gvSim"
@@ -132,43 +132,63 @@ def layout(autoId=None, **kwargs):
         #------------------------------------------------------------------------
         # Tabs
         #------------------------------------------------------------------------
-        *taber.createTaber(
-            tabId=k.tab,
-            defs=[
-                taber.Tab(title="current", active=True),
-                taber.Tab(title="pending", disabled=True),
-            ],
-            htmActs=[
-                dbc.Button("delete selected (0)", id=k.btnCbxRm, color="danger", size="sm", className="w-60", disabled=True),
-                dbc.Button("mark all resolved", id=k.btnCbxOk, color="success", size="sm", className="w-60", disabled=True)
-            ],
-            tabBodies=[
-                # Current
-                [
-                    dbc.Spinner(
-                        htm.Div(id=k.gvSim), color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
+        htm.Div([
+
+            # Tabs
+            dbc.Tabs(
+                id=k.tabs,
+                active_tab="tab-current",
+                children=[
+                    dbc.Tab(
+                        label="current",
+                        tab_id="tab-current",
+                        children=[
+
+                            # Action buttons
+                            htm.Div([
+                                dbc.Button("delete selected (0)", id=k.btnCbxRm, color="danger", size="sm", className="me-2", disabled=True),
+                                dbc.Button("mark all resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True)
+                            ], className="mb-3 text-end"),
+
+
+                            dbc.Spinner(
+                                htm.Div(id=k.gvSim),
+                                color="success",
+                                type="border",
+                                spinner_style={"width": "3rem", "height": "3rem"},
+                            ),
+                        ]
                     ),
-                ],
-                # Pending
-                htm.Div([
+                    dbc.Tab(
+                        label="pending",
+                        tab_id="tab-pending",
+                        id="tab-pending",
+                        disabled=True,
+                        children=[
+                            htm.Div([
+                                # top pager
+                                *pager.createPager(pgId=k.pagerPnd, idx=0, className="mb-3"),
 
-                    # top pager
-                    *pager.createPager(pgId=k.pagerPnd, idx=0, className="mb-3"),
+                                # Grid view
+                                dbc.Spinner(
+                                    htm.Div(id=k.gvPnd),
+                                    color="success",
+                                    type="border",
+                                    spinner_style={"width": "3rem", "height": "3rem"},
+                                ),
 
-                    # Grid view
-                    dbc.Spinner(
-                        htm.Div(id=k.gvPnd), color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
-                    ),
+                                # bottom pager
+                                *pager.createPager(pgId=k.pagerPnd, idx=1, className="mt-3"),
 
-                    # bottom pager
-                    *pager.createPager(pgId=k.pagerPnd, idx=1, className="mt-3"),
-
-                    # Main pager (store only)
-                    *pager.createStore(pgId=k.pagerPnd, page=1, size=20, total=0),
-                ],
-                    className="text-center"
-                ),
-            ]
+                                # Main pager (store only)
+                                *pager.createStore(pgId=k.pagerPnd, page=1, size=20, total=0),
+                            ], className="text-center")
+                        ]
+                    )
+                ]
+            )
+        ],
+            className="ITab"
         ),
 
         #====== bottom end ======================================================
@@ -191,9 +211,27 @@ def layout(autoId=None, **kwargs):
 # callbacks
 #========================================================================
 
-taber.regCallbacks(k.tab)
 pager.regCallbacks(k.pagerPnd)
 
+
+#------------------------------------------------------------------------
+# Sync tab changes to now state
+#------------------------------------------------------------------------
+@callback(
+    out(ks.sto.now, "data", allow_duplicate=True),
+    inp(k.tabs, "active_tab", ),
+    ste(ks.sto.now, "data"),
+    prevent_initial_call=True
+)
+def sim_OnTabChange(active_tab, dta_now):
+    if not active_tab or not dta_now: return noUpd
+
+    now = Now.fromDict(dta_now)
+    now.pg.sim.activeTab = active_tab
+
+    # lg.info(f"[sim:tab] Tab changed to: {active_tab}")
+
+    return now.toDict()
 
 #------------------------------------------------------------------------
 # Handle pager changes - reload pending data
@@ -208,7 +246,7 @@ pager.regCallbacks(k.pagerPnd)
     prevent_initial_call=True
 )
 def sim_onPagerChanged(dta_pgr, dta_now):
-    if not dta_pgr or not dta_now: return noUpd
+    if not dta_pgr or not dta_now: return noUpd, noUpd
 
     now = Now.fromDict(dta_now)
     pgr = Pager.fromDict(dta_pgr)
@@ -217,13 +255,14 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     oldPgr = now.pg.sim.pagerPnd
     if oldPgr and oldPgr.idx == pgr.idx and oldPgr.size == pgr.size and oldPgr.cnt == pgr.cnt:
         if DEBUG: lg.info(f"[sim:pager] Already on page {pgr.idx}, skipping reload")
-        return noUpd
+        return noUpd, noUpd
 
     now.pg.sim.pagerPnd = pgr
 
     paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
     now.pg.sim.assPend = paged
-    if DEBUG: lg.info(f"[sim:pager] Loading page {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
+
+    lg.info(f"[sim:pager] paged: {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
 
     gvPnd = gvs.mkPndGrid(now.pg.sim.assPend, onEmpty=[
         dbc.Alert("No pending items on this page", color="secondary", className="text-center"),
@@ -289,22 +328,21 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
         out(pager.id.store(k.pagerPnd), "data", allow_duplicate=True),
-        out(taber.id.store(k.tab), "data", allow_duplicate=True),
+        out("tab-pending", "disabled"),
+        out("tab-pending", "label"),
+        out(k.tabs, "active_tab", allow_duplicate=True),
     ],
     inp(ks.sto.now, "data"),
     [
         ste(ks.sto.nfy, "data"),
-        ste(taber.id.store(k.tab), "data"),
     ],
     prevent_initial_call="initial_duplicate"
 )
-def sim_OnStatus(dta_now, dta_nfy, dta_tar):
+def sim_Load(dta_now, dta_nfy):
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
-    tar = Taber.fromDict(dta_tar)
 
     trgId = getTriggerId()
-    lg.info(f"[sim:OnStatus] triggered by: {trgId}, assCur len: {len(now.pg.sim.assCur) if now.pg.sim.assCur else 0}, assId: {now.pg.sim.assId}")
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
@@ -316,7 +354,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     if mgr:
         for tskId, info in mgr.list().items():
             if info.status.value in ['pending', 'running']:
-                lg.info(f"[sim:status] Running task found: {tskId}, status: {info.status.value}")
+                lg.info(f"[sim:load] Running task found: {tskId}, status: {info.status.value}")
                 isTaskRunning = True
                 break
 
@@ -327,7 +365,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     disOk = cntAssets <= 0
 
     if cntAssets >= 1:
-        #lg.info(f"[sim:status] assets: {now.pg.sim.assets[0]}")
+        #lg.info(f"[sim:load] assets: {now.pg.sim.assets[0]}")
         pass
 
     gvSim = []
@@ -374,7 +412,8 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:status] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assId[{now.pg.sim.assId}]")
+    lg.info(f"[sim:load] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assId[{now.pg.sim.assId}]")
+    # lg.info(f"[sim:load] tgId[{trgId}] assId[{now.pg.sim.assId}] assCur[{len(now.pg.sim.assCur)}] assPend[{len(now.pg.sim.assPend)}]")
 
     # Load pending data - reload if count changed or no data
     needReload = False
@@ -383,34 +422,27 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
             needReload = True
         elif oldPn != cntPn:
             needReload = True
-            lg.info(f"[sim:status] Pending count changed from {oldPn} to {cntPn}, reloading data")
+            lg.info(f"[sim:load] Pending count changed from {oldPn} to {cntPn}, reloading data")
 
     if needReload:
         paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
-        lg.info(f"[sim:status] Load pendings page[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
+        lg.info(f"[sim:load] pend reload, idx[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
         now.pg.sim.assPend = paged
 
     gvPnd = gvs.mkPndGrid(now.pg.sim.assPend, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
     ])
 
-    # Update pending tab (index 1) state based on cntPn
-    if tar and len(tar.tabs) > 1:
-        tab = tar.tabs[1]  # tab (pending)
-        if cntPn >= 1:
-            tab.disabled = False
-            tab.title = f"pending ({cntPn})"
-        else:
-            tab.disabled = True
-            tab.title = "pending"
-        lg.info(f"[sim:status] Update Tab title[{tab.title}]")
-    else:
-        lg.warn(f"[sim:status] NoTaber?")
+    # Update pending tab state based on cntPn
+    tabDisabled = cntPn < 1
+    tabLabel = f"pending ({cntPn})" if cntPn >= 1 else "pending"
 
     nowDict = now.toDict()
-    lg.info(f"[sim:OnStatus] returning now with assCur len: {len(now.pg.sim.assCur) if now.pg.sim.assCur else 0}")
 
-    return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd, tar.toDict()
+
+    activeTab = now.pg.sim.activeTab if now.pg.sim.activeTab else "tab-current"
+
+    return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd, tabDisabled, tabLabel, activeTab
 
 
 #------------------------------------------------------------------------
@@ -440,7 +472,7 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
         trgId = ctx.triggered_id
 
         tid = trgId['id']
-        lg.info(f"[sim:select] selected[{tid}]")
+        # lg.info(f"[sim:select] selected[{tid}]")
 
         for ass in now.pg.sim.assCur:
             if ass.id == tid:
@@ -472,7 +504,7 @@ def sim_OnNowChangeSelects(dta_now):
 
     selCnt = len(now.pg.sim.assSelect)
 
-    if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
+    # if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
 
     btnText = f"delete selected ( {selCnt} )"
     btnDisabled = selCnt == 0
@@ -486,40 +518,34 @@ def sim_OnNowChangeSelects(dta_now):
 @callback(
     [
         out(ks.sto.now, "data", allow_duplicate=True),
-        out(taber.id.store(k.tab), "data", allow_duplicate=True),
+        out(k.tabs, "active_tab", allow_duplicate=True),  # Switch to current tab
     ],
     inp({"type": "btn-view-group", "id": ALL}, "n_clicks"),
     [
         ste(ks.sto.now, "data"),
-        ste(taber.id.store(k.tab), "data"),
     ],
     prevent_initial_call=True
 )
-def sim_OnSwitchViewGroup(clks, dta_now, dta_tar):
+def sim_OnSwitchViewGroup(clks, dta_now):
     if not ctx.triggered: return noUpd, noUpd
 
     # Check if any button was actually clicked
     if not any(clks): return noUpd, noUpd
 
     now = Now.fromDict(dta_now)
-    tar = Taber.fromDict(dta_tar)
 
     trgId = ctx.triggered_id
     assId = trgId["id"]
 
-    lg.info(f"[sim:view-group] switch: id[{assId}] clks[{clks}]")
+    # lg.info(f"[sim:view-group] switch: id[{assId}] clks[{clks}]")
 
     now.pg.sim.assId = assId
     now.pg.sim.assCur = db.pics.getSimGroup(assId)
     now.pg.sim.assSelect = []
 
-    if tar and len(tar.tabs) > 0:
-        tar.tabs[0].active = True  # current tab
-        if len(tar.tabs) > 1: tar.tabs[1].active = False  # pending tab
-
     if DEBUG: lg.info(f"[sim:view-group] Loaded {len(now.pg.sim.assCur)} assets for group")
 
-    return now.toDict(), tar.toDict()
+    return now.toDict(), "tab-current"  # Switch to current tab
 
 
 #========================================================================
@@ -852,6 +878,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         now.pg.sim.assId = asset.id
         now.pg.sim.assCur = db.pics.getSimGroup(asset.id)
         now.pg.sim.assSelect = []
+        now.pg.sim.activeTab = "tab-current"
 
         lg.info(f"[sim] done, asset #{asset.autoId}")
 
@@ -898,6 +925,7 @@ def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
         now.pg.sim.clearNow()
+        now.pg.sim.activeTab = "tab-pending"
 
         nfy.success(msg)
 
@@ -922,11 +950,9 @@ def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         for a in assets:
             lg.info(f"[sim:resloveAll] set asset #[{a.autoId}] Id[ {a.id} ]")
-            db.pics.setSimOk( a.id, 1 )
-
+            db.pics.setResloveBy( assets )
 
         now.pg.sim.clearNow()
-
 
         nfy.success(msg)
 

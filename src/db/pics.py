@@ -543,14 +543,14 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)
 
-def setSimOk(assId: str, isOk: int):
+def setResloveBy( assets: List[models.Asset] ):
     try:
         with mkConn() as conn:
-            c = conn.cursor()
-            c.execute("UPDATE assets SET simOk = ? WHERE id = ?", (isOk, assId,))
-            conn.commit()
-            count = c.rowcount
-            lg.info(f"set simOk by Id[{assId}] rst[{count}]")
+            # c = conn.cursor()
+            # c.execute("UPDATE assets SET simOk = ? WHERE id = ?", (isOk, assId,))
+            # conn.commit()
+            # count = c.rowcount
+            # lg.info(f"set simOk by Id[{assId}] rst[{count}]")
             return count
     except Exception as e:
         raise mkErr("Failed to clear similarity results:", e)
@@ -717,17 +717,17 @@ def getPendingPaged(page=1, size=20) -> list[models.Asset]:
                 for leader in leaders:
                     seen = {leader.id}
                     ldrSimIds = {s.id for s in leader.simInfos if s.id}
-                    
+
                     for sim in leader.simInfos:
                         if not sim.id or sim.id not in relatMap or sim.id in seen: continue
-                        
+
                         relAsset = relatMap[sim.id]
                         relSimIds = {s.id for s in relAsset.simInfos if s.id}
-                        
+
                         if len(relSimIds) == 1 and leader.id in relSimIds: continue
-                        
+
                         if relSimIds == ldrSimIds: continue
-                        
+
                         leader.relats.append(relAsset)
                         seen.add(sim.id)
 

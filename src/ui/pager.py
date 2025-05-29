@@ -1,4 +1,4 @@
-from typing import List, Optional, Callable
+from typing import List, Optional, Callable, Literal
 import json
 
 from dsh import htm, dbc, dcc, callback, out, inp, ste, ctx, ALL
@@ -26,7 +26,7 @@ def createStore(
     pgId: str,
     page: int = 1,
     size: int = 20,
-    total: int = 0
+    total: int = 0,
 ) -> List:
     """
     Create a pgr store component
@@ -41,7 +41,10 @@ def createStore(
         List containing the store component
     """
     pgr = models.Pager(idx=page, size=size, cnt=total)
-    return [dcc.Store(id=id.store(pgId), data=pgr.toDict(), storage_type="session")]
+    return [
+
+        dcc.Store(id=id.store(pgId), data=pgr.toDict(), storage_type="session"),
+    ]
 
 
 def createPager(pgId: str, idx: int = 0, className: str = None, showInfo: bool = True, avFirstLast: bool = True, avPrevNext: bool = True, btnSize: int = 5, page: int = 1, size: int = 20, total: int = 0) -> List:
@@ -217,6 +220,7 @@ def _buildUI(pgrId: str, idx: int, page: int, size: int, total: int, btnSize: in
 
 
 def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
+    lg.info( f"[pager] registering callbacks for {pgrId}" )
 
     # Handle page clicks
     @callback(
@@ -300,18 +304,19 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
         ],
         prevent_initial_call=False
     )
-    def pager_updateUI(dta_pgr, dta_pgrs):
-        if DEBUG: lg.info(f"[pgr:{pgrId}] updateUI called - store_data: {dta_pgr}, pgr_stores count: {len(dta_pgrs)}")
+    def pager_updateUI(dta_pgr, dta_bars):
+
+        if DEBUG: lg.info(f"[pgr:{pgrId}] updateUI data[{dta_pgr}] bar count[{len(dta_bars)}]")
 
         if not dta_pgr:
-            if DEBUG: lg.info(f"[pgr:{pgrId}] no store data, returning empty")
-            return [[] for _ in dta_pgrs]
+            if DEBUG: lg.info(f"[pgr:{pgrId}] NoStore, RetEmpty")
+            return [[] for _ in dta_bars]
 
         pgr = models.Pager.fromDict(dta_pgr)
         if DEBUG: lg.info(f"[pgr:{pgrId}] pgr: page={pgr.idx}, size={pgr.size}, total={pgr.cnt}")
 
         results = []
-        for idx, pgr_store in enumerate(dta_pgrs):
+        for idx, pgr_store in enumerate(dta_bars):
             if DEBUG: lg.info(f"[pgr:{pgrId}] processing idx={idx}, pgr_store={pgr_store}")
             if not pgr_store:
                 if DEBUG: lg.info(f"[pgr:{pgrId}] idx={idx} has no pgr_store, appending empty")

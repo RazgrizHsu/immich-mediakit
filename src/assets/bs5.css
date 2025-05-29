@@ -6,14 +6,6 @@ a:hover { color: #3772FF; }
 
 .tooltip .tooltip-inner { background-color: #212121 !important; color: #E0E0E0 !important; max-width: 450px !important; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5) !important; border-radius: 6px !important; }
 
-.nav-tabs { border-bottom-color: var(--bs-border-color) !important; }
-
-.nav-tabs .nav-link { color: #A0A0A0 !important; }
-
-.nav-tabs .nav-link:hover { border-color: var(--bs-border-color) var(--bs-border-color) var(--bs-border-color) !important; color: #E0E0E0 !important; }
-
-.nav-tabs .nav-link.active { background-color: #2D2D2D !important; border-color: var(--bs-border-color) var(--bs-border-color) #2D2D2D !important; color: #E0E0E0 !important; }
-
 .form-check, .form-label { margin-bottom: auto; }
 
 .form-control, .form-select, .form-check-input, input, select, textarea { background-color: #484848 !important; border: var(--bs-border-width) var(--bs-border-style) #666666 !important; color: #FFFFFF !important; }
