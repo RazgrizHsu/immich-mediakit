@@ -23,8 +23,8 @@ class k:
 def renderHeader():
     defs = [
         dbc.NavLink(htm.Span(["⚡️ Fetch"]), href="/", active="exact", className="custom-nav-link"),
-        dbc.NavLink(htm.Span(["🖼️ Assets"]), href=f"/{ks.pg.viewGrid}", active="exact", id=k.nav.viewGrid, className="custom-nav-link"),
         dbc.NavLink(htm.Span(["🔄 Vectors"]), href=f"/{ks.pg.vector}", active="exact", id=k.nav.photoVec, className="custom-nav-link"),
+        dbc.NavLink(htm.Span(["🖼️ Assets"]), href=f"/{ks.pg.viewGrid}", active="exact", id=k.nav.viewGrid, className="custom-nav-link"),
         dbc.NavLink(htm.Span(["🔍 Similar"]), href=f"/{ks.pg.similar}", active="exact", id=k.nav.searchDups, className="custom-nav-link"),
         dbc.NavLink(htm.Span(["⚙️ Settings"]), href=f"/{ks.pg.settings}", active="exact", className="custom-nav-link"),
     ]
