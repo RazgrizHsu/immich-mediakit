@@ -88,9 +88,9 @@ def trashBy(assetIds: List[str]):
                 sql = """
                 Update assets
                 Set "deletedAt" = Now(), status = %s
-                Where id In %s
+                Where id = ANY(%s)
                 """
-                cursor.execute(sql, (ks.db.status.trashed, tuple(assetIds)))
+                cursor.execute(sql, (ks.db.status.trashed, assetIds))
                 affectedRows = cursor.rowcount
                 cnn.commit()
 
@@ -113,9 +113,9 @@ def restoreBy(assetIds: List[str]):
                 sql = """
                 Update assets
                 Set "deletedAt" = Null, status = %s
-                Where id In %s And status = %s
+                Where id = ANY(%s) And status = %s
                 """
-                cursor.execute(sql, (ks.db.status.active, tuple(assetIds), ks.db.status.trashed))
+                cursor.execute(sql, (ks.db.status.active, assetIds, ks.db.status.trashed))
                 affectedRows = cursor.rowcount
                 cnn.commit()
 

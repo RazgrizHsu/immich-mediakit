@@ -26,20 +26,21 @@ enabling advanced management capabilities through AI-powered similarity detectio
 <img src="docs/intro.jpg" alt="preview" />
 </p>
 
+<p align="center">
+<img src="docs/intro-view.jpg" alt="preview" />
+</p>
 
 ## Implementation Status
 
 - [x] Fetch Immich assets
-- [x] Process photos to generate feature vectors using ResNet152
-- [x] Store vectors in Qdrant for similarity comparison
-- [x] Display photo library with filtering
-  - [ ] deletion
-- [x] Find similar photos with adjustable threshold
-  - [x] Provide configurable threshold settings for similarity search
-  - [x] Implement single-group duplicate comparison similar to Immich
-- [ ] Set up batch processing rules for duplicate management
-    - [ ] Backup about-to-be-deleted images
-    - [ ] Organize backups by groups in local folders
+- [x] Generate vectors
+- [x] Store vectors for comparison
+- [x] Display library with filtering
+- [x] Find similar
+  - [x] Threshold settings
+  - [x] Single-Group duplicate comparison similar
+  - [x] Provide Deletion
+- [ ] Batch processing
 
 ## How It Works
 
@@ -48,19 +49,69 @@ enabling advanced management capabilities through AI-powered similarity detectio
 3. Stores vectors in the Qdrant vector database
 4. Uses vector similarity to identify similar/duplicate photos
 5. Displays similar photo groups based on the configured threshold
+6. Manages asset deletion by updating Immich database directly:
+   - Follows Immich's deletion logic for compatibility
+   - **Important**: Enable trash feature in Immich settings first
+   - Deleted assets appear in Immich's trash where you can permanently delete or restore them
+
 
 ## Installation & Setup
 
 ### Prerequisites
 
-- Access to an Immich installation
-- API keys for Immich users whose assets you want to manage
+- Access to an Immich installation with trash feature enabled
+- A configured `.env` file (see above)
+-
+
+
+### Connecting to Immich Database
+
+If your Immich is running with Docker Compose, you need to expose the PostgreSQL port. Add the following port mapping to your Immich's docker-compose.yml:
+
+```yaml
+services:
+  database:
+    container_name: immich_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.3.0-pgvectors0.2.0
+    ports:
+      - "5432:5432"  # Add this line to expose PostgreSQL
+```
+
+After updating, restart Immich to apply the changes. The exposed port (5432) should match the `PSQL_PORT` setting in your MediaKit `.env` file.
+
+
+### Environment Variables
+
+Create a `.env` file with the following variables:
+
+```
+# PostgreSQL connection to Immich
+PSQL_HOST=localhost
+PSQL_PORT=5432
+PSQL_DB=immich
+PSQL_USER=postgres
+PSQL_PASS=postgres
+
+# Immich connection
+IMMICH_URL=http://localhost:2283
+IMMICH_PATH=/path/to/immich/library
+
+# Qdrant connection (not needed for Docker Compose)
+QDRANT_URL=http://localhost:6333
+QDRANT_PORT=6333
+
+# MediaKit settings
+MKIT_PORT=8086
+MKIT_DATA=/path/to/data/dir
+```
+
+
 
 ### Option 1: Docker Compose (Recommended)
 
 The easiest way to run Immich-MediaKit is with Docker Compose, which automatically includes the Qdrant vector database:
 
-1. Create a `.env` file (see Environment Variables section below)
+1. Ensure you have created the `.env` file
 2. Run:
 
 ```bash
@@ -73,7 +124,7 @@ docker-compose up -d --build
 If you prefer to run without Docker:
 
 1. Install Qdrant server separately
-2. Create a `.env` file
+2. Ensure you have created the `.env` file
 3. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
@@ -83,45 +134,6 @@ If you prefer to run without Docker:
    python src/app.py
    ```
 
-## Environment Variables
-
-Create a `.env` file with the following variables:
-
-```
-# Qdrant connection (not needed for Docker Compose)
-QDRANT_URL=http://localhost:6333
-
-# PostgreSQL connection to Immich
-PSQL_HOST=localhost
-PSQL_PORT=5432
-PSQL_DB=immich
-PSQL_USER=postgres
-PSQL_PASS=postgres
-
-# Immich connection
-IMMICH_URL=http://localhost:2283
-IMMICH_PATH=/path/to/immich/library  # Optional, for faster local access
-
-# MediaKit settings
-MKIT_PORT=8086
-MKIT_DATA=/path/to/data/dir
-```
-
-## Performance Optimization
-
-Setting the `IMMICH_PATH` environment variable to point to your Immich installation's physical path significantly improves performance. This allows Immich-MediaKit to access images directly from the filesystem rather than downloading them via HTTP API requests.
-
-## Access Control
-
-To manage user assets in Immich, you must create API keys for those users in the Immich system. Assets belonging to users without API keys cannot be accessed. Ensure the API keys have appropriate permissions (read or delete) based on the operations you want to perform.
-
-## Vector Database: Qdrant vs FAISS
-
-This project uses Qdrant as the vector database instead of FAISS due to:
-
-- Better support for custom IDs with direct vector access
-- More efficient memory usage (approximately 50% less memory for large collections)
-- Native support for vector comparison operations
 
 ## Contributing
 
@@ -150,4 +162,4 @@ Please consider the following:
 
 Immich-MediaKit is provided "as is" without warranty of any kind. By using this software, you acknowledge the potential risks involved in managing and potentially modifying your photo collection.
 
-Happy photo organizing! We hope this tool enhances your Immich experience by helping you maintain a clean, duplicate-free photo library.
+Happy organizing! We hope this tool enhances your Immich experience by helping you maintain a clean, duplicate-free library.

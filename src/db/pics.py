@@ -211,8 +211,42 @@ def getAllNonVector() -> list[models.Asset]:
 #------------------------------------------------------------------------
 # paged
 #------------------------------------------------------------------------
+def countFiltered(usrId="", opts="all", search="", favOnly=False):
+    try:
+        cds = []
+        pms = []
+
+        if usrId:
+            cds.append("ownerId = ?")
+            pms.append(usrId)
+
+        if favOnly:
+            cds.append("isFavorite = 1")
+
+        if opts == "with_vectors":
+            cds.append("isVectored = 1")
+        elif opts == "without_vectors":
+            cds.append("isVectored = 0")
+
+        if search and len(search.strip()) > 0:
+            cds.append("originalFileName LIKE ?")
+            pms.append(f"%{search}%")
+
+        query = "Select Count(*) From assets"
+        if cds: query += " WHERE " + " AND ".join(cds)
+
+
+        with mkConn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, pms)
+            return cursor.fetchone()[0]
+    except Exception as e:
+        lg.error(f"Error counting assets: {str(e)}")
+        return 0
+
+
 def getFiltered(
-    usrId="", sort="fileCreatedAt", sortOrd="desc",
+    usrId="",
     opts="all", search="", onlyFav=False,
     page=1, pageSize=24
 ) -> list[models.Asset]:
@@ -240,7 +274,8 @@ def getFiltered(
         if cds:
             query += " WHERE " + " AND ".join(cds)
 
-        query += f" ORDER BY {sort} {'DESC' if sortOrd == 'desc' else 'ASC'}"
+        query += f" Order By autoId DESC"
+        # query += f" ORDER BY {sort} {'DESC' if sortOrd == 'desc' else 'ASC'}"
         query += f" LIMIT {pageSize} OFFSET {(page - 1) * pageSize}"
 
         with mkConn() as conn:
@@ -256,37 +291,6 @@ def getFiltered(
         return []
 
 
-def countFiltered(usrId="", opts="all", search="", favOnly=False):
-    try:
-        cds = []
-        pms = []
-
-        if usrId:
-            cds.append("ownerId = ?")
-            pms.append(usrId)
-
-        if favOnly:
-            cds.append("isFavorite = 1")
-
-        if opts == "with_vectors":
-            cds.append("isVectored = 1")
-        elif opts == "without_vectors":
-            cds.append("isVectored = 0")
-
-        if search and len(search.strip()) > 0:
-            cds.append("originalFileName LIKE ?")
-            pms.append(f"%{search}%")
-
-        query = "Select Count(*) From assets"
-        if cds: query += " WHERE " + " AND ".join(cds)
-
-        with mkConn() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, pms)
-            return cursor.fetchone()[0]
-    except Exception as e:
-        lg.error(f"Error counting assets: {str(e)}")
-        return 0
 
 
 #========================================================================
