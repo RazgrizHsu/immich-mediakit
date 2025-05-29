@@ -487,7 +487,7 @@ body {
 
 
 .tag {
-	border:#E0E0E0 1px solid;
+	border:#E0E0E099 1px solid;
 	padding:0px 4px 3px 4px;
 	margin:1px 3px;
 	background:#2D4A69;
@@ -495,12 +495,20 @@ body {
 	font-size:12px;
 	vertical-align:middle;
 
+	&.second {
+		background: #4A4A4A;
+	}
+
 	&.info {
 		background:#78C22A;
 	}
 
 	&.lg {
 		font-size:15px;
+	}
+
+	&.sm {
+		font-size:10px;
 	}
 }
 
@@ -918,9 +926,9 @@ body {
 			justify-content:end;
 			width:100%;
 
-			> span {
-				font-size:18px !important;
-			}
+			//> span {
+			//	font-size:18px !important;
+			//}
 		}
 
 	}

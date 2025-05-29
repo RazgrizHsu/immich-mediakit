@@ -192,7 +192,7 @@ def testAssetsPath():
                 if isOk:
                     return "OK"
 
-        if not isOk: return "Access Failed"
+            if not isOk: return f"{os.path.dirname(path)}"
 
         return f"test failed"
 

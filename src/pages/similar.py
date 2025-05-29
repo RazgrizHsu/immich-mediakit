@@ -34,7 +34,7 @@ class k:
 
     btnFind = "sim-btn-find"
     btnClear = "sim-btn-clear"
-    btnCbxDel = "sim-btn-CbxDel"
+    btnCbxRm = "sim-btn-CbxRm"
     btnCbxOk = "sim-btn-CbxOk"
 
     tab = 'sim-taber'
@@ -139,7 +139,7 @@ def layout(autoId=None, **kwargs):
                 taber.Tab(title="pending", disabled=True),
             ],
             htmActs=[
-                dbc.Button("delete selected (0)", id=k.btnCbxDel, color="danger", size="sm", className="w-60", disabled=True),
+                dbc.Button("delete selected (0)", id=k.btnCbxRm, color="danger", size="sm", className="w-60", disabled=True),
                 dbc.Button("mark all resolved", id=k.btnCbxOk, color="success", size="sm", className="w-60", disabled=True)
             ],
             tabBodies=[
@@ -335,7 +335,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    # 動態獲取關聯群組
+    # todo: 動態獲取關聯群組
     # relatedGroups = []
     # if now.pg.sim.assId:
     #     asset = db.pics.getById(now.pg.sim.assId)
@@ -354,7 +354,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
     #                     relatedGroups.append(ra)
 
     gvSim = gvs.mkGrid(now.pg.sim.assCur, now.pg.sim.assId, onEmpty=[
-        dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
+        dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
     ])
 
     # Initialize or get pager
@@ -391,7 +391,7 @@ def sim_OnStatus(dta_now, dta_nfy, dta_tar):
         now.pg.sim.assPend = paged
 
     gvPnd = gvs.mkPndGrid(now.pg.sim.assPend, onEmpty=[
-        dbc.Alert("Please find the similar images..", color="secondary", className="text-center"),
+        dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
     ])
 
     # Update pending tab (index 1) state based on cntPn
@@ -461,8 +461,8 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
 #------------------------------------------------------------------------
 @callback(
     [
-        out(k.btnCbxDel, "children"),
-        out(k.btnCbxDel, "disabled"),
+        out(k.btnCbxRm, "children"),
+        out(k.btnCbxRm, "disabled"),
     ],
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
@@ -535,7 +535,8 @@ def sim_OnSwitchViewGroup(clks, dta_now, dta_tar):
     [
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
-        inp(k.btnCbxDel, "n_clicks"),
+        inp(k.btnCbxRm, "n_clicks"),
+        inp(k.btnCbxOk, "n_clicks"),
     ],
     [
         ste(k.slideTh, "value"),
@@ -547,8 +548,8 @@ def sim_OnSwitchViewGroup(clks, dta_now, dta_tar):
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy):
-    if not clk_fnd and not clk_clr and not clk_dse: return noUpd, noUpd, noUpd, noUpd
+def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy):
+    if not clk_fnd and not clk_clr and not clk_dse and not clk_rse: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
@@ -579,7 +580,21 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_cnt, dta_mdl, 
     lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
 
     #------------------------------------------------------------------------
-    if trgId == k.btnCbxDel:
+    if trgId == k.btnCbxOk:
+        ass = now.pg.sim.assCur
+        cnt = len(ass)
+
+        lg.info(f"[sim:reslove] {cnt} assets")
+
+        if cnt > 0:
+            mdl.reset()
+            mdl.id = ks.pg.similar
+            mdl.cmd = ks.cmd.sim.selsOk
+            mdl.msg = f"Are you sure mark resloved current images( {cnt} )?"
+
+            mdl.assets = ass
+    #------------------------------------------------------------------------
+    if trgId == k.btnCbxRm:
         ass = now.pg.sim.assSelect
         cnt = len(ass)
 
@@ -588,9 +603,9 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_cnt, dta_mdl, 
         if cnt > 0:
             mdl.reset()
             mdl.id = ks.pg.similar
-            mdl.cmd = ks.cmd.sim.delSels
+            mdl.cmd = ks.cmd.sim.selsRm
             mdl.msg = [
-                f"Are you sure you want to delete select images( {cnt} )?", htm.Br(),
+                f"Are you sure you want to Delete select images( {cnt} )?", htm.Br(),
                 htm.B("This operation cannot be undone"),
             ]
             mdl.assets = ass
@@ -679,6 +694,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, thRange, dta_now, dta_cnt, dta_mdl, 
 # task acts
 #========================================================================
 from mod.models import IFnProg
+
 def sim_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
 
@@ -829,7 +845,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 raise RuntimeError(f"Error processing similar image {simId}: {ce}")
 
         # auto mark
-        db.pics.simAutoMark()
+        db.pics.setSimAutoMark()
 
         doReport(95, f"Finalizing similar photo relationships")
 
@@ -867,7 +883,6 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
-
     nfy, now = sto.nfy, sto.now
     try:
         assets = now.pg.sim.assSelect
@@ -896,9 +911,38 @@ def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
+def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
+    nfy, now = sto.nfy, sto.now
+    try:
+        assets = now.pg.sim.assCur
+        cnt = len(assets)
+        msg = f"[sim] set Resloved Assets( {cnt} ) Success!"
+
+        if not assets or cnt == 0: raise RuntimeError("Current Assets not found")
+
+        for a in assets:
+            lg.info(f"[sim:resloveAll] set asset #[{a.autoId}] Id[ {a.id} ]")
+            db.pics.setSimOk( a.id, 1 )
+
+
+        now.pg.sim.clearNow()
+
+
+        nfy.success(msg)
+
+        return sto, msg
+    except Exception as e:
+        msg = f"[sim] Delete selected failed: {str(e)}"
+        nfy.error(msg)
+        lg.error(traceback.format_exc())
+        now.pg.sim.clearAll()
+
+        raise RuntimeError(msg)
+
 #========================================================================
 # Set up global functions
 #========================================================================
 mapFns[ks.cmd.sim.find] = sim_FindSimilar
 mapFns[ks.cmd.sim.clear] = sim_Clear
-mapFns[ks.cmd.sim.delSels] = sim_DelSelected
+mapFns[ks.cmd.sim.selsOk] = sim_ResloveAll
+mapFns[ks.cmd.sim.selsRm] = sim_DelSelected

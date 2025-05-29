@@ -125,6 +125,7 @@ def getByAutoId(autoId) -> Optional[models.Asset]:
             return asset
     except Exception as e:
         raise mkErr("Failed to get asset information", e)
+
 def getById(assId) -> Optional[models.Asset]:
     try:
         with mkConn() as conn:
@@ -459,8 +460,6 @@ def getSimGroup(assId: str) -> Optional[List[models.Asset]]:
         raise mkErr(f"Failed to get similar group for root {assId}", e)
 
 
-
-
 def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
     if not infos or len(infos) <= 0:
         lg.warn(f"Can't setSimIds id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
@@ -544,6 +543,18 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)
 
+def setSimOk(assId: str, isOk: int):
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("UPDATE assets SET simOk = ? WHERE id = ?", (isOk, assId,))
+            conn.commit()
+            count = c.rowcount
+            lg.info(f"set simOk by Id[{assId}] rst[{count}]")
+            return count
+    except Exception as e:
+        raise mkErr("Failed to clear similarity results:", e)
+
 def clearSimIds():
     try:
         with mkConn() as conn:
@@ -552,7 +563,7 @@ def clearSimIds():
             conn.commit()
             count = c.rowcount
             lg.info(f"Cleared similarity results for {count} assets")
-            return True
+            return count
     except Exception as e:
         raise mkErr("Failed to clear similarity results:", e)
 
@@ -609,7 +620,7 @@ def getAllSimOks(isOk=0) -> List[models.Asset]:
 
 
 # auto mark simOk=1 if simInfos only includes self
-def simAutoMark():
+def setSimAutoMark():
     try:
         with mkConn() as cnn:
             c = cnn.cursor()

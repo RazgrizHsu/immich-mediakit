@@ -32,8 +32,8 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
     cnt = models.Cnt.fromDict(dta_count)
     nfy = models.Nfy.fromDict(dta_nfy)
 
-    testIP = envs.immichPath if envs.immichPath else '--none--'
     testDA = psql.testAssetsPath()
+    testOk = testDA.startswith("OK")
 
     chkDel = core.checkLogicDelete()
     chkRst = core.checkLogicRestore()
@@ -55,7 +55,7 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
             ])
 
     if testDA and not testDA.startswith("OK"):
-        nfy.warn(f"[system] the direct access to IMMICH_PATH is Failed[ {testDA} ]")
+        nfy.error(["[system] access to IMMICH_PATH is Failed,",htm.Br(),htm.Small(f"{testDA}")])
 
     htmCnts = htm.Div([
         dbc.Card([
@@ -76,10 +76,10 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
                     dbc.Col([htm.Small("Path Test:")], width=5, className=""),
                     dbc.Col([
                         htm.Span(
-                            f"{testDA}", className="tag info"
-                        ) if testDA.startswith("OK") else htm.Span
+                            f"OK", className="tag info"
+                        ) if testOk else htm.Span
                             (
-                            f"{testDA}", className="tag"
+                            f"Failed", className="tag"
                         )
                     ]),
                 ], className="mb-2"),
@@ -103,15 +103,3 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
     ])
 
     return htmCnts, nfy.toDict()
-
-def test():
-    import ui
-    return ui.renderBody([
-        #====== top start =======================================================
-
-        #====== top end =========================================================
-    ], [
-        #====== bottom start=====================================================
-
-        #====== bottom end ======================================================
-    ])
