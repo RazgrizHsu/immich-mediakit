@@ -24,69 +24,69 @@ def layout():
     return ui.renderBody([
         #====== top start =======================================================
 
-        htm.H3(ks.pg.vector.name, className="mb-4"),
+        dbc.Row([
+            dbc.Col(htm.H3(f"{ks.pg.vector.name}"), width=3),
+            dbc.Col(htm.Small(f"{ks.pg.vector.desc}", className="text-muted"))
+        ], className="mb-4"),
 
-        htm.Div([
-            htm.P(ks.pg.vector.desc, className="mb-4"),
 
-            dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("Processing Settings"),
-                        dbc.CardBody([
-                            dbc.Row([
-                                dbc.Col([
-                                    dbc.Label("Photo Quality"),
-                                    dbc.Select(
-                                        id=K.selectQ,
-                                        options=[
-                                            {"label": "Thumbnail (Fast)", "value": ks.db.thumbnail},
-                                            {"label": "Preview", "value": ks.db.preview},
-                                            {"label": "FullSize (Slow)", "value": ks.db.fullsize},
-                                        ],
-                                        value=ks.db.preview,
-                                        className="mb-3",
-                                    ),
-                                ], width=12),
-                            ], className="mb-2"),
-                            dbc.Row([
-                                dbc.Col([
-                                    htm.Ul([
-                                        htm.Li([htm.B("Thumbnail"), htm.Small(" Fastest, but with lower detail comparison accuracy"), ]),
-                                        htm.Li([htm.B("Preview"), htm.Small(" Medium quality, generally the most balanced option"), ]),
-                                        htm.Li([htm.B("FullSize"), htm.Small(" Slowest, but provides the most precise detail comparison"), ]),
-                                    ]),
-                                ], width=12, className=""),
-                            ], className="mb-0"),
-                        ])
-                    ], className="mb-4")
-                ], width=12),
-            ]),
-
-            dbc.Row([
-                dbc.Col([
-                    dbc.Button(
-                        "Execute: Process Assets",
-                        id=K.btnDoVec,
-                        color="primary",
-                        size="lg",
-                        className="w-100",
-                        disabled=True,
-                    ),
-                ], width=6),
-
-                dbc.Col([
-                    dbc.Button(
-                        "Clear All Vectors",
-                        id=K.btnClear,
-                        color="danger",
-                        size="lg",
-                        className="w-100",
-                        disabled=True,
-                    ),
-                ], width=6),
-            ], className="mb-4"),
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader("Processing Settings"),
+                    dbc.CardBody([
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Label("Photo Quality"),
+                                dbc.Select(
+                                    id=K.selectQ,
+                                    options=[
+                                        {"label": "Thumbnail (Fast)", "value": ks.db.thumbnail},
+                                        {"label": "Preview", "value": ks.db.preview},
+                                        {"label": "FullSize (Slow)", "value": ks.db.fullsize},
+                                    ],
+                                    value=ks.db.preview,
+                                    className="mb-3",
+                                ),
+                            ], width=12),
+                        ], className="mb-2"),
+                        dbc.Row([
+                            dbc.Col([
+                                htm.Ul([
+                                    htm.Li([htm.B("Thumbnail"), htm.Small(" Fastest, but with lower detail comparison accuracy"), ]),
+                                    htm.Li([htm.B("Preview"), htm.Small(" Medium quality, generally the most balanced option"), ]),
+                                    htm.Li([htm.B("FullSize"), htm.Small(" Slowest, but provides the most precise detail comparison"), ]),
+                                ]),
+                            ], width=12, className=""),
+                        ], className="mb-0"),
+                    ])
+                ], className="mb-4")
+            ], width=12),
         ]),
+
+        dbc.Row([
+            dbc.Col([
+                dbc.Button(
+                    "Execute: Process Assets",
+                    id=K.btnDoVec,
+                    color="primary",
+                    size="lg",
+                    className="w-100",
+                    disabled=True,
+                ),
+            ], width=6),
+
+            dbc.Col([
+                dbc.Button(
+                    "Clear All Vectors",
+                    id=K.btnClear,
+                    color="danger",
+                    size="lg",
+                    className="w-100",
+                    disabled=True,
+                ),
+            ], width=6),
+        ], className="mb-4"),
         #====== top end =========================================================
     ], [
         #====== bottom start=====================================================
@@ -160,11 +160,12 @@ def photoVec_Status(dta_tsk, dta_cnt):
     tsk = models.Tsk.fromDict(dta_tsk)
     cnt = models.Cnt.fromDict(dta_cnt)
 
-    hasPic = cnt.ass > 0
-    isTskin = tsk.id is not None
+    isTskin = tsk.name is not None
 
-    txtBtn = "Execute: Process Assets"
-    disBtnRun = isTskin or not hasPic
+    cntNeedVec = cnt.ass - cnt.vec
+
+    txtBtn = "Execute: Process Assets" if cntNeedVec else "No Asset Need it"
+    disBtnRun = isTskin or cntNeedVec <= 0
     disBtnClr = isTskin or cnt.vec <= 0
     disSelect = isTskin or cnt.vec >= 1
 
@@ -219,17 +220,18 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, 
         else:
             mdl.id = ks.pg.vector
             mdl.cmd = ks.cmd.vec.toVec
-            mdl.msg = f"Begin processing photos[{cnt.ass}] with quality[{photoQ}] ?"
+            mdl.msg = f"Begin processing photos[{cnt.ass - cnt.vec}] with quality[{photoQ}] ?"
             now.photoQ = photoQ
 
     elif trgId == K.btnClear:
         if cnt.vec <= 0:
             nfy.error("No vector data to clear")
         else:
-            nfy.info(f"[photoVec] Triggered: Clear all vectors")
             mdl.id = ks.pg.vector
             mdl.cmd = ks.cmd.vec.clear
-            mdl.msg = "Are you sure you want to clear all vectors?"
+            mdl.msg = [
+                "Are you sure you want to clear all vectors?"
+            ]
 
     return mdl.toDict(), nfy.toDict(), now.toDict()
 
@@ -239,8 +241,8 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, 
 #========================================================================
 import imgs
 from mod.models import IFnProg
-def photoVec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
+def photoVec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     msg = "[PhotoVec] Processing successful"
 
@@ -249,11 +251,8 @@ def photoVec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         doReport(1, f"Initializing with photoQ[{photoQ}]")
 
-        assets = db.pics.getAll()
+        assets = db.pics.getAllNonVector()
         doReport(5, f"Getting asset data count[{len(assets)}]")
-
-        if cnt.vec:
-            db.vecs.clear()
 
         if not assets or len(assets) == 0:
             msg = "No assets to process"
@@ -279,7 +278,6 @@ def photoVec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def photoVec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
-
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     msg = "[PhotoVec] Clearing successful"
 
@@ -295,7 +293,7 @@ def photoVec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         count = db.vecs.count()
         if count >= 0:
-            db.vecs.clear()
+            db.vecs.cleanAll()
 
         doReport(90, f"Cleared {count} vector records")
 

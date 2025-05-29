@@ -70,7 +70,8 @@ class co:
 class cmds:
     class fetch(co.to):
         asset = co.tit('fetch_asset',desc='Fetch assets from remote')
-        clear = co.tit('fetch_clear',desc='Clear all assets and vectors')
+        clear = co.tit('fetch_clear',desc='Clear select user assets and vectors')
+        reset = co.tit('fetch_reset',desc='Clear all assets and vectors')
 
     class vec(co.to):
         toVec = co.tit('vec_toVec',desc='Generate vectors from assets')
@@ -156,7 +157,7 @@ class ks:
             "updatedAt": "Updated At",
             "updateId": "Update ID"
         }
-        thMarks = {0: "0", 0.2: "0.2", 0.4: "0.4", 0.6: "0.6", 0.8: "0.8", 0.9: "0.9", 0.95: "0.95", 1: "1"}
+        thMarks = {0.5:"0.5", 0.7: "0.7", 0.8: "0.8", 0.85:"0.85", 0.9: "0.9", 0.95: "0.95", 1: "1"}
 
 
     class css:

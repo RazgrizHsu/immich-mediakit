@@ -1,7 +1,7 @@
 import json
 import sqlite3
 from sqlite3 import Cursor
-from typing import Optional, List
+from typing import Optional, List, Callable
 from contextlib import contextmanager
 
 from conf import envs
@@ -61,7 +61,7 @@ def init():
                     isVectored       INTEGER Default 0,
                     simOk            INTEGER Default 0,
                     simInfos         TEXT Default '[]',
-                    simGID           INTEGER
+                    simGID           INTEGER Default 0
                 )
                 ''')
 
@@ -80,7 +80,7 @@ def init():
     except Exception as e:
         raise mkErr("Failed to initialize duplicate photo database", e)
 
-def clear():
+def clearAll():
     try:
         with mkConn() as conn:
             c = conn.cursor()
@@ -92,7 +92,19 @@ def clear():
         raise mkErr("Failed to clear database", e)
 
 
-def hasData(): return count() > 0
+def clearBy(usrId):
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+            sql = "Delete From assets WHERE ownerId = ?"
+            c.execute(sql, (usrId,))
+            cnt = c.rowcount
+            conn.commit()
+
+            lg.info( f"[pics] delete userId[ {usrId} ] assets[ {cnt} ]" )
+            return cnt
+    except Exception as e:
+        raise mkErr(f"Failed to del assets by userId[{usrId}]", e)
 
 
 def count(usrId=None):
@@ -138,6 +150,18 @@ def getById(assId) -> Optional[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get asset information", e)
 
+def getAllByUsrId(usrId: str) -> List[models.Asset]:
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute(f"Select * From assets Where ownerId = ? ", (usrId,))
+            rows = c.fetchall()
+            if not rows: return []
+            assets = [models.Asset.fromDB(c, row) for row in rows]
+            return assets
+    except Exception as e:
+        raise mkErr(f"Failed to get asset by userId[{usrId}]", e)
+
 def getAllByIds(ids: List[str]) -> List[models.Asset]:
     try:
         if not ids: return []
@@ -170,6 +194,19 @@ def getAll(count=0) -> list[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get all asset information", e)
 
+
+def getAllNonVector() -> list[models.Asset]:
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+            sql = "Select * From assets WHERE isVectored=0"
+            c.execute(sql)
+            rows = c.fetchall()
+            if not rows: return []
+            assets = [models.Asset.fromDB(c, row) for row in rows]
+            return assets
+    except Exception as e:
+        raise mkErr("Failed to get all asset information", e)
 
 #------------------------------------------------------------------------
 # paged
@@ -270,107 +307,102 @@ def updVecBy(asset: models.Asset, done=1, cur: Cursor = None):
     except Exception as e:
         raise mkErr(f"Failed to updateVecBy: {asset}", e)
 
-def saveBy(asset: dict):
+def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
     try:
-        with mkConn() as conn:
-            c = conn.cursor()
-            assId = asset.get('id')
-            if not assId: return False
+        assId = asset.get('id', None )
+        if not assId: return False
 
-            exifInfo = asset.get('exifInfo', {})
-            jsonExif = None
-            if exifInfo:
-                try:
-                    jsonExif = json.dumps(exifInfo, ensure_ascii=False, default=BaseDictModel.jsonSerializer)
-                    # lg.info(f"json: {jsonExif}")
-                except Exception as e:
-                    raise mkErr("[pics.save] Error converting EXIF to JSON", e)
+        if not isinstance( assId, str ): assId = str(assId)
 
-            c.execute("Select autoId, id From assets Where id = ?", (assId,))
-            row = c.fetchone()
+        exifInfo = asset.get('exifInfo', {})
+        jsonExif = None
+        if exifInfo:
+            try:
+                jsonExif = json.dumps(exifInfo, ensure_ascii=False, default=BaseDictModel.jsonSerializer)
+                # lg.info(f"json: {jsonExif}")
+            except Exception as e:
+                raise mkErr("[pics.save] Error converting EXIF to JSON", e)
 
-            if row is None:
-                c.execute('''
-                    Insert Into assets (id, ownerId, deviceId, type, originalFileName,
-                    fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
-                    libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
-                    Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    assId,
-                    asset.get('ownerId'),
-                    asset.get('deviceId'),
-                    asset.get('type'),
-                    asset.get('originalFileName'),
-                    asset.get('fileCreatedAt'),
-                    asset.get('fileModifiedAt'),
-                    1 if asset.get('isFavorite') else 0,
-                    1 if asset.get('isVisible') else 0,
-                    1 if asset.get('isArchived') else 0,
-                    asset.get('libraryId'),
-                    asset.get('localDateTime'),
-                    asset.get('thumbnail_path'),
-                    asset.get('preview_path'),
-                    asset.get('fullsize_path', asset.get('originalPath')),
-                    jsonExif,
-                ))
+        c.execute("Select autoId, id From assets Where id = ?", (assId,))
+        row = c.fetchone()
 
-            elif asset.get('thumbnail_path') or asset.get('preview_path') or asset.get('fullsize_path') or jsonExif:
-                updFields = []
-                updValues = []
+        if row is None:
+            c.execute('''
+                Insert Into assets (id, ownerId, deviceId, type, originalFileName,
+                fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
+                libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
+                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                assId,
+                str(asset.get('ownerId')),
+                asset.get('deviceId'),
+                asset.get('type'),
+                asset.get('originalFileName'),
+                asset.get('fileCreatedAt'),
+                asset.get('fileModifiedAt'),
+                1 if asset.get('isFavorite') else 0,
+                1 if asset.get('isVisible') else 0,
+                1 if asset.get('isArchived') else 0,
+                asset.get('libraryId'),
+                asset.get('localDateTime'),
+                asset.get('thumbnail_path'),
+                asset.get('preview_path'),
+                asset.get('fullsize_path', asset.get('originalPath')),
+                jsonExif,
+            ))
 
-                c.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", (assId,))
-                paths = c.fetchone()
-
-                # If thumbnail path is provided and existing path is empty
-                if asset.get('thumbnail_path') and (not paths or not paths[0]):
-                    updFields.append("thumbnail_path = ?")
-                    updValues.append(asset.get('thumbnail_path'))
-
-                # If preview path is provided and existing path is empty
-                if asset.get('preview_path') and (not paths or not paths[1]):
-                    updFields.append("preview_path = ?")
-                    updValues.append(asset.get('preview_path'))
-
-                # If original path is provided and existing path is empty
-                fullsize = asset.get('fullsize_path', asset.get('originalPath'))
-                if fullsize and (not paths or not paths[2]):
-                    updFields.append("fullsize_path = ?")
-                    updValues.append(fullsize)
-
-                # Check EXIF updates
-                if jsonExif:
-                    c.execute("Select jsonExif From assets Where id = ?", (assId,))
-                    existing_exif = c.fetchone()
-                    if not existing_exif or not existing_exif[0]:
-                        updFields.append("jsonExif = ?")
-                        updValues.append(jsonExif)
-
-                if updFields:
-                    update_query = f"UPDATE assets SET {', '.join(updFields)} WHERE id = ?"
-                    updValues.append(assId)
-                    c.execute(update_query, updValues)
-
-            conn.commit()
             return True
+
+        # else:
+        #     lg.info(f"asset already exists, update it..")
+        #     ass = models.Asset.fromDB(c, row)
+        #     if onExist: onExist( ass )
+        #
+        #     c.execute('''
+        #         UPDATE assets SET
+        #         simOk = 0, simGID = 0, simInfos = '[]',
+        #         ownerId = ?, deviceId = ?, type = ?, originalFileName = ?,
+        #         fileCreatedAt = ?, fileModifiedAt = ?, isFavorite = ?, isVisible = ?, isArchived = ?,
+        #         libraryId = ?, localDateTime = ?, thumbnail_path = ?, preview_path = ?, fullsize_path = ?, jsonExif = ?
+        #         WHERE id = ?
+        #     ''', (
+        #         asset.get('ownerId'),
+        #         asset.get('deviceId'),
+        #         asset.get('type'),
+        #         asset.get('originalFileName'),
+        #         asset.get('fileCreatedAt'),
+        #         asset.get('fileModifiedAt'),
+        #         1 if asset.get('isFavorite') else 0,
+        #         1 if asset.get('isVisible') else 0,
+        #         1 if asset.get('isArchived') else 0,
+        #         asset.get('libraryId'),
+        #         asset.get('localDateTime'),
+        #         asset.get('thumbnail_path'),
+        #         asset.get('preview_path'),
+        #         asset.get('fullsize_path', asset.get('originalPath')),
+        #         jsonExif,
+        #         asset.get('id')
+        #     ))
+        return False # ignore duplicates
     except Exception as e:
         raise mkErr("Failed to save asset information", e)
 
 
-def deleteForUsr(usrId):
-    import db.vecs as vecs
-    try:
-        with mkConn() as conn:
-            c = conn.cursor()
-            c.execute("Select id From assets Where ownerId = ?", (usrId,))
-            assIds = [row[0] for row in c.fetchall()]
-            lg.info(f"[pics] delete pics[{len(assIds)}] for usrId[{usrId}]")
-            c.execute("Delete From assets Where ownerId = ?", (usrId,))
-            conn.commit()
-            lg.info(f"[pics] delete vectors for usrId[{usrId}]")
-            for assId in assIds: vecs.deleteBy(assId)
-            return True
-    except Exception as e:
-        raise mkErr("Failed to delete user assets", e)
+# def deleteForUsr(usrId):
+#     import db.vecs as vecs
+#     try:
+#         with mkConn() as conn:
+#             c = conn.cursor()
+#             c.execute("Select id From assets Where ownerId = ?", (usrId,))
+#             assIds = [row[0] for row in c.fetchall()]
+#             lg.info(f"[pics] delete pics[{len(assIds)}] for usrId[{usrId}]")
+#             c.execute("Delete From assets Where ownerId = ?", (usrId,))
+#             conn.commit()
+#             lg.info(f"[pics] delete vectors for usrId[{usrId}]")
+#             for assId in assIds: vecs.deleteBy(assId)
+#             return True
+#     except Exception as e:
+#         raise mkErr("Failed to delete user assets", e)
 
 
 #========================================================================
@@ -535,7 +567,7 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
                 c.execute(f"UPDATE assets SET simGID = ? WHERE id IN ({placeholders})", [newGID] + highSimIds)
 
                 conn.commit()
-                lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}], group[{newGID}] with {len(highSimIds)} members")
+                lg.info(f"[pics] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}], group[{newGID}] with {len(highSimIds)} members")
                 return True
             except Exception as e:
                 conn.rollback()
@@ -543,19 +575,23 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)
 
-def setResloveBy( assets: List[models.Asset] ):
+def setResloveBy(assets: List[models.Asset], isOk=1):
     try:
         with mkConn() as conn:
-            # c = conn.cursor()
-            # c.execute("UPDATE assets SET simOk = ? WHERE id = ?", (isOk, assId,))
-            # conn.commit()
-            # count = c.rowcount
-            # lg.info(f"set simOk by Id[{assId}] rst[{count}]")
+            c = conn.cursor()
+            autoIds = [ass.autoId for ass in assets]
+            if not autoIds: return 0
+
+            placeholders = ','.join(['?' for _ in autoIds])
+            c.execute(f"UPDATE assets SET simOk = {isOk}, simGID = 0, simInfos = '[]' WHERE autoId IN ({placeholders})", autoIds)
+            conn.commit()
+            count = c.rowcount
+            lg.info(f"[pics] set simOk by autoIds[{len(autoIds)}] rst[{count}]")
             return count
     except Exception as e:
         raise mkErr("Failed to clear similarity results:", e)
 
-def clearSimIds():
+def clearAllSimIds():
     try:
         with mkConn() as conn:
             c = conn.cursor()

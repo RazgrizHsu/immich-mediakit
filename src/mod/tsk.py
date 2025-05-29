@@ -237,7 +237,7 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
             msg = data.get('message')
 
             if ste == 'failed':
-                return 100, "Failed", noUpd
+                return 100, "Failed", msg if msg else "task failed"
 
             lg.info(f"[tws:uui] complete, ste[{ste}] chs[{rstChs}]")
             return 100, "completed", msg if msg else "⭐ completed"

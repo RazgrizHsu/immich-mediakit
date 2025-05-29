@@ -46,16 +46,19 @@ def createPhotoCard(ass: models.Asset):
 
     return htm.Div([
         htm.Div([
-
-        ], className="head"),
-        htm.Div([
             dbc.CardImg(
                 src=image_src,
                 top=True,
                 style={"height": "160px", "objectFit": "cover", "cursor": "pointer"},
-            )
-        ], id={"type": "img-pop", "index": assId}, n_clicks=0),
-        dbc.CardBody([
+            ),
+            htm.Div([
+                htm.Span(f"#{ass.autoId}", className="tag sm second"),
+            ], className="floatL top"),
+        ],
+            id={"type": "img-pop", "index": assId}, n_clicks=0,
+            className="head"
+        ),
+        htm.Div([
             htm.H6(
                 fnm,
                 className="text-truncate",
@@ -69,16 +72,14 @@ def createPhotoCard(ass: models.Asset):
             ),
             htm.Div([
                 dbc.Badge(
+                    "NoVec", color="warning", className="me-1"
+                ) if not hasVec else None,
+                dbc.Badge(
                     "❤️", color="danger", className="ms-1"
                 ) if isFav else None,
                 dbc.Badge(
                     f"resolved✅", color="secondary", className="ms-1"
                 ) if ass.simOk else None,
-                dbc.Badge(
-                    "Vec", color="success", className="me-1"
-                ) if hasVec else dbc.Badge(
-                    "NoVec", color="warning", className="me-1"
-                ),
                 dbc.Badge(
                     "EXIF",
                     color="info",
@@ -110,4 +111,4 @@ def createPhotoCard(ass: models.Asset):
             ], className="mt-2") if not simOk else None,
 
         ], className="p-2")
-    ], className="card")
+    ], className="img-card")

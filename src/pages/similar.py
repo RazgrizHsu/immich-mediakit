@@ -1,6 +1,7 @@
 import traceback
 from typing import Optional
 
+import core
 import db
 from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
@@ -99,7 +100,15 @@ def layout(autoId=None, **kwargs):
                                 dbc.Label("Similarity Threshold Range", className="txt-sm"),
                                 dbc.Row([
                                     dbc.Col([
-                                        dcc.RangeSlider(id=k.slideTh, min=0, max=1, step=0.01, marks=ks.defs.thMarks, value=[0.92, 1.0], className="mb-0"),
+                                        dcc.RangeSlider(
+                                            id=k.slideTh, min=0.5, max=1, step=0.01, marks=ks.defs.thMarks,
+                                            value=[0.9, 1.0],
+                                            tooltip={
+                                                "placement": "top", "always_visible": True,
+                                                "style": {"padding": "3px 5px 3px 5px", "fontSize": "15px"},
+                                            },
+                                            className="mb-0"
+                                        ),
                                     ], className="mt-2"),
                                 ])
                             ]),
@@ -439,7 +448,6 @@ def sim_Load(dta_now, dta_nfy):
 
     nowDict = now.toDict()
 
-
     activeTab = now.pg.sim.activeTab if now.pg.sim.activeTab else "tab-current"
 
     return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd, tabDisabled, tabLabel, activeTab
@@ -738,7 +746,7 @@ def sim_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         doReport(30, "Clearing similarity records from database...")
 
-        db.pics.clearSimIds()
+        db.pics.clearAllSimIds()
 
         doReport(90, "Updating dynamic data...")
 
@@ -910,22 +918,32 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now = sto.nfy, sto.now
+    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
-        assets = now.pg.sim.assSelect
-        cnt = len(assets)
-        msg = f"[sim] Delete Selected Assets( {cnt} ) Success!"
+        assAlls = now.pg.sim.assCur
+        assSels = now.pg.sim.assSelect
+        assLefts = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
 
-        if not assets or cnt == 0: raise RuntimeError("Selected not found")
+        cntSelect = len(assSels)
+        msg = f"[sim] Delete Selected Assets( {cntSelect} ) Success!"
 
-        for a in assets:
+        if not assSels or cntSelect == 0: raise RuntimeError("Selected not found")
+
+        ids = [a.id for a in assSels]
+
+        for a in assSels:
             lg.info(f"[sim:delSelects] delete asset #[{a.autoId}] Id[ {a.id} ]")
 
-        #todo: 清除同個simGID的所有資料讓他重新找
+        # immich
+        core.trashBy(ids)
 
+        #清除同個simGID的相似資料讓他重新找
+        db.pics.setResloveBy(assSels, 0)
 
         now.pg.sim.clearNow()
         now.pg.sim.activeTab = "tab-pending"
+
+        cnt.refreshFromDB()
 
         nfy.success(msg)
 
@@ -940,28 +958,29 @@ def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now = sto.nfy, sto.now
+    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
         assets = now.pg.sim.assCur
-        cnt = len(assets)
-        msg = f"[sim] set Resloved Assets( {cnt} ) Success!"
+        cntAll = len(assets)
+        msg = f"[sim] set Resloved Assets( {cntAll} ) Success!"
 
         if not assets or cnt == 0: raise RuntimeError("Current Assets not found")
 
-        for a in assets:
-            lg.info(f"[sim:resloveAll] set asset #[{a.autoId}] Id[ {a.id} ]")
-            db.pics.setResloveBy( assets )
+        db.pics.setResloveBy(assets)
 
         now.pg.sim.clearNow()
 
         nfy.success(msg)
+
+        # update cnts
+        cnt.refreshFromDB()
 
         return sto, msg
     except Exception as e:
         msg = f"[sim] Delete selected failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
-        now.pg.sim.clearAll()
+        now.pg.sim.clearNow()
 
         raise RuntimeError(msg)
 
