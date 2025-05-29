@@ -196,7 +196,10 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
             cntRemote = db.psql.count(now.usrId)
             cntLocal = db.pics.count(now.usrId)
 
-            if cntLocal <= 0: disBtnClr = True
+            if cntLocal <= 0:
+                disBtnClr = True
+
+            disBtnRun = cntRemote <= cntLocal or cntRemote == 0
 
             txtBtn = f"Fetch: {usr.name} ({cntRemote})"
             txtClr = f"Clear local: {usr.name} ({cntLocal})"
@@ -353,7 +356,7 @@ def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         doReport(100, f"Saved {cntSaved} photos")
 
-        msg = f"Successfully fetched[{cntFetch}] and saved[{cntSaved}]"
+        msg = f"success, user[ {usr.name} ] fetched[ {cntFetch} ] and saved[ {cntSaved} ]"
         nfy.info(msg)
 
         return sto, msg

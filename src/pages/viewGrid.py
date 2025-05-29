@@ -18,8 +18,6 @@ dash.register_page(
 class K:
     class inp:
         selectUsrId = "inp-grid-user-selector"
-        selectSortBy = "inp-grid-sort-by"
-        selectSortOrder = "inp-grid-sort-order"
         selectFilter = "inp-grid-filter"
         searchKeyword = "inp-grid-search"
         checkFavorites = "inp-grid-favorites-only"
@@ -61,38 +59,6 @@ def layout():
                             className="mb-2"
                         ),
                     ], width=4),
-
-                    dbc.Col([
-                        dbc.Label("Sort By"),
-                        dcc.Dropdown(
-                            id=K.inp.selectSortBy,
-                            options=[
-                                {"label": "Date Created", "value": "fileCreatedAt"},
-                                {"label": "Date Modified", "value": "fileModifiedAt"},
-                                {"label": "File Name", "value": "originalFileName"}
-                            ],
-                            value="fileCreatedAt",
-                            clearable=False,
-                            className="mb-2"
-                        ),
-                    ], width=4),
-
-                    dbc.Col([
-                        dbc.Label("Order"),
-                        dcc.Dropdown(
-                            id=K.inp.selectSortOrder,
-                            options=[
-                                {"label": "Ascending", "value": "asc"},
-                                {"label": "Descending", "value": "desc"}
-                            ],
-                            value="desc",
-                            clearable=False,
-                            className="mb-2"
-                        ),
-                    ], width=4),
-                ]),
-
-                dbc.Row([
                     dbc.Col([
                         dbc.Label("Filter"),
                         dcc.Dropdown(
@@ -107,6 +73,10 @@ def layout():
                             className="mb-2"
                         ),
                     ], width=4),
+                ]),
+
+                dbc.Row([
+
 
                     dbc.Col([
                         dbc.Label("Search"),
@@ -250,8 +220,6 @@ def viewGrid_OnFilterChange(
     [
         inp(pager.id.store(K.div.pagerMain), "data"),
         inp(K.inp.selectUsrId, "value"),
-        inp(K.inp.selectSortBy, "value"),
-        inp(K.inp.selectSortOrder, "value"),
         inp(K.inp.selectFilter, "value"),
         inp(K.inp.searchKeyword, "value"),
         inp(K.inp.checkFavorites, "value"),
@@ -259,7 +227,7 @@ def viewGrid_OnFilterChange(
     ste(ks.sto.cnt, "data"),
     prevent_initial_call=False
 )
-def viewGrid_Load(dta_pgr, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_cnt):
+def viewGrid_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
     if not dta_pgr: return noUpd
 
     cnt = models.Cnt.fromDict(dta_cnt)
@@ -268,7 +236,7 @@ def viewGrid_Load(dta_pgr, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_c
     if cnt.ass <= 0:
         return dbc.Alert("No photos available", color="secondary", className="text-center")
 
-    photos = db.pics.getFiltered(usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, pgr.idx, pgr.size)
+    photos = db.pics.getFiltered(usrId, filOpt, shKey, onlyFav, pgr.idx, pgr.size)
 
     if photos and len(photos) > 0:
         lg.info(f"[vg:load] Loaded {len(photos)} photos for page {pgr.idx}")
