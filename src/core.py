@@ -1,7 +1,10 @@
+from typing import List, Tuple
+
 import requests
 import re
 
-from util import log
+from conf import ks
+from util import log, err
 
 lg = log.get(__name__)
 
@@ -63,3 +66,59 @@ def checkLogicDelete():
 
 def checkLogicRestore():
     return checkBy(url_restore, code_Restore)
+
+
+
+
+from db import psql
+#------------------------------------------------------------------------
+# delete
+#
+# This function moves multiple assets to trash by updating their status to 'trashed' and setting deletedAt timestamp
+# Note: This implementation follows Immich's API flow which may change in future versions
+# follow delete flow
+# https://github.com/immich-app/immich/blob/main/server/src/services/asset.service.ts#L231
+#------------------------------------------------------------------------
+def trashBy(assetIds: List[str]):
+    try:
+        if not assetIds or len(assetIds) <= 0: raise RuntimeError(f"can't delete assetIds empty {assetIds}")
+
+        with psql.mkConn() as cnn:
+            with cnn.cursor() as cursor:
+                sql = """
+                Update assets
+                Set "deletedAt" = Now(), status = %s
+                Where id In %s
+                """
+                cursor.execute(sql, (ks.db.status.trashed, tuple(assetIds)))
+                affectedRows = cursor.rowcount
+                cnn.commit()
+
+                return affectedRows
+    except Exception as e:
+        raise err.mkErr(f"Failed to delete assets: {str(e)}", e)
+
+#------------------------------------------------------------------------
+# This function restores multiple assets from trash by updating their status back to 'active' and clearing deletedAt
+# Note: This implementation follows Immich's API flow which may change in future versions
+# restore flow
+# https://github.com/immich-app/immich/blob/main/server/src/repositories/trash.repository.ts#L15
+#------------------------------------------------------------------------
+def restoreBy(assetIds: List[str]):
+    try:
+        if not assetIds or len(assetIds) <= 0: raise RuntimeError(f"can't restore assetIds empty {assetIds}")
+
+        with psql.mkConn() as cnn:
+            with cnn.cursor() as cursor:
+                sql = """
+                Update assets
+                Set "deletedAt" = Null, status = %s
+                Where id In %s And status = %s
+                """
+                cursor.execute(sql, (ks.db.status.active, tuple(assetIds), ks.db.status.trashed))
+                affectedRows = cursor.rowcount
+                cnn.commit()
+
+                return affectedRows
+    except Exception as e:
+        raise err.mkErr(f"Failed to restore assets: {str(e)}", e)

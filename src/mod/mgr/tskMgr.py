@@ -226,7 +226,6 @@ class TskMgr:
             pass
 
         #------------------------------------
-        retMsg = None
         try:
             doSend({
                 'type': 'start',
@@ -248,14 +247,13 @@ class TskMgr:
 
         finally:
             ti.dte = time.time()
-            if retMsg:
-                doSend( {
-                    'type': 'complete',
-                    'tsn': tsn,
-                    'message': retMsg,
-                    'status': ti.status.value,
-                    'error': ti.err
-                })
+            doSend( {
+                'type': 'complete',
+                'tsn': tsn,
+                'message': ti.msg,
+                'status': ti.status.value,
+                'error': ti.err
+            })
 
             if tsn in self.threads: del self.threads[tsn]
 

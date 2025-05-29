@@ -36,10 +36,10 @@ def close():
 
     return True
 
-def clear_all_data():
+def resetAllData():
     try:
-        pics.clear()
-        vecs.clear()
+        pics.clearAll()
+        vecs.cleanAll()
         lg.info('[clear] All records cleared successfully')
     except Exception as e:
         lg.error(f'[clear] Failed to clear all records: {str(e)}')

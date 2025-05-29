@@ -36,10 +36,7 @@ def close():
 
 def create():
     try:
-        cols = conn.get_collections().collections
-        names = [c.name for c in cols]
-
-        if keyColl not in names:
+        if not conn.collection_exists(keyColl):
             lg.info(f"[qdrant] creating coll[{keyColl}]...")
             conn.create_collection(
                 collection_name=keyColl,
@@ -53,24 +50,18 @@ def create():
     except Exception as e:
         raise mkErr(f"Failed to initialize Qdrant", e)
 
-def clear():
+def cleanAll():
     try:
         if conn is None: raise RuntimeError("[qdrant] not connectioned")
 
-        collections = conn.get_collections().collections
-        collection_names = [c.name for c in collections]
+        exist = conn.collection_exists(keyColl)
 
-        if keyColl in collection_names:
+        if exist:
             lg.info(f"[qdrant] Start Clear coll[{keyColl}]..")
-            conn.recreate_collection(
-                collection_name=keyColl,
-                vectors_config=qmod.VectorParams(
-                    size=2048,
-                    distance=qmod.Distance.COSINE
-                ),
-                timeout=60
-            )
-            lg.info(f"[qdrant] Success, coll[{keyColl}] deleted successfully")
+            conn.delete_collection(keyColl, 60 * 5)
+            lg.info(f"[qdrant] coll[{keyColl}] deleted")
+
+        create()
 
     except Exception as e:
         raise mkErr(f"[qdrant] Failed to clear vector database", e)
@@ -90,20 +81,23 @@ def hasData():
     return c > 0
 
 
-def deleteBy(photo_id):
+def deleteBy(assIds: list[str]):
     try:
         if conn is None: return False
 
-        conn.delete(
+        rst = conn.delete(
             collection_name=keyColl,
-            points_selector=qmod.PointIdsList(points=[photo_id])
+            points_selector=qmod.PointIdsList(points=assIds)
         )
+
+        lg.info(f"[vec] delete status[{rst}] ids: {assIds}")
+
         return True
     except Exception as e:
-        raise mkErr(f"Error deleting vector for photo {photo_id}", e)
+        raise mkErr(f"Error deleting vector for asset {assIds}", e)
 
 
-def save(photo_id, vector):
+def save(assId, vector):
     try:
         if conn is None:
             return False
@@ -123,16 +117,16 @@ def save(photo_id, vector):
         if not vector_list or len(vector_list) != 2048:
             raise ValueError(f"Vector length is incorrect, expected 2048, actual {len(vector_list) if vector_list else 0}")
 
-        # lg.info(f"Saving vector to Qdrant: photo_id={photo_id}, vector length={len(vector_list)}")
+        # lg.info(f"Saving vector to Qdrant: assId={assId}, vector length={len(vector_list)}")
 
         conn.upsert(
             collection_name=keyColl,
             points=[
                 qmod.PointStruct(
-                    id=photo_id,
+                    id=assId,
                     vector=vector_list,
                     payload={
-                        "id": photo_id
+                        "id": assId
                     }
                 )
             ]
@@ -141,7 +135,7 @@ def save(photo_id, vector):
         try:
             stored = conn.retrieve(
                 collection_name=keyColl,
-                ids=[photo_id], with_vectors=True
+                ids=[assId], with_vectors=True
             )
             if not stored:
                 lg.info(f"Warning: Vector not successfully saved to Qdrant")
@@ -157,7 +151,7 @@ def save(photo_id, vector):
 
         return True
     except Exception as e:
-        raise mkErr(f"Error saving vector for photo {photo_id}", e)
+        raise mkErr(f"Error saving vector for asset {assId}", e)
 
 
 #------------------------------------------------------------------------
@@ -169,7 +163,7 @@ def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> l
             lg.info("Qdrant connection not initialized")
             return []
 
-        lg.info(f"Finding similar photos for {assId}, threshold range[{thMin}-{thMax}]")
+        lg.info(f"Finding similar assets for {assId}, threshold range[{thMin}-{thMax}]")
 
         target = conn.retrieve(
             collection_name=keyColl,
@@ -177,12 +171,12 @@ def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> l
             with_payload=True, with_vectors=True
         )
 
-        if not target: raise f"Vector for photo {assId} does not exist"
+        if not target: raise RuntimeError(f"Vector for asset {assId} does not exist")
 
-        # lg.info(f"Successfully retrieved vector for photo {photo_id}")
+        # lg.info(f"Successfully retrieved vector for asset {assId}")
 
         if not hasattr(target[0], 'vector') or target[0].vector is None:
-            raise f"Vector for photo {assId} is empty"
+            raise RuntimeError(f"Vector for asset {assId} is empty")
 
         vector = target[0].vector
 
@@ -196,19 +190,19 @@ def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> l
             vector = vector.tolist()
 
         if not hasattr(vector, '__len__') or len(vector) == 0:
-            raise f"Vector format for photo {assId} is incorrect: {type(vector)}"
+            raise RuntimeError(f"Vector format for asset {assId} is incorrect: {type(vector)}")
 
         if not isinstance(vector, list):
             try:
                 vector = list(vector)
                 lg.warn(f"Converted vector from {type(vector)} to list, length: {len(vector)}")
             except Exception as e:
-                raise f"Cannot convert vector to list: {str(e)}"
+                raise RuntimeError(f"Cannot convert vector to list: {str(e)}")
 
         count = conn.count(collection_name=keyColl)
         lg.info(f"Total vectors in database: {count.count}")
 
-        lg.info(f"Searching for similar photos, threshold: {thMin}, limit: {limit}...")
+        lg.info(f"Searching for similar assets, threshold: {thMin}, limit: {limit}...")
 
         # distance = qmod.Distance.COSINE if method == ks.use.mth.cosine else qmod.Distance.EUCLID
 
@@ -220,10 +214,10 @@ def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> l
         for i, hit in enumerate(rst):
             #lg.info(f"    no.{i + 1}: ID[{hit.id}], score[{hit.score:.6f}] self[{hit.id == assId}]")
 
-            if hit.score <= thMax or hit.id == assId: #always add self
+            if hit.score <= thMax or hit.id == assId:  #always add self
                 isSelf = hit.id == assId
                 infos.append(models.SimInfo(hit.id, hit.score, isSelf))
 
         return infos
     except Exception as e:
-        raise mkErr(f"Error finding similar photos for {assId}", e)
+        raise mkErr(f"Error finding similar assets for {assId}", e)

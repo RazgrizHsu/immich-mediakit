@@ -112,7 +112,7 @@ def saveVectorBy(assetId, img):
 
         return False
     except Exception as e:
-        raise f"Error processing asset {assetId}: {str(e)}"
+        raise RuntimeError( f"Error processing asset {assetId}: {str(e)}" )
 
 
 def fixPath(path: Optional[str]):
