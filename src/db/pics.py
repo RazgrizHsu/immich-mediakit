@@ -716,10 +716,20 @@ def getPendingPaged(page=1, size=20) -> list[models.Asset]:
 
                 for leader in leaders:
                     seen = {leader.id}
+                    ldrSimIds = {s.id for s in leader.simInfos if s.id}
+                    
                     for sim in leader.simInfos:
-                        if sim.id and sim.id in relatMap and sim.id not in seen:
-                            leader.relats.append(relatMap[sim.id])
-                            seen.add(sim.id)
+                        if not sim.id or sim.id not in relatMap or sim.id in seen: continue
+                        
+                        relAsset = relatMap[sim.id]
+                        relSimIds = {s.id for s in relAsset.simInfos if s.id}
+                        
+                        if len(relSimIds) == 1 and leader.id in relSimIds: continue
+                        
+                        if relSimIds == ldrSimIds: continue
+                        
+                        leader.relats.append(relAsset)
+                        seen.add(sim.id)
 
             return leaders
     except Exception as e:
