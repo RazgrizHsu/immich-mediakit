@@ -119,11 +119,15 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .img-pop .modal-body { flex: none; padding: 0; }
 
-.tag { border: #E0E0E0 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px; background: #2D4A69; border-radius: 5px; font-size: 12px; vertical-align: middle; }
+.tag { border: #E0E0E099 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px; background: #2D4A69; border-radius: 5px; font-size: 12px; vertical-align: middle; }
+
+.tag.second { background: #4A4A4A; }
 
 .tag.info { background: #78C22A; }
 
 .tag.lg { font-size: 15px; }
+
+.tag.sm { font-size: 10px; }
 
 /* Exif info tooltip styling */
 .tooltip-exif-info .tooltip-inner { padding: 10px !important; background-color: rgba(20, 20, 20, 0.95) !important; backdrop-filter: blur(5px) !important; border: 1px solid var(--info-dkr) !important; }
@@ -241,8 +245,6 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 .card.sim .img > div:nth-of-type(1) { position: absolute; bottom: 5px; left: 5px; display: flex; justify-content: start; }
 
 .card.sim .img > div:nth-of-type(2) { position: absolute; bottom: 5px; right: 5px; display: flex; justify-content: end; width: 100%; }
-
-.card.sim .img > div:nth-of-type(2) > span { font-size: 18px !important; }
 
 .card.sim .grid { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
 

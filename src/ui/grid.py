@@ -69,7 +69,13 @@ def createPhotoCard(ass: models.Asset):
             ),
             htm.Div([
                 dbc.Badge(
-                    "VecOk", color="success", className="me-1"
+                    "❤️", color="danger", className="ms-1"
+                ) if isFav else None,
+                dbc.Badge(
+                    f"resolved✅", color="secondary", className="ms-1"
+                ) if ass.simOk else None,
+                dbc.Badge(
+                    "Vec", color="success", className="me-1"
                 ) if hasVec else dbc.Badge(
                     "NoVec", color="warning", className="me-1"
                 ),
@@ -79,9 +85,7 @@ def createPhotoCard(ass: models.Asset):
                     className="me-1 exif-badge",
                     id={"type": "exif-badge", "index": assId}
                 ) if hasEx else htm.Span(),
-                dbc.Badge(
-                    "❤️", color="danger", className="ms-1"
-                ) if isFav else htm.Span(),
+
 
             ], className="d-flex flex-wrap"),
 

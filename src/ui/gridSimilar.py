@@ -38,6 +38,12 @@ def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=
 
     rootSI = next((a.simInfos for a in assets if a.id == rootId), None)
 
+    if not rootSI:
+        msg = f"[mkGrid] no rootSI for rootId[ {rootId[:8]} ], ids: {[ a.id[:8] for a in assets ]}"
+        lg.info( msg )
+        return htm.Div( f"-- {msg} --" )
+
+
     styItem = {"maxWidth": f"{maxW}px"}
     styGrid = {
         "display": "grid",
@@ -228,7 +234,7 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None, show
 #     ], className="mb-3")
 
 
-def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False):
+def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.id}" if ass.id else None
@@ -240,9 +246,10 @@ def mkImgCardSim(ass: models.Asset, simInfos: list[models.SimInfo], isMain=False
     checked = ass.selected
     cssIds = "checked" if checked else ""
 
-    si = next((i for i in simInfos if i.id == ass.id), None) if simInfos else None
+    si = next((i for i in srcSIs if i.id == ass.id), None) if srcSIs else None
 
     if not si:
+        lg.error( f"[mkImgCardSim] asset:{ass}" )
         return dbc.Alert(f"Photo assetId[{assId}] SimNotFound not found", color="danger")
 
     exi = ass.jsonExif
@@ -345,30 +352,28 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
     #         ]))
 
     # 顯示相關群組
-    htmRelated = []
+    htmRelated = None
     if hasattr(ass, 'relats') and ass.relats and showRelated:
-        htmRelated.append(htm.Hr(className="my-2"))
-        htmRelated.append(htm.Div([
-            htm.Span("Related groups: ", className="text-muted"),
-            htm.Span(f"{len(ass.relats)}", className="badge bg-warning")
-        ]))
-        for ra in ass.relats[:2]:
-            htmRelated.append(htm.Div([
-                htm.Span(f"#{ra.autoId}", className="badge bg-secondary me-1"),
-                htm.Span(f"{ra.id[:8]}...", className="text-muted small"),
-            ]))
-        if len(ass.relats) > 2:
-            htmRelated.append(htm.Div(
-                f"... {len(ass.relats) - 2} more",
-                className="text-muted small"
-            ))
+
+        rids = []
+        for ra in ass.relats:
+            rids.append( htm.Span(f"#{ra.autoId}", className="badge bg-secondary me-1") )
+
+        htmRelated = [
+            htm.Hr(className="my-2"),
+            htm.Div([
+                htm.Span("Related groups: ", className="text-muted"),
+                htm.Span(f"{len(ass.relats)}", className="badge bg-warning")
+            ]),
+            htm.Div(rids)
+        ]
 
     return dbc.Card([
         htm.Div([
             dbc.Row([
                 dbc.Col(
                     dbc.Button(
-                        "View as Group",
+                        "ViewGroup",
                         id={"type": "btn-view-group", "id": assId},
                         color="info",
                         size="sm",
@@ -376,7 +381,7 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
                     )
                 ),
                 dbc.Col([
-                    htm.Span("Matches: ", className="txt-sm"), htm.Span(f"{len(ass.simInfos) - 1}", className="tag lg ms-1")
+                    htm.Span("Matches: ", className="txt-sm"), htm.Span(f"{len(ass.simInfos) - 1}", className="tag lg ms-1 ps-2 pe-2")
                 ], className="justify-content-end")
             ]
                 , className="p-0")
@@ -389,12 +394,12 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
                 className="card-img"
             ),
             htm.Div([
-                htm.Span(f"#{ass.autoId}", className="badge"),
+                htm.Span(f"#{ass.autoId}", className="tag sm second"),
             ]),
             htm.Div([
-                htm.Span(f"{imgW}", className="badge bg-primary"),
+                htm.Span(f"{imgW}", className="tag lg"),
                 htm.Span("x"),
-                htm.Span(f"{imgH}", className="badge bg-primary"),
+                htm.Span(f"{imgH}", className="tag lg"),
             ])
         ], className="img"),
         dbc.CardBody([
@@ -410,9 +415,8 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
             ], class_name="grid2"),
 
 
-            htm.Div(
-                htmSimInfos + htmRelated,
-            ),
+            htm.Div(htmSimInfos),
+            htm.Div(htmRelated),
 
             # htm.Div([
             #     dbc.Button(

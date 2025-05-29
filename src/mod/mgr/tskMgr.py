@@ -226,6 +226,7 @@ class TskMgr:
             pass
 
         #------------------------------------
+        retMsg = None
         try:
             doSend({
                 'type': 'start',
@@ -233,12 +234,12 @@ class TskMgr:
                 'name': ti.name
             })
 
-            sto, msg = tk.run(fnReport)
+            sto, retMsg = tk.run(fnReport)
 
             ti.status = TskStatus.COMPLETED
             ti.result = sto
             ti.prog = 100
-            ti.msg = msg
+            ti.msg = retMsg
 
         except Exception as e:
             ti.status = TskStatus.FAILED
@@ -247,13 +248,14 @@ class TskMgr:
 
         finally:
             ti.dte = time.time()
-            doSend( {
-                'type': 'complete',
-                'tsn': tsn,
-                'message': msg,
-                'status': ti.status.value,
-                'error': ti.err
-            })
+            if retMsg:
+                doSend( {
+                    'type': 'complete',
+                    'tsn': tsn,
+                    'message': retMsg,
+                    'status': ti.status.value,
+                    'error': ti.err
+                })
 
             if tsn in self.threads: del self.threads[tsn]
 
@@ -280,3 +282,11 @@ class TskMgr:
 
     def list(self) -> Dict[str, TskInfo]:
         return self.infos.copy()
+
+
+    def hasRunning(self):
+        for tid, info in self.list().items():
+            if info.status.value in ['pending', 'running']:
+                return True
+
+        return False

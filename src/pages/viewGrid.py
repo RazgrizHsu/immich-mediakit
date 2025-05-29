@@ -33,13 +33,13 @@ class K:
 #========================================================================
 def layout():
     import ui
-    
+
     # Get initial total for display
     try:
         total = db.pics.count()
     except:
         total = 0
-    
+
     return ui.renderBody([
         #====== top start =======================================================
         dbc.Row([
@@ -152,22 +152,24 @@ def layout():
     ], [
         #====== bottom start=====================================================
 
-        # Top pager
-        *pager.createPager(pgId=K.div.pagerMain, idx=0, className="mb-3 text-center", showInfo=True),
+        htm.Div([
+            # Top pager
+            *pager.createPager(pgId=K.div.pagerMain, idx=0, className="mb-3 text-center", btnSize=7 ),
 
-        # Grid
-        dbc.Spinner(
-            htm.Div(id=K.div.grid, className="mb-4"),
-            color="primary",
-            type="border",
-            spinner_style={"width": "3rem", "height": "3rem"}
-        ),
+            # Grid
+            dbc.Spinner(
+                htm.Div(id=K.div.grid, className="mb-4"),
+                color="primary",
+                type="border",
+                spinner_style={"width": "3rem", "height": "3rem"}
+            ),
 
-        # Bottom pager
-        *pager.createPager(pgId=K.div.pagerMain, idx=1, className="mt-3 text-center", showInfo=True),
+            # Bottom pager
+            *pager.createPager(pgId=K.div.pagerMain, idx=1, className="mt-3 text-center", btnSize=7),
 
-        # Main pager store
-        *pager.createStore(pgId=K.div.pagerMain, page=1, size=24, total=total),
+            # Main pager store
+            *pager.createStore(pgId=K.div.pagerMain, page=1, size=24, total=total)
+        ])
 
         #====== bottom end ======================================================
     ])
@@ -271,12 +273,11 @@ def viewGrid_Load(dta_pgr, usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, dta_n
     photos = db.pics.getFiltered(usrId, sortBy, sortOrd, filOpt, shKey, onlyFav, pgr.idx, pgr.size)
 
     if photos and len(photos) > 0:
-        lg.info(f"[viewGrid] Loaded {len(photos)} photos for page {pgr.idx}")
+        lg.info(f"[vg:load] Loaded {len(photos)} photos for page {pgr.idx}")
     else:
-        lg.info(f"[viewGrid] No photos found for page {pgr.idx}")
+        lg.info(f"[vg:load] No photos found for page {pgr.idx}")
         return dbc.Alert("No photos found matching your criteria", color="info", className="text-center")
 
     grid = createGrid(photos)
 
     return grid
-

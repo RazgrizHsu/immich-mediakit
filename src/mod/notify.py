@@ -44,10 +44,12 @@ def update_notifications(dta_nfy):
     msgs.reverse()
 
     for nid, data in msgs:
-        # lg.info(f"[notify] Update notification: {notif_data}")
+        msg = data['message']
+
+        # lg.info(f"[notify] Update notification: {data['message']}")
         divs.append(
             dbc.Alert(
-                data['message'],
+                msg, 
                 id={'type': 'notify-alert', 'index': nid},
                 color=data['type'],
                 dismissable=True,
