@@ -130,37 +130,6 @@ class Tab(BaseDictModel):
         if self.disabled: css += " dis"
         return css.strip()
 
-@dataclass
-class Taber(BaseDictModel):
-    id: str = None
-    tabs: List[Tab] = field(default_factory=list)
-
-    # tabActs: List[Any] = field(default_factory=list)
-
-    def getTab(self, tabId: str) -> Optional[Tab]:
-        return next((t for t in self.tabs if t.id == tabId), None)
-
-    def setActive(self, tabId: str):
-        for tab in self.tabs:
-            tab.active = (tab.id == tabId)
-
-    def setActiveIdx(self, idx: int):
-        for i, tab in enumerate(self.tabs):
-            tab.active = i == idx;
-            if tab.active: lg.info(f"[Taber] set active: {tab.title}")
-
-
-    def cssTabs(self):
-        css = []
-        for tab in self.tabs: css.append(tab.css())
-        return css
-
-    def titles(self):
-        tits = []
-        for tab in self.tabs:
-            tits.append(tab.title)
-
-        return tits
 
 
 @dataclass
@@ -298,8 +267,8 @@ class Cnt(BaseDictModel):
 
 @dataclass
 class PageSim(BaseDictModel):
-    taber: Optional[Taber] = None
     pagerPnd: Optional[Pager] = None
+    activeTab: Optional[str] = "tab-current"
 
     assId: Optional[str] = None
     assCur: List[Asset] = field(default_factory=list)

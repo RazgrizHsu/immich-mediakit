@@ -180,27 +180,19 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 .tskPanel .progress { border: #999999 1px solid; }
 
 /*======================== taber ========================*/
-.taber { border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+.ITab .nav-tabs { border: none; }
 
-.taber .head { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; }
+.ITab .nav > div { cursor: pointer !important; border-radius: 4px 4px 0 0; transition: all 0.2s ease; margin-right: 5px; }
 
-.taber .head .nav { display: flex; }
+.ITab .nav .nav-link { border: var(--bs-border-color) 1px solid; border-bottom: none; margin-bottom: 0; background-image: linear-gradient(to bottom, #858585, #666666 50%, #525252); }
 
-.taber .head .nav > div { padding: 8px 38px; cursor: pointer !important; border-radius: 4px 4px 0 0; transition: all 0.2s ease; border: #737373 1px solid; border-bottom: none; margin-right: 5px; }
+.ITab .nav .nav-link:hover { background: var(--main-dkr); }
 
-.taber .head .nav > div:hover { background: var(--main-dkr); }
+.ITab .nav .nav-link.active { background: #3772FF; color: white; font-weight: 500; background-image: linear-gradient(to bottom, var(--main-lig), var(--main-bs) 50%, var(--main-dk)); }
 
-.taber .head .nav > div.act { background: #3772FF; color: white; font-weight: 500; background-image: linear-gradient(to bottom, var(--main-lig), var(--main-bs) 50%, var(--main-dk)); }
+.ITab .nav .nav-link.dis { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; background: #444444; color: #999999; }
 
-.taber .head .nav > div.dis { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; background: #444444; color: #999999; border-color: #555555; }
-
-.taber .head .acts { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-
-.taber .body { border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color); padding: 15px 10px 15px 10px; background: linear-gradient(to bottom, rgba(52, 99, 148, 0.5) 0%, rgba(52, 99, 148, 0.2) 10%, rgba(52, 99, 148, 0) 50%, rgba(52, 99, 148, 0.2) 90%, rgba(52, 99, 148, 0.5) 100%); }
-
-.taber .body > div { display: none; }
-
-.taber .body > div.act { display: block; animation: fadeIn 0.3s ease; }
+.ITab .tab-content { border-radius: 0 12px 12px 12px; border: 1px solid var(--bs-border-color); padding: 15px 10px 15px 10px; background: linear-gradient(to bottom, rgba(52, 99, 148, 0.5) 0%, rgba(52, 99, 148, 0.2) 10%, rgba(52, 99, 148, 0) 50%, rgba(52, 99, 148, 0.2) 90%, rgba(52, 99, 148, 0.5) 100%); }
 
 @keyframes fadeIn { from { opacity: 0; }
   to { opacity: 1; } }

@@ -18,25 +18,6 @@ a {
 	}
 }
 
-.nav-tabs {
-	border-bottom-color:var(--bs-border-color) !important;
-
-	.nav-link {
-		color:#A0A0A0 !important;
-
-		&:hover {
-			border-color:var(--bs-border-color) var(--bs-border-color) var(--bs-border-color) !important;
-			color:#E0E0E0 !important;
-		}
-
-		&.active {
-			background-color:#2D2D2D !important;
-			border-color:var(--bs-border-color) var(--bs-border-color) #2D2D2D !important;
-			color:#E0E0E0 !important;
-		}
-	}
-}
-
 .form-check, .form-label {
 	margin-bottom: auto;
 }

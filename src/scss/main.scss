@@ -408,12 +408,12 @@ body {
 		padding:8px;
 
 		span:first-child {
-			margin: 0px auto auto 10px;
-			color: #BBBBBB;
+			margin:0px auto auto 10px;
+			color:#BBBBBB;
 		}
 
 		button {
-			font-size: 13px;
+			font-size:13px;
 		}
 	}
 
@@ -496,7 +496,7 @@ body {
 	vertical-align:middle;
 
 	&.second {
-		background: #4A4A4A;
+		background:#4A4A4A;
 	}
 
 	&.info {
@@ -686,67 +686,51 @@ body {
 }
 
 /*======================== taber ========================*/
-.taber {
+.ITab {
 
-	$debug:true;
+	.nav-tabs {
+		border: none;
+	}
 
-	border-radius:8px;
-	overflow:hidden;
-	margin-bottom:20px;
+	.nav {
+		> div {
+			cursor:pointer !important;
+			border-radius:4px 4px 0 0;
+			transition:all 0.2s ease;
 
-	.head {
-		display:flex;
-		justify-content:space-between;
-		align-items:center;
-		//border-bottom:1px solid #444444;
-		flex-wrap:nowrap;
-
-		.nav {
-			display:flex;
-			//gap: 5px;
-
-			> div {
-				padding:8px 38px;
-				cursor:pointer !important;
-				border-radius:4px 4px 0 0;
-				transition:all 0.2s ease;
-				border:#737373 1px solid;
-				border-bottom:none;
-				margin-right:5px;
-
-				&:hover {
-					background:var(--main-dkr);
-				}
-
-				&.act {
-					background:#3772FF;
-					color:white;
-					font-weight:500;
-
-					@include bg-gradient(var(--main-bs), var(--main-lig), var(--main-dk))
-				}
-
-				&.dis {
-					opacity:0.5;
-					cursor:not-allowed !important;
-					pointer-events:none;
-					background:#444444;
-					color:#999999;
-					border-color:#555555;
-				}
-			}
+			margin-right:5px;
 		}
 
-		.acts {
-			display:flex;
-			align-items:center;
-			gap:8px;
-			white-space:nowrap;
+		.nav-link {
+			border: var(--bs-border-color) 1px solid;
+			border-bottom:none;
+			margin-bottom: 0;
+			@include bg-gradient( #666666 );
+
+			&:hover {
+				background:var(--main-dkr);
+			}
+
+			&.active {
+				background:#3772FF;
+				color:white;
+				font-weight:500;
+				@include bg-gradient(var(--main-bs), var(--main-lig), var(--main-dk))
+			}
+
+			&.dis {
+				opacity:0.5;
+				cursor:not-allowed !important;
+				pointer-events:none;
+				background:#444444;
+				color:#999999;
+			}
 		}
 	}
 
-	.body {
-		border:var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+	.tab-content {
+		border-radius: 0 12px 12px 12px;
+		border:1px solid var(--bs-border-color);
 		padding:15px 10px 15px 10px;
 
 		$co:rgb(52, 99, 148);
@@ -759,15 +743,6 @@ body {
 						rgba($co, 0.2) 90%,
 						rgba($co, 0.5) 100%
 		);
-
-		> div {
-			display:none;
-
-			&.act {
-				display:block;
-				animation:fadeIn 0.3s ease;
-			}
-		}
 	}
 }
 
