@@ -19,16 +19,6 @@ def layout():
         htm.H3("System Settings", className="mb-4"),
 
         htm.Div([
-            htm.Div([
-                htm.H5("API Settings", className="mb-3"),
-
-                htm.Div([
-                    htm.Strong("Immich Server URL: "),
-                    htm.Span(envs.immichUrl or "(Not set)")
-                ], className="mb-3"),
-
-
-            ], className="bg-dark p-3 mb-4 border rounded"),
 
             htm.Div([
                 htm.H5("PostgreSQL Settings", className="mb-3"),

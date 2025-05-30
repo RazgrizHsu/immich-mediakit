@@ -12,21 +12,19 @@ lg = log.get(__name__)
 #========================================================================
 class k:
     class nav:
-        assets = 'nav-assets'
-        photoVec = 'nav-photoVec'
-        searchDups = 'nav-searchDups'
-        viewGrid = 'nav-viewGrid'
-        settings = 'nav-settings'
+        vec = 'nav-vector'
+        sim = 'nav-similar'
+        view = 'nav-view'
 
 
 #========================================================================
 def renderHeader():
     defs = [
-        dbc.NavLink(htm.Span(["⚡️ Fetch"]), href="/", active="exact", className="custom-nav-link"),
-        dbc.NavLink(htm.Span(["🔄 Vectors"]), href=f"/{ks.pg.vector}", active="exact", id=k.nav.photoVec, className="custom-nav-link"),
-        dbc.NavLink(htm.Span(["🖼️ Assets"]), href=f"/{ks.pg.viewGrid}", active="exact", id=k.nav.viewGrid, className="custom-nav-link"),
-        dbc.NavLink(htm.Span(["🔍 Similar"]), href=f"/{ks.pg.similar}", active="exact", id=k.nav.searchDups, className="custom-nav-link"),
-        dbc.NavLink(htm.Span(["⚙️ Settings"]), href=f"/{ks.pg.settings}", active="exact", className="custom-nav-link"),
+        dbc.NavLink(htm.Span(["⚡️ Fetch"]), href="/", active="exact", className="navLnk"),
+        dbc.NavLink(htm.Span(["🔄 Vectors"]), href=f"/{ks.pg.vector}", active="exact", id=k.nav.vec, className="navLnk"),
+        dbc.NavLink(htm.Span(["🖼️ Assets"]), href=f"/{ks.pg.view}", active="exact", id=k.nav.view, className="navLnk"),
+        dbc.NavLink(htm.Span(["🔍 Similar"]), href=f"/{ks.pg.similar}", active="exact", id=k.nav.sim, className="navLnk"),
+        dbc.NavLink(htm.Span(["⚙️ Settings"]), href=f"/{ks.pg.settings}", active="exact", className="navLnk"),
     ]
 
     return dbc.Navbar(
@@ -93,9 +91,9 @@ def renderBody(top, bottom):
 #========================================================================
 #------------------------------------------------------------------------
 @callback(
-    out(k.nav.photoVec, 'disabled'),
-    out(k.nav.searchDups, 'disabled'),
-    out(k.nav.viewGrid, 'disabled'),
+    out(k.nav.vec, 'disabled'),
+    out(k.nav.sim, 'disabled'),
+    out(k.nav.view, 'disabled'),
     inp(ks.sto.cnt, 'data')
 )
 def onUpdateMenus(dta_cnt):
@@ -107,9 +105,9 @@ def onUpdateMenus(dta_cnt):
     cnt = models.Cnt.fromDict(dta_cnt)
 
     disVec = cnt.ass <= 0
-    disGrd = disVec
-    disDup = cnt.vec <= 0
+    disSim = cnt.vec <= 0
+    disView = disVec
 
-    return disVec, disDup, disGrd
+    return disVec, disSim, disView
 
 #------------------------------------------------------------------------

@@ -2,7 +2,7 @@ from dsh import htm, dcc, dbc
 from conf import ks
 from util import log
 from mod import models
-from ui.gridExif import mkTipExif
+from ui.gvExif import mkTipExif
 
 lg = log.get(__name__)
 

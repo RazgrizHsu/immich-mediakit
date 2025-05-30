@@ -1,7 +1,7 @@
 from typing import Any
-from db.dyn import dto
 from dsh import htm, dcc
 
+from db import dto
 from util import log
 from mod import models
 from conf import ks
@@ -32,7 +32,8 @@ def render():
     now.usrId = dto.usrId
 
     photoQ = dto.photoQ
-    if not photoQ: photoQ = dto.photoQ = ks.db.thumbnail
+    if not photoQ or photoQ not in [ ks.db.thumbnail, ks.db.preview, ks.db.fullsize ]:
+        photoQ = dto.photoQ = ks.db.thumbnail
 
     now.photoQ = photoQ
 

@@ -7,9 +7,6 @@ import db.sets as sets
 import db.vecs as vecs
 import db.psql as psql
 
-# noinspection PyUnresolvedReferences
-import db.dyn as dyn
-
 
 def init():
     try:
@@ -46,3 +43,39 @@ def resetAllData():
         return False
 
     return True
+
+
+
+class AutoDbField:
+    def __init__(self, key, default=None):
+        self.key = key
+        self.default = default
+
+    def __get__(self, instance, owner):
+        if instance is None: return self
+        return sets.get(self.key, self.default)
+
+    def __set__(self, instance, value):
+        # lg.info(f"[dynField] Saving setting k[{self.key}] v[{value}]")
+        sets.save(self.key, str(value))
+
+
+class DtoSets:
+    usrId = AutoDbField('usrId')
+    photoQ = AutoDbField('photoQ')
+    simMin = AutoDbField('simMin')
+    simMax = AutoDbField('simMax')
+
+    @classmethod
+    def get(cls, key, default=None):
+        value = sets.get(key, default)
+        return value
+
+    @classmethod
+    def save(cls, key, value):
+        return sets.save(key, str(value))
+
+
+
+# global
+dto = DtoSets()

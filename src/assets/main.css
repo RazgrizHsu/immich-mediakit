@@ -105,15 +105,15 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .img-pop .modal-body { flex: none; padding: 0; }
 
-.tag { border: #E0E0E099 1px solid; padding: 0px 4px 3px 4px; margin: 1px 3px; background: #2D4A69; border-radius: 5px; font-size: 12px; vertical-align: middle; }
+.tag { border: #E0E0E099 1px solid; padding: 0 4px 0 4px; margin: 1px 3px; border-radius: 5px; font-size: 12px; vertical-align: middle; background-image: linear-gradient(to bottom, #576e87, #2D4A69 50%, #243b54); }
 
-.tag.second { background: #4A4A4A; }
+.tag.second { background-image: linear-gradient(to bottom, #6e6e6e, #4A4A4A 50%, #3b3b3b); }
 
-.tag.info { background: #78C22A; }
+.tag.info { background-image: linear-gradient(to bottom, #8abb55, #6DAA2B 50%, #578822); }
 
-.tag.lg { font-size: 15px; }
+.tag.lg { font-size: 15px; padding: 0 4px 2px 4px; }
 
-.tag.sm { font-size: 10px; }
+.tag.sm { font-size: 10px; padding: 0 2px 0 2px; }
 
 /* Exif info tooltip styling */
 .tooltip-exif-info .tooltip-inner { padding: 10px !important; background-color: rgba(20, 20, 20, 0.95) !important; backdrop-filter: blur(5px) !important; border: 1px solid var(--info-dkr) !important; }
@@ -122,21 +122,21 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .exif-badge:hover { transform: scale(1.1) !important; box-shadow: 0 0 5px rgba(87, 195, 238, 0.7) !important; }
 
-.custom-nav-link { color: #E0E0E0 !important; border-radius: 6px; padding: 8px 15px !important; transition: all 0.3s ease; position: relative; margin: 0 5px; overflow: hidden; font-weight: 500; letter-spacing: 0.3px; background: var(--nav-bs); }
+.navLnk { color: #E0E0E0 !important; border-radius: 6px; padding: 8px 15px !important; transition: all 0.3s ease; position: relative; margin: 0 5px; overflow: hidden; font-weight: 500; letter-spacing: 0.3px; background: var(--nav-bs); }
 
-.custom-nav-link::before { content: ""; position: absolute; bottom: 0; left: 50%; width: 0; height: 2px; background: var(--nav-acc); transition: all 0.3s ease; transform: translateX(-50%); }
+.navLnk::before { content: ""; position: absolute; bottom: 0; left: 50%; width: 0; height: 2px; background: var(--nav-acc); transition: all 0.3s ease; transform: translateX(-50%); }
 
-.custom-nav-link:hover { color: #FFFFFF !important; background-color: var(--nav-hov); transform: translateY(-2px); text-shadow: 0 0 8px rgba(255, 255, 255, 0.6); text-decoration: none; animation: navHover 1s ease infinite; }
+.navLnk:hover { color: #FFFFFF !important; background-color: var(--nav-hov); transform: translateY(-2px); text-shadow: 0 0 8px rgba(255, 255, 255, 0.6); text-decoration: none; animation: navHover 1s ease infinite; }
 
-.custom-nav-link:hover::before { width: 100%; }
+.navLnk:hover::before { width: 100%; }
 
-.custom-nav-link.active { color: #FFFFFF !important; background-color: var(--nav-act); font-weight: 600; animation: pulse 2s infinite; }
+.navLnk.active { color: #FFFFFF !important; background-color: var(--nav-act); font-weight: 600; animation: pulse 2s infinite; }
 
-.custom-nav-link.active::before { width: 100%; height: 3px; }
+.navLnk.active::before { width: 100%; height: 3px; }
 
-.custom-nav-link.disabled { color: #D3D3D3 !important; pointer-events: none; opacity: 0.6; box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2); position: relative; border-radius: 6px; transform: none !important; animation: none !important; }
+.navLnk.disabled { color: #D3D3D3 !important; pointer-events: none; opacity: 0.6; box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2); position: relative; border-radius: 6px; transform: none !important; animation: none !important; }
 
-.custom-nav-link span { display: flex; align-items: center; gap: 8px; }
+.navLnk span { display: flex; align-items: center; gap: 8px; }
 
 .notify .alert { box-shadow: 0 0 3px 3px #FFFFFF66 !important; margin: 20px; text-shadow: 0 0 10px #1A1A1A; }
 
@@ -174,7 +174,7 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .ITab .nav .nav-link:hover { background: var(--main-dkr); }
 
-.ITab .nav .nav-link.active { background: #3772FF; color: white; font-weight: 500; background-image: linear-gradient(to bottom, var(--main-lig), var(--main-bs) 50%, var(--main-dk)); }
+.ITab .nav .nav-link.active { background: #3772FF; color: white; font-weight: 500; background-image: linear-gradient(to bottom, #607b99, #385A7F 50%, #2d4866); }
 
 .ITab .nav .nav-link.dis { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; background: #444444; color: #999999; }
 

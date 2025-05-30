@@ -4,6 +4,12 @@ FROM python:3.12
 
 WORKDIR /app
 
+ARG MKIT_PORT=8086
+ARG MIKT_PORTWS=8087
+
+ENV PORT=${MKIT_PORT}
+ENV PORTWS=${MIKT_PORTWS}
+
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -13,7 +19,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 COPY src/ ./src/
 
-EXPOSE 8086
-HEALTHCHECK CMD curl -f http://127.0.0.1:8086 || exit 1
+EXPOSE ${PORT} ${PORTWS}
+HEALTHCHECK CMD curl -f http://127.0.0.1:${PORT} || exit 1
 
 CMD ["python", "src/app.py"]

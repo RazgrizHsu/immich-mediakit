@@ -27,7 +27,7 @@ def regBy(app):
 
 
     # ----------------------------------------------------------------
-    # serve for viewGrid
+    # serve for Image
     # ----------------------------------------------------------------
     @app.server.route('/api/img/<assetId>')
     def serve_image(assetId):

@@ -17,7 +17,7 @@ lg = log.get(__name__)
 
 assets = []
 timeout = 5000
-urlApi:str = envs.immichUrl
+urlApi:str = "current we don't need it"
 
 if not urlApi: raise KeyError('[api] the urlApi environment variable is not set')
 if not urlApi.endswith('/'): urlApi += '/'

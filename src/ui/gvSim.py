@@ -39,10 +39,9 @@ def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=
     rootSI = next((a.simInfos for a in assets if a.id == rootId), None)
 
     if not rootSI:
-        msg = f"[mkGrid] no rootSI for rootId[ {rootId[:8]} ], ids: {[ a.id[:8] for a in assets ]}"
-        lg.info( msg )
-        return htm.Div( f"-- {msg} --" )
-
+        msg = f"[mkGrid] no rootSI for rootId[ {rootId[:8]} ], ids: {[a.id[:8] for a in assets]}"
+        lg.info(msg)
+        return htm.Div(f"-- {msg} --")
 
     styItem = {"maxWidth": f"{maxW}px"}
     styGrid = {
@@ -249,7 +248,7 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
     si = next((i for i in srcSIs if i.id == ass.id), None) if srcSIs else None
 
     if not si:
-        lg.error( f"[mkImgCardSim] asset:{ass}" )
+        lg.error(f"[mkImgCardSim] asset:{ass}")
         return dbc.Alert(f"Photo assetId[{assId}] SimNotFound not found", color="danger")
 
     exi = ass.jsonExif
@@ -284,17 +283,17 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
         htm.Div([
             htm.Img(
                 src=imgSrc,
-                id={"type": "img-pop-multi", "id": ass.id, "autoId": ass.autoId }, n_clicks=0,
+                id={"type": "img-pop-multi", "id": ass.id, "autoId": ass.autoId}, n_clicks=0,
                 className="card-img"
             ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
             ,
             htm.Div([
-                htm.Span(f"#{ass.autoId}", className="badge"),
+                htm.Span(f"#{ass.autoId}", className="tag"),
             ]),
             htm.Div([
-                htm.Span(f"{imgW}", className="badge bg-primary"),
+                htm.Span(f"{imgW}", className="tag lg"),
                 htm.Span("x"),
-                htm.Span(f"{imgH}", className="badge bg-primary"),
+                htm.Span(f"{imgH}", className="tag lg"),
             ])
         ], className="img"),
         dbc.CardBody([
@@ -351,13 +350,11 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
     #             htm.Span(f"{si.id[:8]}...", className="badge bg-primary txt-sm"),
     #         ]))
 
-    # 顯示相關群組
     htmRelated = None
     if hasattr(ass, 'relats') and ass.relats and showRelated:
-
         rids = []
         for ra in ass.relats:
-            rids.append( htm.Span(f"#{ra.autoId}", className="badge bg-secondary me-1") )
+            rids.append(htm.Span(f"#{ra.autoId}", className="badge bg-secondary me-1"))
 
         htmRelated = [
             htm.Hr(className="my-2"),
@@ -368,6 +365,7 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
             htm.Div(rids)
         ]
 
+
     return dbc.Card([
         htm.Div([
             dbc.Row([
@@ -377,7 +375,7 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
                         id={"type": "btn-view-group", "id": assId},
                         color="info",
                         size="sm",
-                        className="w-100"
+                        className=""
                     )
                 ),
                 dbc.Col([

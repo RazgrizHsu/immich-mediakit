@@ -134,9 +134,9 @@ class Tab(BaseDictModel):
 
 @dataclass
 class Pager(BaseDictModel):
-    idx: Optional[int] = 1
-    size: Optional[int] = 20
-    cnt: Optional[int] = 0
+    idx: int = 1
+    size: int = 20
+    cnt: int = 0
 
 
 @dataclass

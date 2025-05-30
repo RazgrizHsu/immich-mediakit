@@ -50,12 +50,15 @@ class DashTask(BseTsk):
             lg.error(f"[Task] name[{self.name}] call fn failed: {str(e)}")
             raise
 
-def init(port: int = 8765, forceInit=False):
+def init(port: Optional[int] = None, forceInit=False):
     import os
     if forceInit or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         global mgr
         if not mgr:
             try:
+                if port is None:
+                    from conf import envs
+                    port = int(envs.mkitPortWs)
                 mgr = TskMgr(port=port)
                 mgr.start()
                 lg.info(f"[TskMgr] Started on port {port}")

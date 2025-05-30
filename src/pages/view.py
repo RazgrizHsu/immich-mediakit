@@ -3,7 +3,7 @@ from conf import ks
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
 from mod import models
 from mod.models import Pager
-from ui.grid import createGrid
+from ui.gv import createGrid
 from ui import pager
 from util import log
 
@@ -11,7 +11,7 @@ lg = log.get(__name__)
 
 dash.register_page(
     __name__,
-    path=f'/{ks.pg.viewGrid}',
+    path=f'/{ks.pg.view}',
     title=f"{ks.title}: " + 'Assets Grid',
 )
 
@@ -41,8 +41,8 @@ def layout():
     return ui.renderBody([
         #====== top start =======================================================
         dbc.Row([
-            dbc.Col(htm.H3(f"{ks.pg.viewGrid.name}"), width=3),
-            dbc.Col(htm.Small(f"{ks.pg.viewGrid.desc}", className="text-muted"))
+            dbc.Col(htm.H3(f"{ks.pg.view.name}"), width=3),
+            dbc.Col(htm.Small(f"{ks.pg.view.desc}", className="text-muted"))
         ], className="mb-4"),
 
         dbc.Card([
@@ -160,7 +160,7 @@ pager.regCallbacks(K.div.pagerMain)
     ],
     prevent_initial_call=False
 )
-def viewGrid_Init(dta_cnt, dta_now):
+def vw_Init(dta_cnt, dta_now):
     cnt = models.Cnt.fromDict(dta_cnt)
     now = models.Now.fromDict(dta_now)
 
@@ -188,7 +188,7 @@ def viewGrid_Init(dta_cnt, dta_now):
     ste(pager.id.store(K.div.pagerMain), "data"),
     prevent_initial_call=True
 )
-def viewGrid_OnFilterChange(
+def vw_OnFilterChange(
     usrId, filterOption, favoritesOnly, schKey, pgSize,
     dta_pgr
 ):
@@ -207,7 +207,7 @@ def viewGrid_OnFilterChange(
     pgr.size = pgSize
     pgr.cnt = total
 
-    lg.info(f"[viewGrid] Filter changed, total: {total}, size: {pgSize}")
+    lg.info(f"[vw] Filter changed, total: {total}, size: {pgSize}")
 
     return pgr.toDict()
 
@@ -225,9 +225,9 @@ def viewGrid_OnFilterChange(
         inp(K.inp.checkFavorites, "value"),
     ],
     ste(ks.sto.cnt, "data"),
-    prevent_initial_call=False
+    prevent_initial_call=True
 )
-def viewGrid_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
+def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
     if not dta_pgr: return noUpd
 
     cnt = models.Cnt.fromDict(dta_cnt)
