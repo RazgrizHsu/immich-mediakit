@@ -47,7 +47,7 @@ class BseTsk(ABC):
 # Task Manager
 #========================================================================
 class TskMgr:
-    def __init__(self, host: str = '0.0.0.0', port: int = 8765):
+    def __init__(self, host: str = '0.0.0.0', port: int = 8087):
         self.host = host
         self.port = port
         self.infos: Dict[str, TskInfo] = {}

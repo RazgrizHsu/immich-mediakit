@@ -75,7 +75,7 @@ async def test_websocket_client(port:int):
 
 if __name__ == "__main__":
 
-    port = 8765
+    port = 8087
     print(f"Testing UI Integration... port[{port}]")
     print("-" * 50)
 

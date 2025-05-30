@@ -99,10 +99,10 @@
 	}
 }
 
-@mixin bg-gradient($bg, $light: null, $dark: null) {
-	$light:if($light, $light, mix(white, $bg, 20%));
-	$dark:if($dark, $dark, mix(black, $bg, 20%));
-	background-image:linear-gradient(to bottom, $light, $bg 50%, $dark);
+@mixin bg-gradient($bg, $type:to bottom) {
+	$light:mix(white, $bg, 20%);
+	$dark:mix(black, $bg, 20%);
+	background-image:linear-gradient($type, $light, $bg 50%, $dark);
 }
 
 @mixin colors-gradient($light, $bg, $dark, $color, $border: true) {

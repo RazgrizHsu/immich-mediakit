@@ -58,6 +58,7 @@ def init():
                     preview_path     TEXT,
                     fullsize_path    TEXT,
                     jsonExif         TEXT Default '{}',
+                    size             INTEGER Default 0,
                     isVectored       INTEGER Default 0,
                     simOk            INTEGER Default 0,
                     simInfos         TEXT Default '[]',

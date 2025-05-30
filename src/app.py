@@ -61,7 +61,7 @@ app.layout = htm.Div([
     dcc.Location(id='url', refresh=False),
 
     # Global WebSocket connection for task updates
-    WebSocket(id=tsk.k.wsId, url="ws://localhost:8765"),
+    WebSocket(id=tsk.k.wsId, url=conf.getWebSocketUrl()),
 
     notify.render(),
     session.render(),

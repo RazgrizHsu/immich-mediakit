@@ -7,7 +7,7 @@ from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
 from util import log
 from mod import mapFns
-from ui import gridSimilar as gvs
+from ui import gvSim as gvs
 from mod import models, tskSvc
 from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk
 from ui import pager

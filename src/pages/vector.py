@@ -45,7 +45,7 @@ def layout():
                                         {"label": "Preview", "value": ks.db.preview},
                                         {"label": "FullSize (Slow)", "value": ks.db.fullsize},
                                     ],
-                                    value=ks.db.preview,
+                                    value=db.dto.photoQ,
                                     className="mb-3",
                                 ),
                             ], width=12),
@@ -167,14 +167,14 @@ def photoVec_Status(dta_tsk, dta_cnt):
     txtBtn = "Execute: Process Assets" if cntNeedVec else "No Asset Need it"
     disBtnRun = isTskin or cntNeedVec <= 0
     disBtnClr = isTskin or cnt.vec <= 0
-    disSelect = isTskin or cnt.vec >= 1
+    disPhotoQ = isTskin or cnt.vec >= 1
 
-    lg.info(f"[photoVec] vec[{cnt.vec}] select[{disSelect}]")
+    lg.info(f"[photoVec] vec[{cnt.vec}] select[{disPhotoQ}]")
 
     if tsk.id:
         txtBtn = "Task in progress.."
 
-    return txtBtn, disBtnRun, disBtnClr, disSelect
+    return txtBtn, disBtnRun, disBtnClr, disPhotoQ
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------

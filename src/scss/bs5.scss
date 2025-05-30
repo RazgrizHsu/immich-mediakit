@@ -153,7 +153,8 @@ select {
 	}
 
 	&-muted {
-		color:#A0A0A0 !important;
+
+		color:color-mix(in srgb, var(--dark-bs) 50%, white) !important;
 	}
 
 	&-white {

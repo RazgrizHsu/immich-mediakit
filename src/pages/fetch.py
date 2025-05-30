@@ -119,9 +119,8 @@ dis_hide = {"display": "none"}
     prevent_initial_call="initial_duplicate"
 )
 def assets_Init(dta_pi, dta_now):
-    # lg.info("[Assets] Initialization: PageInit by Sess")
-
     now = models.Now.fromDict(dta_now)
+    lg.info(f"[fth:init] usrId[{db.dto.usrId}] now[{now.usrId}]")
 
     opts = []
     usrs = db.psql.fetchUsers()
@@ -129,7 +128,7 @@ def assets_Init(dta_pi, dta_now):
         for usr in usrs:
             opts.append({"label": usr.name, "value": usr.id})
 
-    return opts, db.dyn.dto.usrId
+    return opts, db.dto.usrId
 
 
 #------------------------------------------------------------------------
@@ -171,24 +170,29 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
     txtClr = f"Clean Data"
 
     if usrId and usrId != now.usrId:
-        db.dyn.dto.usrId = usrId
-        now.usrId = usrId
-        #nfy.info(f"Switched user: {'All Users' if not now.usr else usr.name}")
+        usr = db.psql.fetchUser(usrId)
+        if usr:
+            db.dto.usrId = usrId
+            now.usrId = usrId
+            nfy.info(f"Switched user: {usr.name}")
+        else:
+            usrId = now.usrId = db.dto.usrId = None
 
     if isTasking:
         disBtnRun = disBtnClr = True
         txtBtn = "Task in progress..."
 
-    if not usrId:
+    if not now.usrId:
         disBtnRun = disBtnClr = True
         txtBtn = "Please select user"
+        nfy.info( txtBtn )
 
     elif usrId == "":
         disBtnRun = disBtnClr = True
         txtBtn = "Please select user"
         txtClr = "---"
     else:
-        if not usrId:
+        if not now.usrId:
             disBtnRun = disBtnClr = True
             txtBtn = "--No users--"
         else:
@@ -218,6 +222,7 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
     [
         inp(k.btnFetch, "n_clicks"),
         inp(k.btnClean, "n_clicks"),
+        inp(k.btnReset, "n_clicks"),
     ],
     [
         ste(k.selectUsr, "value"),
@@ -228,8 +233,8 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
     ],
     prevent_initial_call=True
 )
-def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
-    if not nclk_fetch and not nclk_clean: return noUpd, noUpd
+def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
+    if not clk_feh and not clk_clr and not clk_rst: return noUpd, noUpd
 
     now = models.Now.fromDict(dta_now)
     mdl = models.Mdl.fromDict(dta_mdl)
@@ -241,9 +246,9 @@ def assets_RunModal(nclk_fetch, nclk_clean, usrId, dta_now, dta_mdl, dta_tsk, dt
 
     if trgSrc == k.btnReset:
         mdl.id = ks.pg.fetch
-        mdl.cmd = ks.cmd.fetch.asset
+        mdl.cmd = ks.cmd.fetch.reset
         mdl.msg = [
-            'Warning: Reset all system data'
+            htm.Div([ htm.B('Warning:'), ' Reset all local data' ], className="p-5")
         ]
     elif trgSrc == k.btnClean:
         if not now.usrId:

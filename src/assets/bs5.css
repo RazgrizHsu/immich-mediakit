@@ -58,7 +58,7 @@ select:disabled { opacity: 0.6; box-shadow: none !important; border: #9C9C9C 2px
 
 .text-dark { color: var(--dark-bs) !important; }
 
-.text-muted { color: #A0A0A0 !important; }
+.text-muted { color: color-mix(in srgb, var(--dark-bs) 50%, white) !important; }
 
 .text-white { color: #FFFFFF !important; }
 

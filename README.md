@@ -93,7 +93,6 @@ PSQL_USER=postgres
 PSQL_PASS=postgres
 
 # Immich connection
-IMMICH_URL=http://localhost:2283
 IMMICH_PATH=/path/to/immich/library
 
 # Qdrant connection (not needed for Docker Compose)
@@ -102,6 +101,8 @@ QDRANT_PORT=6333
 
 # MediaKit settings
 MKIT_PORT=8086
+MIKT_PORTWS=8087       # for background tasks (optional, default: 8087)
+MKIT_WS_HOST=localhost  # for non-Docker setups (optional)
 MKIT_DATA=/path/to/data/dir
 ```
 

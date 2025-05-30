@@ -85,13 +85,13 @@ def fetchUser(usrId: str) -> Optional[models.Usr]:
                 u.name,
                 u.email
             From users u
+            Where u.id = %s
             """
             with conn.cursor(row_factory=dict_row) as cursor:
-                cursor.execute(sql)
+                cursor.execute(sql, (usrId,))
                 row = cursor.fetchone()
 
-                if row:
-                    return models.Usr.fromDict(row)
+                if row: return models.Usr.fromDict(row)
 
                 return None
     except Exception as e:

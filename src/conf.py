@@ -92,7 +92,7 @@ class ks:
         vector = co.tit('vector', 'ToVectors', cmds.vec.dict(), desc='Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector')
         similar = co.tit('similar', 'Similarity', cmds.sim.dict(), desc='Find similar photos based on image content. This uses AI-generated vector embeddings to find visually similar assets')
         settings = co.tit('settings', 'Settings', desc='')
-        viewGrid = co.tit('viewGrid', 'ViewGrid', desc='Use the filters and sorting options to customize your view')
+        view = co.tit('view', 'View', desc='Use the filters and sorting options to customize your view')
 
 
     class db:
@@ -184,21 +184,31 @@ def pathFromRoot(path):
 class envs:
     isDev = False if isDock else os.getenv('IsDev')
     isDock = False if not isDock else True
+    immichPath = os.getenv('IMMICH_PATH')
     qdrantUrl = 'http://immich-mediakit-qdrant:6333' if isDock else os.getenv('QDRANT_URL')
     psqlHost = os.getenv('PSQL_HOST')
     psqlPort = os.getenv('PSQL_PORT')
     psqlDb = os.getenv('PSQL_DB')
     psqlUser = os.getenv('PSQL_USER')
     psqlPass = os.getenv('PSQL_PASS')
-    immichUrl = os.getenv('IMMICH_URL')
-    immichPath = os.getenv('IMMICH_PATH')
     mkitPort = os.getenv('MKIT_PORT', '8086')
+    mkitPortWs = os.getenv('MIKT_PORTWS', '8087')
 
     if os.getcwd().startswith(os.path.join(pathRoot, 'tests')):
         mkitData = os.path.join(pathRoot, 'data/')
     else:
         mkitData = 'data/' if isDock else os.getenv('MKIT_DATA', os.path.join(pathRoot, 'data/'))
         if not mkitData.endswith('/'): mkitData += '/'
+
+# ------------------------------------------------------------------------
+# WebSocket URL generator
+# ------------------------------------------------------------------------
+def getWebSocketUrl():
+    if isDock:
+        return f"ws://localhost:{envs.mkitPortWs}"
+
+    host = os.getenv('MKIT_WS_HOST', 'localhost')
+    return f"ws://{host}:{envs.mkitPortWs}"
 
 # ------------------------------------------------------------------------
 # const

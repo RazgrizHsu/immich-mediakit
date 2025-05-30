@@ -445,27 +445,30 @@ body {
 
 .tag {
 	border:#E0E0E099 1px solid;
-	padding:0px 4px 3px 4px;
+	padding:0 4px 0 4px;
 	margin:1px 3px;
-	background:#2D4A69;
 	border-radius:5px;
 	font-size:12px;
 	vertical-align:middle;
+	@include bg-gradient(#2D4A69);
 
 	&.second {
-		background:#4A4A4A;
+		@include bg-gradient(#4A4A4A);
 	}
 
 	&.info {
-		background:#78C22A;
+		//background:;
+		@include bg-gradient(#6DAA2B);
 	}
 
 	&.lg {
 		font-size:15px;
+		padding:0 4px 2px 4px;
 	}
 
 	&.sm {
 		font-size:10px;
+		padding:0 2px 0 2px;
 	}
 }
 
@@ -488,7 +491,7 @@ body {
 	}
 }
 
-.custom-nav-link {
+.navLnk {
 	color:#E0E0E0 !important;
 	border-radius:6px;
 	padding:8px 15px !important;
@@ -672,7 +675,7 @@ body {
 				background:#3772FF;
 				color:white;
 				font-weight:500;
-				@include bg-gradient(var(--main-bs), var(--main-lig), var(--main-dk))
+				@include bg-gradient(#385A7F)
 			}
 
 			&.dis {
