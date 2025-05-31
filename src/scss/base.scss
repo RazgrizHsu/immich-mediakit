@@ -85,10 +85,15 @@
 }
 
 
-div.inline {
-	display: inline-block;
-}
+div {
+	.inline {
+		display:inline-block;
+	}
 
+	.txt-AL {
+		text-align: left;
+	}
+}
 
 
 @mixin btn-colors($light, $base, $dark, $darker) {
