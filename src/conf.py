@@ -78,10 +78,11 @@ class cmds:
         clear = co.tit('vec_clear',desc='Clear all vectors')
 
     class sim(co.to):
-        find = co.tit('sim_find', desc='Find Similar vectors')
+        fdSim = co.tit('sim_find', desc='Find Similar vectors')
         clear = co.tit('sim_clear', desc='Clear all similar results')
-        selsRm = co.tit('sim_del', desc='Delete Selected assets')
-        selsOk = co.tit('sim_reslove', desc='Reslove Selected assets')
+        selRm = co.tit('sim_selRm', desc='Delete selected assets')
+        allOk = co.tit('sim_allOk', desc='Reslove All assets')
+        allRm = co.tit('sim_allRm', desc='Delete All assets')
 
 class ks:
     title = "Immich-MediaKit"

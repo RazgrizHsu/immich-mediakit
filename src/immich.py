@@ -5,6 +5,7 @@ import re
 
 from conf import ks
 from util import log, err
+from mod import models
 
 lg = log.get(__name__)
 
@@ -97,6 +98,14 @@ def trashBy(assetIds: List[str]):
                 return affectedRows
     except Exception as e:
         raise err.mkErr(f"Failed to delete assets: {str(e)}", e)
+
+#------------------------------------------------------------------------
+# delete by assets list
+#------------------------------------------------------------------------
+def trashByAssets(assets: List[models.Asset]):
+    if not assets: return 0
+    assetIds = [ass.id for ass in assets]
+    return trashBy(assetIds)
 
 #------------------------------------------------------------------------
 # This function restores multiple assets from trash by updating their status back to 'active' and clearing deletedAt

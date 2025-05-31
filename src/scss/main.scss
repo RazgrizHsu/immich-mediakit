@@ -634,11 +634,13 @@ body {
 /*======================== task ========================*/
 .tskPanel {
 	margin:10px 20px 15px 20px;
-	padding:20px 30px 20px 30px;
+	padding:10px 30px 10px 30px;
 	border-radius:16px;
-	border:2px solid var(--bs-border-color);
-	background:#3F3F3F;
+	border:2px solid #737373;
+	//background:#3F3F3F;
 	box-shadow:0 0 6px rgba(255, 255, 255, 0.2);
+
+	@include bg-gradient(#33333F);
 
 	.progress {
 		border:#999999 1px solid;

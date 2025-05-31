@@ -589,6 +589,7 @@ def deleteBy(assets: List[models.Asset]):
         with mkConn() as conn:
             c = conn.cursor()
             autoIds = [ass.autoId for ass in assets]
+            assIds = [ass.id for ass in assets]
             if not autoIds: return 0
 
             qargs = ','.join(['?' for _ in autoIds])
@@ -596,6 +597,16 @@ def deleteBy(assets: List[models.Asset]):
             conn.commit()
             count = c.rowcount
             lg.info(f"[pics] delete by autoIds[{len(autoIds)}] rst[{count}]")
+            
+            # Delete vectors from Qdrant
+            if assIds:
+                import db.vecs as vecs
+                try:
+                    vecs.deleteBy(assIds)
+                    lg.info(f"[pics] deleted vectors for {len(assIds)} assets")
+                except Exception as e:
+                    lg.error(f"[pics] Failed to delete vectors: {str(e)}")
+            
             return count
     except Exception as e:
         raise mkErr("Failed to clear similarity results:", e)

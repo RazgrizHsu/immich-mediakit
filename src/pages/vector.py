@@ -108,7 +108,7 @@ def layout():
     inp(ks.sto.cnt, "data"),
     prevent_initial_call=False
 )
-def photoVec_OnInit(dta_cnt):
+def vec_OnInit(dta_cnt):
     cnt = models.Cnt.fromDict(dta_cnt)
 
     hasPics = cnt.ass > 0
@@ -129,7 +129,7 @@ def photoVec_OnInit(dta_cnt):
         disBtnRun = False
         disBtnClr = True
     else:
-        btnTxt = "Please Get Photo Assets First"
+        btnTxt = "Please Get Assets First"
         disBtnRun = True
         disBtnClr = True
 
@@ -153,7 +153,7 @@ def photoVec_OnInit(dta_cnt):
     ],
     prevent_initial_call=True
 )
-def photoVec_Status(dta_tsk, dta_cnt):
+def vec_Status(dta_tsk, dta_cnt):
     # trgId = getTriggerId()
     # if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd, noUpd
 
@@ -169,7 +169,7 @@ def photoVec_Status(dta_tsk, dta_cnt):
     disBtnClr = isTskin or cnt.vec <= 0
     disPhotoQ = isTskin or cnt.vec >= 1
 
-    lg.info(f"[photoVec] vec[{cnt.vec}] select[{disPhotoQ}]")
+    lg.info(f"[vec] vec[{cnt.vec}] select[{disPhotoQ}]")
 
     if tsk.id:
         txtBtn = "Task in progress.."
@@ -198,7 +198,7 @@ def photoVec_Status(dta_tsk, dta_cnt):
     ],
     prevent_initial_call=True
 )
-def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy):
+def vec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy):
     if not nclk_proc and not nclk_clear: return noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
@@ -212,7 +212,7 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, 
     mdl = models.Mdl.fromDict(dta_mdl)
     nfy = models.Nfy.fromDict(dta_nfy)
 
-    lg.info(f"[photoVec] trig[{trgId}] clk[{nclk_proc}/{nclk_clear}] tsk[{tsk}]")
+    lg.info(f"[vec] trig[{trgId}] clk[{nclk_proc}/{nclk_clear}] tsk[{tsk}]")
 
     if trgId == K.btnDoVec:
         if cnt.ass <= 0:
@@ -243,9 +243,9 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, 
 import imgs
 from mod.models import IFnProg
 
-def photoVec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def vec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
-    msg = "[PhotoVec] Processing successful"
+    msg = "[vec] Processing successful"
 
     try:
         photoQ = now.photoQ if now.photoQ else ks.db.thumbnail
@@ -261,26 +261,28 @@ def photoVec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
             return nfy, now, msg
 
         cntAll = len(assets)
-        doReport(8, f"Found {cntAll} photos, starting processing")
+        doReport(8, f"Found [ {cntAll} ] starting processing")
 
         rst = imgs.toVectors(assets, photoQ, onUpdate=doReport)
 
         cnt.vec = db.vecs.count()
 
-        msg = f"Completed: total[{rst.total}] done[{rst.done}, Skip[{rst.skip}] Error[{rst.error}]"
+        msg = f"Completed: total[ {rst.total} ] done[ {rst.done} ] Skip[ {rst.skip} ]"
+        if rst.error: msg += f" Error[ {rst.error}]"
+
         nfy.success(msg)
 
         return sto, msg
 
     except Exception as e:
-        msg = f"Photo processing failed: {str(e)}"
+        msg = f"Asset processing failed: {str(e)}"
         nfy.error(msg)
         raise RuntimeError(msg)
 
 
-def photoVec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def vec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
-    msg = "[PhotoVec] Clearing successful"
+    msg = "[AssetVec] Clearing successful"
 
     try:
         doReport(10, "Preparing to clear all Vectors")
@@ -314,5 +316,5 @@ def photoVec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
 #========================================================================
 # Set up global functions
 #========================================================================
-mapFns[ks.cmd.vec.toVec] = photoVec_ToVec
-mapFns[ks.cmd.vec.clear] = photoVec_Clear
+mapFns[ks.cmd.vec.toVec] = vec_ToVec
+mapFns[ks.cmd.vec.clear] = vec_Clear

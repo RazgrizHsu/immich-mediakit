@@ -106,7 +106,7 @@ def saveVectorBy(assetId, img):
 
             saved = db.vecs.save(assetId, features)
         except ValueError as ve:
-            return f"Photo {assetId} vector processing error: {str(ve)}"
+            return f"assetId[{assetId}] vector processing error: {str(ve)}"
 
         if saved: return True
 
@@ -154,7 +154,7 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = Non
             cur = conn.cursor()
 
             if onUpdate:
-                onUpdate(inPct, f"Preparing to process {pi.total} photos, quality: {photoQ}")
+                onUpdate(inPct, f"Preparing to process count[{pi.total}], quality: {photoQ}")
 
             for idx, asset in enumerate(assets):
                 assetId = asset.id
@@ -216,7 +216,12 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = Non
                         speedStr = f" ({itemsPerSec:.1f} items/sec)"
                     else:
                         speedStr = ""
-                    onUpdate(percent, f"Processing photo {processedCnt}/{pi.total} - (Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}). Estimated remaining: {remainStr}{speedStr}")
+
+                    msg = f"Processing {processedCnt}/{pi.total}, done[{pi.done}] skip[{pi.skip}] error[{pi.error}]"
+
+                    msg += f" ( Estimated remaining: {remainStr}{speedStr} )"
+
+                    onUpdate(percent, msg)
 
             conn.commit()
             if onUpdate:
