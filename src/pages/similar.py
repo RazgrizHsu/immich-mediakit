@@ -1,7 +1,7 @@
 import traceback
 from typing import Optional
 
-import core
+import immich
 import db
 from conf import ks, co
 from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
@@ -37,8 +37,10 @@ class k:
     btnClear = "sim-btn-clear"
     btnCbxRm = "sim-btn-CbxRm"
     btnCbxOk = "sim-btn-CbxOk"
+    btnCbxRA = "sim-btn-CbxRA"
     cbxNCOk = "sim-btn-CbxNCOk"
     cbxNCRm = "sim-btn-CbxNCRm"
+    cbxNCRA = "sim-btn-CbxNCRA"
 
     tabs = 'sim-tabs'
     pagerPnd = "sim-pager-pnd"
@@ -163,6 +165,14 @@ def layout(autoId=None, **kwargs):
                                     dbc.Checkbox( id=k.cbxNCRm, label="No-Confirm", className="sm pe-2" ),
                                 ],
                                 className="inline me-2"),
+
+                                htm.Div([
+                                    dbc.Button("Mark All Delete", id=k.btnCbxRA, color="danger", size="sm", disabled=True),
+                                    htm.Br(),
+                                    dbc.Checkbox(id=k.cbxNCRA, label="No-Confirm", className="sm pe-2")
+                                ],
+                                    className="inline me-2"
+                                ),
 
                                 htm.Div([
                                     dbc.Button("Mark All Resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True),
@@ -328,7 +338,7 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
 
     tsk = Tsk()
     tsk.id = ks.pg.similar
-    tsk.cmd = ks.cmd.sim.find
+    tsk.cmd = ks.cmd.sim.fdSim
     tsk.name = f'Find similar for #{ass.autoId}'
     tsk.msg = f'Search images similar to {ass.originalFileName} with threshold [{thMin:.2f} - {thMax:.2f}]'
     tsk.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': True}
@@ -347,6 +357,7 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
         out(k.btnCbxOk, "disabled"),
+        out(k.btnCbxRA, "disabled"),
         out(k.gvSim, "children"),
         out(k.gvPnd, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -387,6 +398,7 @@ def sim_Load(dta_now, dta_nfy):
 
     cntAssets = len(now.pg.sim.assCur) if now.pg.sim.assCur else -1
     disOk = cntAssets <= 0
+    disDel = cntAssets <= 0
 
     if cntAssets >= 1:
         #lg.info(f"[sim:load] assets: {now.pg.sim.assets[0]}")
@@ -465,7 +477,7 @@ def sim_Load(dta_now, dta_nfy):
 
     activeTab = now.pg.sim.activeTab if now.pg.sim.activeTab else "tab-current"
 
-    return cntOk, cntPn, cntNo, disFind, disCler, disOk, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd, tabDisabled, tabLabel, activeTab
+    return cntOk, cntPn, cntNo, disFind, disCler, disOk, disDel, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd, tabDisabled, tabLabel, activeTab
 
 
 #------------------------------------------------------------------------
@@ -586,6 +598,7 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         inp(k.btnClear, "n_clicks"),
         inp(k.btnCbxRm, "n_clicks"),
         inp(k.btnCbxOk, "n_clicks"),
+        inp(k.btnCbxRA, "n_clicks"),
     ],
     [
         ste(k.slideTh, "value"),
@@ -596,11 +609,12 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         ste(ks.sto.nfy, "data"),
         ste(k.cbxNCOk, "value"),
         ste(k.cbxNCRm, "value"),
+        ste(k.cbxNCRA, "value"),
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm):
-    if not clk_fnd and not clk_clr and not clk_dse and not clk_rse: return noUpd, noUpd, noUpd, noUpd
+def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_ok, clk_ra, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRA):
+    if not clk_fnd and not clk_clr and not clk_rm and not clk_ok and not clk_ra: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
@@ -640,7 +654,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, 
         if cnt > 0:
             mdl.reset()
             mdl.id = ks.pg.similar
-            mdl.cmd = ks.cmd.sim.selsOk
+            mdl.cmd = ks.cmd.sim.allOk
             mdl.msg = f"Are you sure mark resloved current images( {cnt} )?"
             mdl.assets = ass
 
@@ -657,7 +671,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, 
         if cnt > 0:
             mdl.reset()
             mdl.id = ks.pg.similar
-            mdl.cmd = ks.cmd.sim.selsRm
+            mdl.cmd = ks.cmd.sim.selRm
             mdl.msg = [
                 f"Are you sure you want to Delete select images( {cnt} )?", htm.Br(),
                 htm.B("This operation cannot be undone"),
@@ -667,6 +681,29 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, 
             if ncRm:
                 tsk = mdl.mkTsk()
                 mdl.reset()
+                return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
+
+    #------------------------------------------------------------------------
+    if trgId == k.btnCbxRA:
+        ass = now.pg.sim.assCur
+        cnt = len(ass)
+
+        lg.info(f"[sim:delAll] {cnt} assets to delete")
+
+        if cnt > 0:
+            mdl.reset()
+            mdl.id = ks.pg.similar
+            mdl.cmd = ks.cmd.sim.allRm
+            mdl.msg = [
+                f"Are you sure you want to Delete ALL current images( {cnt} )?", htm.Br(),
+                htm.B("This operation cannot be undone"),
+            ]
+            mdl.assets = ass
+
+            if ncRA:
+                tsk = mdl.mkTsk()
+                mdl.reset()
+                return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
 
     #------------------------------------------------------------------------
     if trgId == k.btnClear:
@@ -732,7 +769,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, 
             now.pg.sim.assId = asset.id
 
             mdl.id = ks.pg.similar
-            mdl.cmd = ks.cmd.sim.find
+            mdl.cmd = ks.cmd.sim.fdSim
             mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': isFromUrl}
             tsk = mdl.mkTsk()
             mdl.reset()
@@ -753,7 +790,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, 
 #========================================================================
 from mod.models import IFnProg
 
-def sim_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
 
     try:
@@ -953,14 +990,10 @@ def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         if not assSels or cntSelect == 0: raise RuntimeError("Selected not found")
 
-        ids = [a.id for a in assSels]
-
         for a in assSels:
             lg.info(f"[sim:delSelects] delete asset #[{a.autoId}] Id[ {a.id} ]")
 
-        # immich
-        core.trashBy(ids)
-
+        immich.trashByAssets(assSels)
 
         db.pics.deleteBy(assSels)
         db.pics.setResloveBy(assLefts) # set unselected to resloved
@@ -997,12 +1030,43 @@ def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         nfy.success(msg)
 
-        # update cnts
         cnt.refreshFromDB()
 
         return sto, msg
     except Exception as e:
-        msg = f"[sim] Delete selected failed: {str(e)}"
+        msg = f"[sim] Resloved All failed: {str(e)}"
+        nfy.error(msg)
+        lg.error(traceback.format_exc())
+        now.pg.sim.clearAll()
+
+        raise RuntimeError(msg)
+
+
+def sim_DeleteAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
+    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+    try:
+        assets = now.pg.sim.assCur
+        cntAll = len(assets)
+        msg = f"[sim] Delete All Assets( {cntAll} ) Success!"
+
+        if not assets or cntAll == 0: raise RuntimeError("Current Assets not found")
+
+        for a in assets:
+            lg.info(f"[sim:delAll] delete asset #[{a.autoId}] Id[ {a.id} ]")
+
+        immich.trashByAssets(assets)
+        db.pics.deleteBy(assets)
+
+        now.pg.sim.clearAll()
+        now.pg.sim.activeTab = "tab-pending"
+
+        cnt.refreshFromDB()
+
+        nfy.success(msg)
+
+        return sto, msg
+    except Exception as e:
+        msg = f"[sim] Delete all failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.pg.sim.clearAll()
@@ -1012,7 +1076,8 @@ def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
 #========================================================================
 # Set up global functions
 #========================================================================
-mapFns[ks.cmd.sim.find] = sim_FindSimilar
-mapFns[ks.cmd.sim.clear] = sim_Clear
-mapFns[ks.cmd.sim.selsOk] = sim_ResloveAll
-mapFns[ks.cmd.sim.selsRm] = sim_DelSelected
+mapFns[ks.cmd.sim.fdSim] = sim_FindSimilar
+mapFns[ks.cmd.sim.clear] = sim_ClearSims
+mapFns[ks.cmd.sim.allOk] = sim_ResloveAll
+mapFns[ks.cmd.sim.selRm] = sim_DelSelected
+mapFns[ks.cmd.sim.allRm] = sim_DeleteAll

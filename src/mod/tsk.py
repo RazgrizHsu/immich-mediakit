@@ -45,7 +45,7 @@ def render():
             dbc.Col(htm.Div(id=k.rst), width=9),
             dbc.Col([
                 dbc.Button("Test Ws", id="task-test-ws-btn", className="btn-success", size="sm", style=style_show if DEBUG else style_none),
-                dbc.Button("close to continue", id=k.btn, className="btn-info", size="sm", disabled=True),
+                dbc.Button("close", id=k.btn, className="btn-info", size="sm", disabled=True),
             ], className="text-end"),
         ]),
 

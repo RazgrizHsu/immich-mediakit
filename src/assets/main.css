@@ -163,7 +163,7 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 .test { background: #0B66BC; color: #1A95C3; border: red 1px solid; }
 
 /*======================== task ========================*/
-.tskPanel { margin: 10px 20px 15px 20px; padding: 20px 30px 20px 30px; border-radius: 16px; border: 2px solid var(--bs-border-color); background: #3F3F3F; box-shadow: 0 0 6px rgba(255, 255, 255, 0.2); }
+.tskPanel { margin: 10px 20px 15px 20px; padding: 10px 30px 10px 30px; border-radius: 16px; border: 2px solid #737373; box-shadow: 0 0 6px rgba(255, 255, 255, 0.2); background-image: linear-gradient(to bottom, #5c5c65, #33333F 50%, #292932); }
 
 .tskPanel .progress { border: #999999 1px solid; }
 

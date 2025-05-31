@@ -78,10 +78,11 @@ def renderBody(top, bottom):
         htm.Div(
             [
                 *top,
-                tsk.render(),
             ],
             className="main"
         ),
+
+        tsk.render(),
 
         *bottom
 

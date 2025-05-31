@@ -2,7 +2,7 @@ from dsh import htm, dcc, dbc, inp, out, ste, callback
 from mod import models
 from conf import ks, envs
 from db import psql
-import core
+import immich
 
 class k:
     connInfo = 'div-conn-info'
@@ -49,8 +49,8 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
     testDA = psql.testAssetsPath()
     testOk = testDA.startswith("OK")
 
-    chkDel = core.checkLogicDelete()
-    chkRst = core.checkLogicRestore()
+    chkDel = immich.checkLogicDelete()
+    chkRst = immich.checkLogicRestore()
 
     logicOk = chkDel and chkRst
 
