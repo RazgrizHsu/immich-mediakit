@@ -93,7 +93,7 @@ def mdlImg_IsOpen(dta_mdl, is_open):
 
     trigger_id = getTriggerId()
 
-    lg.info(f"[mdlImg] dta_mdl: {dta_mdl}")
+    # lg.info(f"[mdlImg] dta_mdl: {dta_mdl}")
 
     if trigger_id != k.store: return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
 

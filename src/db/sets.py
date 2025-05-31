@@ -7,9 +7,10 @@ from util import log
 
 lg = log.get(__name__)
 
+pathDb = envs.mkitData + 'sets.db'
+
 @contextmanager
 def mkConn():
-    pathDb = envs.mkitData + 'sets.db'
     conn = sqlite3.connect(pathDb, check_same_thread=False, timeout=30.0)
     conn.execute("PRAGMA busy_timeout = 30000")
     try:
@@ -25,12 +26,13 @@ def init():
     with mkConn() as conn:
         c = conn.cursor()
         c.execute('''
-		Create Table If Not Exists settings (
-		   key TEXT Primary Key,
-		   val TEXT
-		)
-''')
+            Create Table If Not Exists settings (
+               key TEXT Primary Key,
+               val TEXT
+            )
+        ''')
         conn.commit()
+        lg.info( f"[sets] db connected: {pathDb}" )
 
 def get(key, defaultValue=None):
     try:

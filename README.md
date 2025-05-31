@@ -117,7 +117,7 @@ The easiest way to run Immich-MediaKit is with Docker Compose, which automatical
 
 ```bash
 # Build and start containers
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### Option 2: Direct Installation

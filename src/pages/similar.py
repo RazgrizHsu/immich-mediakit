@@ -844,7 +844,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 if processedCount > 1:
                     msg = f"Processed {processedCount} assets without similar. Last: #{asset.autoId}"
                 nfy.info(msg)
-                return nfy, now, msg
+                return sto, msg
 
             # 找到有相似圖片的，跳出迴圈繼續處理
             break
@@ -937,8 +937,9 @@ def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
         # immich
         core.trashBy(ids)
 
-        #清除同個simGID的相似資料讓他重新找
-        db.pics.setResloveBy(assSels, 0)
+
+        db.pics.deleteBy(assSels)
+        db.pics.setResloveBy(assLefts) # set unselected to resloved
 
         now.pg.sim.clearNow()
         now.pg.sim.activeTab = "tab-pending"

@@ -126,7 +126,7 @@ def assets_Init(dta_pi, dta_now):
     usrs = db.psql.fetchUsers()
     if usrs and len(usrs) > 0:
         for usr in usrs:
-            opts.append({"label": usr.name, "value": usr.id})
+            opts.append({"label": usr.name, "value": str(usr.id)})
 
     return opts, db.dto.usrId
 
