@@ -37,6 +37,8 @@ class k:
     btnClear = "sim-btn-clear"
     btnCbxRm = "sim-btn-CbxRm"
     btnCbxOk = "sim-btn-CbxOk"
+    cbxNCOk = "sim-btn-CbxNCOk"
+    cbxNCRm = "sim-btn-CbxNCRm"
 
     tabs = 'sim-tabs'
     pagerPnd = "sim-pager-pnd"
@@ -155,8 +157,21 @@ def layout(autoId=None, **kwargs):
 
                             # Action buttons
                             htm.Div([
-                                dbc.Button("delete selected (0)", id=k.btnCbxRm, color="danger", size="sm", className="me-2", disabled=True),
-                                dbc.Button("mark all resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True)
+                                htm.Div([
+                                    dbc.Button("delete select", id=k.btnCbxRm, color="danger", size="sm", disabled=True),
+                                    htm.Br(),
+                                    dbc.Checkbox( id=k.cbxNCRm, label="No-Confirm", className="sm pe-2" ),
+                                ],
+                                className="inline me-2"),
+
+                                htm.Div([
+                                    dbc.Button("Mark All Resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True),
+                                    htm.Br(),
+                                    dbc.Checkbox(id=k.cbxNCOk, label="No-Confirm", className="sm pe-2")
+                                ],
+                                    className="inline"
+                                ),
+
                             ], className="mb-3 text-end"),
 
 
@@ -514,7 +529,7 @@ def sim_OnNowChangeSelects(dta_now):
 
     # if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
 
-    btnText = f"delete selected ( {selCnt} )"
+    btnText = f"delete selected ( {selCnt} ) and make others resloved"
     btnDisabled = selCnt == 0
 
     return btnText, btnDisabled
@@ -579,10 +594,12 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         ste(ks.sto.mdl, "data"),
         ste(ks.sto.tsk, "data"),
         ste(ks.sto.nfy, "data"),
+        ste(k.cbxNCOk, "value"),
+        ste(k.cbxNCRm, "value"),
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy):
+def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm):
     if not clk_fnd and not clk_clr and not clk_dse and not clk_rse: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
@@ -625,8 +642,11 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, 
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.selsOk
             mdl.msg = f"Are you sure mark resloved current images( {cnt} )?"
-
             mdl.assets = ass
+
+            if ncOk:
+                tsk = mdl.mkTsk()
+                mdl.reset()
     #------------------------------------------------------------------------
     if trgId == k.btnCbxRm:
         ass = now.pg.sim.assSelect
@@ -643,6 +663,10 @@ def sim_RunModal(clk_fnd, clk_clr, clk_dse, clk_rse, thRange, dta_now, dta_cnt, 
                 htm.B("This operation cannot be undone"),
             ]
             mdl.assets = ass
+
+            if ncRm:
+                tsk = mdl.mkTsk()
+                mdl.reset()
 
     #------------------------------------------------------------------------
     if trgId == k.btnClear:
@@ -941,7 +965,7 @@ def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
         db.pics.deleteBy(assSels)
         db.pics.setResloveBy(assLefts) # set unselected to resloved
 
-        now.pg.sim.clearNow()
+        now.pg.sim.clearAll()
         now.pg.sim.activeTab = "tab-pending"
 
         cnt.refreshFromDB()
@@ -969,7 +993,7 @@ def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         db.pics.setResloveBy(assets)
 
-        now.pg.sim.clearNow()
+        now.pg.sim.clearAll()
 
         nfy.success(msg)
 
@@ -981,7 +1005,7 @@ def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
         msg = f"[sim] Delete selected failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
-        now.pg.sim.clearNow()
+        now.pg.sim.clearAll()
 
         raise RuntimeError(msg)
 

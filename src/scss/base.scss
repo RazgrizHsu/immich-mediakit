@@ -85,6 +85,12 @@
 }
 
 
+div.inline {
+	display: inline-block;
+}
+
+
+
 @mixin btn-colors($light, $base, $dark, $darker) {
 	background-image:linear-gradient($light, $base 50%, $dark);
 	filter:none;

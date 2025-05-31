@@ -6,7 +6,7 @@ lg = log.get(__name__)
 
 dash.register_page(
     __name__,
-    path=f'/{ks.pg.settings}',
+    path=f'/{ks.pg.system}',
     title=f"{ks.title}: " + 'System Settings',
 )
 
@@ -17,8 +17,8 @@ def layout():
         #====== top start =======================================================
 
         dbc.Row([
-            dbc.Col(htm.H3(f"{ks.pg.settings.name}"), width=3),
-            dbc.Col(htm.Small(f"{ks.pg.settings.desc}", className="text-muted text-right"))
+            dbc.Col(htm.H3(f"{ks.pg.system.name}"), width=3),
+            dbc.Col(htm.Small(f"{ks.pg.system.desc}", className="text-muted text-right"))
         ], className="mb-4"),
 
         htm.Div([

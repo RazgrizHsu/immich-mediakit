@@ -18,8 +18,30 @@ a {
 	}
 }
 
-.form-check, .form-label {
-	margin-bottom: auto;
+.form-check {
+
+	&.sm {
+
+		.form-check-label {
+			font-size: 12px;
+		}
+	}
+}
+
+.form-check, .form-check-input, .form-label {
+	margin: auto;
+	padding: 0;
+}
+
+.form-check, .form-check-input {
+	display: inline-block;
+	float: none!important;
+}
+.form-check-input[type="checkbox"] {
+	display: inline-block;
+	vertical-align:sub;
+	margin: auto 5px;
+	width: 18px; height: 18px;
 }
 
 .form-control, .form-select, .form-check-input, input, select, textarea {

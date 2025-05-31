@@ -22,9 +22,9 @@ def renderHeader():
     defs = [
         dbc.NavLink(htm.Span(["⚡️ Fetch"]), href="/", active="exact", className="navLnk"),
         dbc.NavLink(htm.Span(["🔄 Vectors"]), href=f"/{ks.pg.vector}", active="exact", id=k.nav.vec, className="navLnk"),
-        dbc.NavLink(htm.Span(["🖼️ Assets"]), href=f"/{ks.pg.view}", active="exact", id=k.nav.view, className="navLnk"),
         dbc.NavLink(htm.Span(["🔍 Similar"]), href=f"/{ks.pg.similar}", active="exact", id=k.nav.sim, className="navLnk"),
-        dbc.NavLink(htm.Span(["⚙️ Settings"]), href=f"/{ks.pg.settings}", active="exact", className="navLnk"),
+        dbc.NavLink(htm.Span(["🖼️ Assets"]), href=f"/{ks.pg.view}", active="exact", id=k.nav.view, className="navLnk"),
+        dbc.NavLink(htm.Span(["⚙️ System"]), href=f"/{ks.pg.system}", active="exact", className="navLnk"),
     ]
 
     return dbc.Navbar(
