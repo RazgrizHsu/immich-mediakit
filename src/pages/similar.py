@@ -334,10 +334,14 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     prevent_initial_call=True
 )
 def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
-    if not dta_ass:
-        return noUpd, noUpd
 
     now = Now.fromDict(dta_now)
+
+    if not dta_ass:
+        now.pg.sim.assFromUrl = None
+        now.pg.sim.assId = None
+        return now.toDict(), noUpd
+
     ass = models.Asset.fromDict(dta_ass)
 
     lg.info(f"[sim:sync] asset from url: #{ass.autoId} id[{ass.id}]")
@@ -816,8 +820,8 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
-    # 如果有清除過 tsk.id，需要更新 store
-    return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict() if tsk.id is None else noUpd
+
+    return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
 
 
 #========================================================================
