@@ -676,13 +676,12 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.allOk
             mdl.msg = f"Are you sure mark resloved current images( {cnt} )?"
-            mdl.assets = ass
 
             if ncOk:
                 tsk = mdl.mkTsk()
                 mdl.reset()
     #------------------------------------------------------------------------
-    if trgId == k.btnCbxRm:
+    elif trgId == k.btnCbxRm:
         ass = now.pg.sim.assSelect
         cnt = len(ass)
 
@@ -696,14 +695,13 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
                 f"Are you sure you want to Delete select images( {cnt} )?", htm.Br(),
                 htm.B("This operation cannot be undone"),
             ]
-            mdl.assets = ass
 
             if ncRm:
                 tsk = mdl.mkTsk()
                 mdl.reset()
 
     #------------------------------------------------------------------------
-    if trgId == k.btnCbxRS:
+    elif trgId == k.btnCbxRS:
         assSel = now.pg.sim.assSelect
         assAll = now.pg.sim.assCur
         cnt = len(assSel)
@@ -718,14 +716,13 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
                 f"Are you sure you want to Resolve selected images( {cnt} ) and Delete others( {len(assAll) - cnt} )?", htm.Br(),
                 htm.B("This operation cannot be undone"),
             ]
-            mdl.assets = assSel
 
             if ncRS:
                 tsk = mdl.mkTsk()
                 mdl.reset()
 
     #------------------------------------------------------------------------
-    if trgId == k.btnCbxRA:
+    elif trgId == k.btnCbxRA:
         ass = now.pg.sim.assCur
         cnt = len(ass)
 
@@ -739,14 +736,13 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
                 f"Are you sure you want to Delete ALL current images( {cnt} )?", htm.Br(),
                 htm.B("This operation cannot be undone"),
             ]
-            mdl.assets = ass
 
             if ncRA:
                 tsk = mdl.mkTsk()
                 mdl.reset()
 
     #------------------------------------------------------------------------
-    if trgId == k.btnClear:
+    elif trgId == k.btnClear:
         cntOk = db.pics.countSimOk(isOk=1)
         cntRs = db.pics.countHasSimIds()
         if cntOk <= 0 and cntRs <= 0:
