@@ -80,6 +80,7 @@ class cmds:
     class sim(co.to):
         fdSim = co.tit('sim_find', desc='Find Similar vectors')
         clear = co.tit('sim_clear', desc='Clear all similar results')
+        selOk = co.tit('sim_selOk', desc='Reslove selected assets')
         selRm = co.tit('sim_selRm', desc='Delete selected assets')
         allOk = co.tit('sim_allOk', desc='Reslove All assets')
         allRm = co.tit('sim_allRm', desc='Delete All assets')

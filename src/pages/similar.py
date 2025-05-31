@@ -36,10 +36,12 @@ class k:
     btnFind = "sim-btn-find"
     btnClear = "sim-btn-clear"
     btnCbxRm = "sim-btn-CbxRm"
+    btnCbxRS = "sim-btn-CbxRS"
     btnCbxOk = "sim-btn-CbxOk"
     btnCbxRA = "sim-btn-CbxRA"
     cbxNCOk = "sim-btn-CbxNCOk"
     cbxNCRm = "sim-btn-CbxNCRm"
+    cbxNCRS = "sim-btn-CbxNCRS"
     cbxNCRA = "sim-btn-CbxNCRA"
 
     tabs = 'sim-tabs'
@@ -162,24 +164,33 @@ def layout(autoId=None, **kwargs):
                                 htm.Div([
                                     dbc.Button("delete select", id=k.btnCbxRm, color="danger", size="sm", disabled=True),
                                     htm.Br(),
-                                    dbc.Checkbox( id=k.cbxNCRm, label="No-Confirm", className="sm pe-2" ),
+                                    dbc.Checkbox( id=k.cbxNCRm, label="No-Confirm", className="sm" ),
                                 ],
-                                className="inline me-2"),
+                                    className="inline me-2 txt-AL"
+                                ),
+
+                                htm.Div([
+                                    dbc.Button("resolve select", id=k.btnCbxRS, color="success", size="sm", disabled=True),
+                                    htm.Br(),
+                                    dbc.Checkbox(id=k.cbxNCRS, label="No-Confirm", className="sm")
+                                ],
+                                    className="inline me-2 txt-AL"
+                                ),
 
                                 htm.Div([
                                     dbc.Button("Mark All Delete", id=k.btnCbxRA, color="danger", size="sm", disabled=True),
                                     htm.Br(),
-                                    dbc.Checkbox(id=k.cbxNCRA, label="No-Confirm", className="sm pe-2")
+                                    dbc.Checkbox(id=k.cbxNCRA, label="No-Confirm", className="sm")
                                 ],
-                                    className="inline me-2"
+                                    className="inline me-2 txt-AL"
                                 ),
 
                                 htm.Div([
                                     dbc.Button("Mark All Resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True),
                                     htm.Br(),
-                                    dbc.Checkbox(id=k.cbxNCOk, label="No-Confirm", className="sm pe-2")
+                                    dbc.Checkbox(id=k.cbxNCOk, label="No-Confirm", className="sm")
                                 ],
-                                    className="inline"
+                                    className="inline me-2 txt-AL"
                                 ),
 
                             ], className="mb-3 text-end"),
@@ -530,6 +541,8 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
     [
         out(k.btnCbxRm, "children"),
         out(k.btnCbxRm, "disabled"),
+        out(k.btnCbxRS, "children"),
+        out(k.btnCbxRS, "disabled"),
     ],
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
@@ -541,10 +554,11 @@ def sim_OnNowChangeSelects(dta_now):
 
     # if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
 
-    btnText = f"delete selected ( {selCnt} ) and make others resloved"
+    btnTextRm = f"delete selected ( {selCnt} ) and make others resloved"
+    btnTextRS = f"resolve selected ( {selCnt} ) and delete others"
     btnDisabled = selCnt == 0
 
-    return btnText, btnDisabled
+    return btnTextRm, btnDisabled, btnTextRS, btnDisabled
 
 
 #------------------------------------------------------------------------
@@ -597,6 +611,7 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
         inp(k.btnCbxRm, "n_clicks"),
+        inp(k.btnCbxRS, "n_clicks"),
         inp(k.btnCbxOk, "n_clicks"),
         inp(k.btnCbxRA, "n_clicks"),
     ],
@@ -609,12 +624,13 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         ste(ks.sto.nfy, "data"),
         ste(k.cbxNCOk, "value"),
         ste(k.cbxNCRm, "value"),
+        ste(k.cbxNCRS, "value"),
         ste(k.cbxNCRA, "value"),
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_ok, clk_ra, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRA):
-    if not clk_fnd and not clk_clr and not clk_rm and not clk_ok and not clk_ra: return noUpd, noUpd, noUpd, noUpd
+def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRS, ncRA):
+    if not clk_fnd and not clk_clr and not clk_rm and not clk_rs and not clk_ok and not clk_ra: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
 
@@ -681,7 +697,28 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_ok, clk_ra, thRange, dta_now, dta
             if ncRm:
                 tsk = mdl.mkTsk()
                 mdl.reset()
-                return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
+
+    #------------------------------------------------------------------------
+    if trgId == k.btnCbxRS:
+        assSel = now.pg.sim.assSelect
+        assAll = now.pg.sim.assCur
+        cnt = len(assSel)
+
+        lg.info(f"[sim:resolveSels] {cnt} assets selected")
+
+        if cnt > 0:
+            mdl.reset()
+            mdl.id = ks.pg.similar
+            mdl.cmd = ks.cmd.sim.selOk
+            mdl.msg = [
+                f"Are you sure you want to Resolve selected images( {cnt} ) and Delete others( {len(assAll) - cnt} )?", htm.Br(),
+                htm.B("This operation cannot be undone"),
+            ]
+            mdl.assets = assSel
+
+            if ncRS:
+                tsk = mdl.mkTsk()
+                mdl.reset()
 
     #------------------------------------------------------------------------
     if trgId == k.btnCbxRA:
@@ -703,7 +740,6 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_ok, clk_ra, thRange, dta_now, dta
             if ncRA:
                 tsk = mdl.mkTsk()
                 mdl.reset()
-                return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
 
     #------------------------------------------------------------------------
     if trgId == k.btnClear:
@@ -777,7 +813,6 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_ok, clk_ra, thRange, dta_now, dta
             #     f"Begin finding similar?", htm.Br(),
             #     f"threshold[{thMin:.2f}-{thMax:.2f}]]",
             # ]
-            return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
@@ -978,7 +1013,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
-def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
         assAlls = now.pg.sim.assCur
@@ -1015,7 +1050,7 @@ def sim_DelSelected(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
-def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
         assets = now.pg.sim.assCur
@@ -1027,6 +1062,7 @@ def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
         db.pics.setResloveBy(assets)
 
         now.pg.sim.clearAll()
+        now.pg.sim.activeTab = "tab-pending"
 
         nfy.success(msg)
 
@@ -1042,7 +1078,7 @@ def sim_ResloveAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
-def sim_DeleteAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
         assets = now.pg.sim.assCur
@@ -1073,11 +1109,52 @@ def sim_DeleteAll(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         raise RuntimeError(msg)
 
+def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
+    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+    try:
+        assAlls = now.pg.sim.assCur
+        assSels = now.pg.sim.assSelect
+        assOthers = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
+
+        cntSelect = len(assSels)
+        cntOthers = len(assOthers)
+        msg = f"[sim] Resolve Selected Assets( {cntSelect} ) and Delete Others( {cntOthers} ) Success!"
+
+        if not assSels or cntSelect == 0: raise RuntimeError("Selected not found")
+
+        # Resolve selected assets
+        db.pics.setResloveBy(assSels)
+
+        # Delete other assets
+        if assOthers:
+            for a in assOthers:
+                lg.info(f"[sim:resolveSelected] delete asset #[{a.autoId}] Id[ {a.id} ]")
+
+            immich.trashByAssets(assOthers)
+            db.pics.deleteBy(assOthers)
+
+        now.pg.sim.clearAll()
+        now.pg.sim.activeTab = "tab-pending"
+
+        cnt.refreshFromDB()
+
+        nfy.success(msg)
+
+        return sto, msg
+    except Exception as e:
+        msg = f"[sim] Resolve selected failed: {str(e)}"
+        nfy.error(msg)
+        lg.error(traceback.format_exc())
+        now.pg.sim.clearAll()
+
+        raise RuntimeError(msg)
+
 #========================================================================
 # Set up global functions
 #========================================================================
 mapFns[ks.cmd.sim.fdSim] = sim_FindSimilar
 mapFns[ks.cmd.sim.clear] = sim_ClearSims
-mapFns[ks.cmd.sim.allOk] = sim_ResloveAll
-mapFns[ks.cmd.sim.selRm] = sim_DelSelected
-mapFns[ks.cmd.sim.allRm] = sim_DeleteAll
+mapFns[ks.cmd.sim.selOk] = sim_SelectedReslove
+mapFns[ks.cmd.sim.selRm] = sim_SelectedDelete
+mapFns[ks.cmd.sim.allOk] = sim_AllReslove
+mapFns[ks.cmd.sim.allRm] = sim_AllDelete
