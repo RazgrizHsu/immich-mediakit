@@ -221,7 +221,8 @@ def photoVec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, 
             mdl.id = ks.pg.vector
             mdl.cmd = ks.cmd.vec.toVec
             mdl.msg = f"Begin processing photos[{cnt.ass - cnt.vec}] with quality[{photoQ}] ?"
-            now.photoQ = photoQ
+
+            db.dto.photoQ = now.photoQ = photoQ
 
     elif trgId == K.btnClear:
         if cnt.vec <= 0:

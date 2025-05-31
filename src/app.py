@@ -12,10 +12,15 @@ import conf, db
 
 lg = log.get(__name__)
 
+
+#------------------------------------
+# init
+#------------------------------------
 db.init()
+tskSvc.init( forceInit= True if conf.isDock else False )
 
-tskSvc.init()
 
+#------------------------------------
 app = dash.Dash(
     __name__,
     title=conf.ks.title,
@@ -29,33 +34,16 @@ app = dash.Dash(
     pages_folder="pages",
 )
 
+#------------------------------------
 err.injectCallbacks(app)
 
 import serve
-
 serve.regBy(app)
 
-from dsh import callback, inp, out
 
-@callback(
-    out("url", "pathname"),
-    [
-        inp(tsk.k.wsId, "state"),
-        inp(tsk.k.wsId, "error")
-    ],
-    prevent_initial_call=True
-)
-def monitor_ws_connection(state, error):
-    if error:
-        lg.error(f"[app:ws] ERROR: {error}")
-    elif state:
-        # lg.info(f"[app:ws] state changed: {state}")
-        pass
 
-    return dash.no_update
-
-import ui
 #========================================================================
+import ui
 app.layout = htm.Div([
 
     dcc.Location(id='url', refresh=False),
@@ -108,6 +96,7 @@ if __name__ == "__main__":
                 debug=False,
                 host='0.0.0.0',
                 port=int(conf.envs.mkitPort),
+                dev_tools_silence_routes_logging=True,
             )
 
     finally:

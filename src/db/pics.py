@@ -12,15 +12,16 @@ from util.err import mkErr, tracebk
 
 lg = log.get(__name__)
 
+pathDb = envs.mkitData + 'pics.db'
+
 @contextmanager
 def mkConn():
     """Context manager for database connections"""
     conn = None
     try:
-        pathDb = envs.mkitData + 'pics.db'
+
         conn = sqlite3.connect(pathDb, check_same_thread=False, timeout=30.0)
         conn.row_factory = sqlite3.Row
-        #conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=30000")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA temp_store=MEMORY")
@@ -76,6 +77,8 @@ def init():
                 ''')
 
             conn.commit()
+
+            lg.info( f"[pics] db connected: {pathDb}" )
 
         return True
     except Exception as e:
@@ -168,8 +171,8 @@ def getAllByIds(ids: List[str]) -> List[models.Asset]:
         if not ids: return []
         with mkConn() as conn:
             c = conn.cursor()
-            placeholders = ','.join(['?' for _ in ids])
-            c.execute(f"Select * From assets Where id IN ({placeholders})", ids)
+            qargs = ','.join(['?' for _ in ids])
+            c.execute(f"Select * From assets Where id IN ({qargs})", ids)
             rows = c.fetchall()
             if not rows: return []
             assets = [models.Asset.fromDB(c, row) for row in rows]
@@ -475,8 +478,8 @@ def getSimGroup(assId: str) -> Optional[List[models.Asset]]:
             simIds = [info.id for info in rootAsset.simInfos]
             if not simIds: return [rootAsset]
 
-            placeholders = ','.join(['?' for _ in simIds])
-            c.execute(f"SELECT * FROM assets WHERE id IN ({placeholders})", simIds)
+            qargs = ','.join(['?' for _ in simIds])
+            c.execute(f"SELECT * FROM assets WHERE id IN ({qargs})", simIds)
 
             rows = c.fetchall()
 
@@ -526,8 +529,8 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
 
                 highSimIds.append(assId)
 
-                placeholders = ','.join(['?' for _ in highSimIds])
-                c.execute(f"SELECT id, simGID, simInfos FROM assets WHERE id IN ({placeholders})", highSimIds)
+                qargs = ','.join(['?' for _ in highSimIds])
+                c.execute(f"SELECT id, simGID, simInfos FROM assets WHERE id IN ({qargs})", highSimIds)
 
                 grpAssets = {}
                 existGIDs = set()
@@ -542,8 +545,8 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
                 if len(existGIDs) > 1:
                     minGID = min(existGIDs)
                     otherGIDs = existGIDs - {minGID}
-                    placeholders = ','.join(['?' for _ in otherGIDs])
-                    c.execute(f"UPDATE assets SET simGID = ? WHERE simGID IN ({placeholders})", [minGID] + list(otherGIDs))
+                    qargs = ','.join(['?' for _ in otherGIDs])
+                    c.execute(f"UPDATE assets SET simGID = ? WHERE simGID IN ({qargs})", [minGID] + list(otherGIDs))
 
                     for aId in grpAssets:
                         if grpAssets[aId]['gid'] in otherGIDs:
@@ -568,8 +571,8 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
                     maxGID = c.fetchone()[0]
                     newGID = (maxGID or 0) + 1
 
-                placeholders = ','.join(['?' for _ in highSimIds])
-                c.execute(f"UPDATE assets SET simGID = ? WHERE id IN ({placeholders})", [newGID] + highSimIds)
+                qargs = ','.join(['?' for _ in highSimIds])
+                c.execute(f"UPDATE assets SET simGID = ? WHERE id IN ({qargs})", [newGID] + highSimIds)
 
                 conn.commit()
                 lg.info(f"[pics] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}], group[{newGID}] with {len(highSimIds)} members")
@@ -580,15 +583,32 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)
 
-def setResloveBy(assets: List[models.Asset], isOk=1):
+
+def deleteBy(assets: List[models.Asset]):
     try:
         with mkConn() as conn:
             c = conn.cursor()
             autoIds = [ass.autoId for ass in assets]
             if not autoIds: return 0
 
-            placeholders = ','.join(['?' for _ in autoIds])
-            c.execute(f"UPDATE assets SET simOk = {isOk}, simGID = 0, simInfos = '[]' WHERE autoId IN ({placeholders})", autoIds)
+            qargs = ','.join(['?' for _ in autoIds])
+            c.execute(f"DELETE FROM assets WHERE autoId IN ({qargs})", autoIds)
+            conn.commit()
+            count = c.rowcount
+            lg.info(f"[pics] delete by autoIds[{len(autoIds)}] rst[{count}]")
+            return count
+    except Exception as e:
+        raise mkErr("Failed to clear similarity results:", e)
+
+def setResloveBy(assets: List[models.Asset]):
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+            autoIds = [ass.autoId for ass in assets]
+            if not autoIds: return 0
+
+            qargs = ','.join(['?' for _ in autoIds])
+            c.execute(f"UPDATE assets SET simOk = 1, simGID = 0, simInfos = '[]' WHERE autoId IN ({qargs})", autoIds)
             conn.commit()
             count = c.rowcount
             lg.info(f"[pics] set simOk by autoIds[{len(autoIds)}] rst[{count}]")
@@ -747,8 +767,8 @@ def getPendingPaged(page=1, size=20) -> list[models.Asset]:
                     if sim.id and not sim.isSelf: allRelIds.add(sim.id)
 
             if allRelIds:
-                placeholders = ','.join(['?' for _ in allRelIds])
-                cursor.execute(f"SELECT * FROM assets WHERE id IN ({placeholders})", list(allRelIds))
+                qargs = ','.join(['?' for _ in allRelIds])
+                cursor.execute(f"SELECT * FROM assets WHERE id IN ({qargs})", list(allRelIds))
 
                 relatMap = {}
                 for row in cursor.fetchall():

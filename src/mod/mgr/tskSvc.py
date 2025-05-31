@@ -41,10 +41,13 @@ class DashTask(BseTsk):
 
         #------------------------------------
         try:
-            sto = self.fn(report, self.store)
+            rst = self.fn(report, self.store)
 
-            # always return store
-            return sto if sto else self.store
+            if len(rst) != 2:
+                raise RuntimeError( f"[Task] name[{self.name}] fn shound returned 2values now[ {len(rst)} ]" )
+
+            sto, msg = rst
+            return sto if sto else self.store, msg
 
         except Exception as e:
             lg.error(f"[Task] name[{self.name}] call fn failed: {str(e)}")
@@ -61,20 +64,20 @@ def init(port: Optional[int] = None, forceInit=False):
                     port = int(envs.mkitPortWs)
                 mgr = TskMgr(port=port)
                 mgr.start()
-                lg.info(f"[TskMgr] Started on port {port}")
+                lg.info(f"[tskSvc] Started on port {port}")
             except Exception as e:
-                lg.error(f"[TskMgr] Init Failed: {str(e)}")
-                raise RuntimeError(f"[TskMgr] Start failed, port[{port}]: {str(e)}")
+                lg.error(f"[tskSvc] Init Failed: {str(e)}")
+                raise RuntimeError(f"[tskSvc] Start failed, port[{port}]: {str(e)}")
         return mgr
     else:
-        lg.warn("[TskMgr] Ignore init..")
+        lg.warn("[tskSvc] Ignore init..")
 
 def stop():
     global mgr
     if mgr:
         mgr.stop()
         mgr = None
-        lg.info("[TskMgr] Stopped")
+        lg.info("[tskSvc] Stopped")
 
 def mkTask(tsk: Tsk, fn: Callable, sto: ITaskStore) -> str:
     if not mgr: raise RuntimeError("TskMgr not initialized")
