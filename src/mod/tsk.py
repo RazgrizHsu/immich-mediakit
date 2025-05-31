@@ -171,7 +171,8 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt):
                 return tsk.toDict(), nfy.toDict()
 
     from .mgr import tskSvc
-    if DEBUG: lg.info(f"[tws:ing] Start.. id[{tsk.id}] name[{tsk.name}] cmd[{tsk.cmd}]")
+
+    lg.info(f"[tws:ing] into id[{tsk.id}] name[{tsk.name}] cmd[{tsk.cmd}]")
 
     fn = mapFns.get(tsk.cmd)
 
@@ -268,16 +269,15 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
 # 處理任務完成並更新 store
 @callback(
     [
+        out(ks.sto.cnt, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
         out(ks.sto.tsk, "data", allow_duplicate=True),
-        out(ks.sto.cnt, "data", allow_duplicate=True),
     ],
     inp(k.wsId, "message"),
-    ste(ks.sto.tsk, "data"),
     prevent_initial_call=True
 )
-def tsk_OnData(wmsg, dta_tsk):
+def tsk_OnData(wmsg):
     if not wmsg: return noUpd, noUpd, noUpd, noUpd
 
     try:
@@ -288,27 +288,38 @@ def tsk_OnData(wmsg, dta_tsk):
 
         if data.get('type') == 'complete':
             lg.info(f"[tws:dta] Type[{data.get('type')}] tsn[{data.get('tsn')}]")
-            tsk = models.Tsk.fromDict(dta_tsk)
 
             from .mgr import tskSvc
             sto = tskSvc.getResultBy(data.get('tsn'))
 
-            dicNfy, dicNow, dicTsk, dicCnt = noUpd, noUpd, noUpd, noUpd
+            dicCnt, dicNfy, dicNow, dicTsk = noUpd, noUpd, noUpd, noUpd
 
-            if sto.nfy: dicNfy = sto.nfy.toDict()
-            if sto.now: dicNow = sto.now.toDict()
-            if sto.tsk:
-                tsk = sto.tsk  #note: can't concurrent
-
-                # 清除任務 ID 以允許執行新任務，但保留名稱供顯示
-                tsk.id = None
-                tsk.cmd = None
-
+            # every task refresh cnt
             dicCnt = models.Cnt.mkNewCnt().toDict()
 
-            return dicNfy, dicNow, dicTsk, dicCnt
+            dicNfy = sto.nfy.toDict()
+            dicNow = sto.now.toDict()
+
+            tsk = sto.tsk  #note: can't concurrent
+
+            if tsk.nexts and len(tsk.nexts):
+                ntsk = tsk.nexts[0]
+                ntsk.nexts = tsk.nexts[1:]
+
+                lg.info( f"[tws:dta] ====== continue next ======>>>> {ntsk}" )
+                dicTsk = ntsk.toDict()
+            else:
+                # clear id & cmd but keep name
+                # name only display, but id & cmd will trigger new task
+                tsk.id = None
+                tsk.cmd = None
+                dicTsk = tsk.toDict()
+
+            lg.info( f"[tws:dta] dicCnt, dicNfy, dicNow, dicTsk = ({type(dicCnt), type(dicNfy), type(dicNow), type(dicTsk)}) " )
+            return dicCnt, dicNfy, dicNow, dicTsk
+
     except Exception as e:
-        lg.error(f"[tws:dta] Error in tsk_OnComplete: {e}")
+        lg.error(f"[tws:dta] Error in tsk_OnComplete: {e}", exc_info=True)
 
     return noUpd, noUpd, noUpd, noUpd
 
@@ -340,14 +351,13 @@ def tsk_OnStatus(wmsg, dta_tsk):
 
 
 # only for test
-@callback(
-    out("task-test-ws-btn", "disabled"),
-    inp("task-test-ws-btn", "n_clicks"),
-    ste(ks.sto.tsk, "data"),
-    prevent_initial_call=True
-)
-def tsk_Test(n_clicks, dta_tsk):
-    return noUpd
+# @callback(
+#     out("task-test-ws-btn", "disabled"),
+#     inp("task-test-ws-btn", "n_clicks"),
+#     ste(ks.sto.tsk, "data"),
+#     prevent_initial_call=True
+# )
+# def tsk_Test(n_clicks, dta_tsk):
     # if DEBUG: lg.info(f"[TSW] Button clicked: {n_clicks}")
     #
     # from .mgr.tskSvc import mgr

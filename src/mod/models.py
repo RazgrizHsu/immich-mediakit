@@ -61,6 +61,8 @@ class Tsk(Cmd):
     name: Optional[str] = None
     msg: Optional[str] = None
 
+    nexts: List['Tsk'] = field(default_factory=list)
+
     def reset(self, withDone=True):
         self.id = self.name = self.cmd = self.msg = None
         self.args = {}
@@ -276,6 +278,11 @@ class PageSim(BaseDictModel):
     assPend: List[Asset] = field(default_factory=list)
 
     assFromUrl: Optional[Asset] = None
+
+    thMin: Optional[float] = None
+    thMax: Optional[float] = None
+
+    autoNext: bool = True
 
     def clearNow(self):
         self.assId = self.assFromUrl = None

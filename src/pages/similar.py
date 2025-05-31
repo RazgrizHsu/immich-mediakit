@@ -43,6 +43,7 @@ class k:
     cbxNCRm = "sim-btn-CbxNCRm"
     cbxNCRS = "sim-btn-CbxNCRS"
     cbxNCRA = "sim-btn-CbxNCRA"
+    cbxAutoNext = "sim-cbx-auto-next"
 
     tabs = 'sim-tabs'
     pagerPnd = "sim-pager-pnd"
@@ -92,7 +93,6 @@ def layout(autoId=None, **kwargs):
                             dbc.Col(htm.Small("Resolved", className="d-inline-block me-2"), width=6),
                             dbc.Col(dbc.Alert(f"0", id=k.txtCntOk, color="success", className="py-1 px-2 mb-2 text-center")),
                         ]),
-                        dbc.Row([htm.Small("Shows vectorized data in the local db and whether similarity comparison has been performed with other assets", className="text-muted")])
                     ])
                 ], className="mb-4"),
             ], width=4),
@@ -120,7 +120,13 @@ def layout(autoId=None, **kwargs):
                             ]),
                         ]),
 
-                        dbc.Row([htm.Small("A threshold range sets both minimum and maximum similarity levels for matches. It helps you find things that are similar enough to what you want, without being too strict or too loose with your matching criteria. (Usually the default setting works just fine)", className="text-muted")])
+                        dbc.Row([
+                            htm.Small(
+                                "A threshold range sets similarity limits to find matches that are similar enough without being too strict or loose. (Default settings usually work fine.)"
+                                ,
+                                className="text-muted"
+                            )
+                        ])
                     ])
                 ], className="mb-0"),
 
@@ -161,39 +167,52 @@ def layout(autoId=None, **kwargs):
 
                             # Action buttons
                             htm.Div([
-                                htm.Div([
-                                    dbc.Button("delete select", id=k.btnCbxRm, color="danger", size="sm", disabled=True),
-                                    htm.Br(),
-                                    dbc.Checkbox( id=k.cbxNCRm, label="No-Confirm", className="sm" ),
-                                ],
-                                    className="inline me-2 txt-AL"
-                                ),
 
                                 htm.Div([
-                                    dbc.Button("resolve select", id=k.btnCbxRS, color="success", size="sm", disabled=True),
-                                    htm.Br(),
-                                    dbc.Checkbox(id=k.cbxNCRS, label="No-Confirm", className="sm")
-                                ],
-                                    className="inline me-2 txt-AL"
-                                ),
+                                    dbc.Checkbox(id=k.cbxAutoNext, label="AutoFindNext", className="me-2", value=True),
+                                ], className="tab-acts-L inline me-4"),
+
 
                                 htm.Div([
-                                    dbc.Button("Mark All Delete", id=k.btnCbxRA, color="danger", size="sm", disabled=True),
-                                    htm.Br(),
-                                    dbc.Checkbox(id=k.cbxNCRA, label="No-Confirm", className="sm")
-                                ],
-                                    className="inline me-2 txt-AL"
-                                ),
 
-                                htm.Div([
-                                    dbc.Button("Mark All Resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True),
-                                    htm.Br(),
-                                    dbc.Checkbox(id=k.cbxNCOk, label="No-Confirm", className="sm")
-                                ],
-                                    className="inline me-2 txt-AL"
-                                ),
+                                    htm.Div([
+                                        dbc.Button("delete select", id=k.btnCbxRm, color="danger", size="sm", disabled=True),
+                                        htm.Br(),
+                                        dbc.Checkbox(id=k.cbxNCRm, label="No-Confirm", className="sm"),
+                                    ],
+                                        className="inline me-2 txt-AL"
+                                    ),
 
-                            ], className="mb-3 text-end"),
+                                    htm.Div([
+                                        dbc.Button("resolve select", id=k.btnCbxRS, color="success", size="sm", disabled=True),
+                                        htm.Br(),
+                                        dbc.Checkbox(id=k.cbxNCRS, label="No-Confirm", className="sm")
+                                    ],
+                                        className="inline me-2 txt-AL"
+                                    ),
+
+                                    htm.Div([
+                                        dbc.Button("Mark All Delete", id=k.btnCbxRA, color="danger", size="sm", disabled=True),
+                                        htm.Br(),
+                                        dbc.Checkbox(id=k.cbxNCRA, label="No-Confirm", className="sm")
+                                    ],
+                                        className="inline me-2 txt-AL"
+                                    ),
+
+                                    htm.Div([
+                                        dbc.Button("Mark All Resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True),
+                                        htm.Br(),
+                                        dbc.Checkbox(id=k.cbxNCOk, label="No-Confirm", className="sm")
+                                    ],
+                                        className="inline txt-AL"
+                                    ),
+
+                                ], className="text-end"),
+
+
+                            ],
+                                className="tab-acts"
+                            ),
 
 
                             dbc.Spinner(
@@ -334,7 +353,6 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     prevent_initial_call=True
 )
 def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
-
     now = Now.fromDict(dta_now)
 
     if not dta_ass:
@@ -630,10 +648,11 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         ste(k.cbxNCRm, "value"),
         ste(k.cbxNCRS, "value"),
         ste(k.cbxNCRA, "value"),
+        ste(k.cbxAutoNext, "value"),
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRS, ncRA):
+def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRS, ncRA, autoNext):
     if not clk_fnd and not clk_clr and not clk_rm and not clk_rs and not clk_ok and not clk_ra: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
@@ -643,6 +662,9 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
     mdl = Mdl.fromDict(dta_mdl)
     tsk = Tsk.fromDict(dta_tsk)
     nfy = Nfy.fromDict(dta_nfy)
+
+    # Save autoNext state
+    now.pg.sim.autoNext = autoNext if autoNext is not None else True
 
     # Check if any task is already running
     from mod.mgr.tskSvc import mgr
@@ -767,8 +789,8 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
             return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
 
         thMin, thMax = thRange
-        thMin = co.valid.float(thMin, 0.80)
-        thMax = co.valid.float(thMax, 0.99)
+        thMin = now.pg.sim.thMin = co.valid.float(thMin, 0.80)
+        thMax = now.pg.sim.thMax = co.valid.float(thMax, 0.99)
 
         asset: Optional[models.Asset] = None
 
@@ -815,7 +837,6 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
             # ]
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
-
 
     return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
 
@@ -866,6 +887,31 @@ def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
+def queueNext(sto: tskSvc.ITaskStore):
+    now, nfy, tsk = sto.now, sto.nfy, sto.tsk
+
+    ass = db.pics.getAnyNonSim()
+    if ass:
+        lg.info(f"[sim] auto found non-simOk assetId[{ass.id}]")
+        thMin = now.pg.sim.thMin
+        thMax = now.pg.sim.thMax
+
+        # now.pg.sim.assId = ass.id
+
+        mdl = models.Mdl()
+        mdl.id = ks.pg.similar
+        mdl.cmd = ks.cmd.sim.fdSim
+        mdl.args = {'thMin': thMin, 'thMax': thMax}
+
+        ntsk = mdl.mkTsk()
+        ntsk.args['assetId'] = ass.id
+
+        sto.tsk.nexts.append(ntsk)
+
+        sto.tsk = tsk
+        nfy.success([f"Auto-Find next: #{ass.autoId}"])
+
+
 def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt, tsk = sto.nfy, sto.now, sto.cnt, sto.tsk
 
@@ -873,11 +919,18 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
     # 如果是從 URL 進入，清除引導避免重複搜尋
     if isFromUrl and now.pg.sim.assFromUrl:
-        lg.info(f"[sim] Clearing URL guidance for asset {now.pg.sim.assFromUrl.autoId if now.pg.sim.assFromUrl else 'unknown'}")
+        lg.info(f"[sim:find] Clearing URL guidance for asset {now.pg.sim.assFromUrl.autoId if now.pg.sim.assFromUrl else 'unknown'}")
         now.pg.sim.assFromUrl = None
 
     try:
         assetId = now.pg.sim.assId
+
+        if not assetId and tsk.args.get('assetId'):
+            lg.info(f"[sim:find] search from task args assetId[{assetId}]")
+            assetId = tsk.args.get('assetId')
+        else:
+            lg.info(f"[sim:find] search assetId[{assetId}]")
+
         if not assetId: raise RuntimeError(f"[tsk] sim.assId is empty")
 
         doReport(1, f"prepare..")
@@ -885,7 +938,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         asset = db.pics.getById(assetId)
 
         if not asset:
-            raise RuntimeError(f"[tsk] not found assetId[{assetId}]")
+            raise RuntimeError(f"[sim:find] not found assetId[{assetId}]")
 
         processedCount = 0
         while True:
@@ -917,7 +970,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
             pgAll = len(simIds)
             if pgAll == 0:
-                lg.info(f"[sim] NoFound #{asset.autoId}")
+                lg.info(f"[sim:find] NoFound #{asset.autoId}")
                 time.sleep(0.1)
                 db.pics.setSimIds(asset.id, infos, isOk=1)
                 processedCount += 1
@@ -926,14 +979,14 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 if not isFromUrl:
                     nextAss = db.pics.getAnyNonSim()
                     if nextAss:
-                        lg.info(f"[sim] Next: #{nextAss.autoId}")
+                        lg.info(f"[sim:find] Next: #{nextAss.autoId}")
                         asset = nextAss
                         assetId = nextAss.id
                         now.pg.sim.assId = nextAss.id
                         doReport(5, f"No similar found for #{asset.autoId - 1}, continuing to #{asset.autoId}...")
                         continue
                 else:
-                    lg.info(f"[sim] break bcoz from url")
+                    lg.info(f"[sim:find] break bcoz from url")
 
                 doReport(100, f"NoFound #{asset.autoId}")
                 msg = f"No similar photos found for {asset.autoId}"
@@ -960,7 +1013,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             doReport(prog, f"Processing similar photo {cntDone}/{pgAll}")
 
             try:
-                lg.info(f"[sim] search child id[{simId}]")
+                lg.info(f"[sim:find] search child id[{simId}]")
                 cInfos = db.vecs.findSimiliar(simId, thMin, thMax)
 
                 db.pics.setSimIds(simId, cInfos)
@@ -984,7 +1037,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         now.pg.sim.assSelect = []
         now.pg.sim.activeTab = "tab-current"
 
-        lg.info(f"[sim] done, asset #{asset.autoId}")
+        lg.info(f"[sim:find] done, asset #{asset.autoId}")
 
         if not now.pg.sim.assCur:
             raise RuntimeError(f"the get SimGroup not found by asset.id[{asset.id}]")
@@ -1006,7 +1059,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         return sto, msg
 
     except Exception as e:
-        msg = f"[sim] Similar search failed: {str(e)}"
+        msg = f"[sim:find] Similar search failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.pg.sim.clearAll()
@@ -1031,18 +1084,63 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
         immich.trashByAssets(assSels)
 
         db.pics.deleteBy(assSels)
-        db.pics.setResloveBy(assLefts) # set unselected to resloved
+        db.pics.setResloveBy(assLefts)  # set unselected to resloved
 
         now.pg.sim.clearAll()
-        now.pg.sim.activeTab = "tab-pending"
 
-        cnt.refreshFromDB()
+        if not now.pg.sim.autoNext:
+            now.pg.sim.activeTab = "tab-pending"
+        else:
+            queueNext(sto)
 
         nfy.success(msg)
 
         return sto, msg
     except Exception as e:
         msg = f"[sim] Delete selected failed: {str(e)}"
+        nfy.error(msg)
+        lg.error(traceback.format_exc())
+        now.pg.sim.clearAll()
+
+        raise RuntimeError(msg)
+
+
+def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
+    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+    try:
+        assAlls = now.pg.sim.assCur
+        assSels = now.pg.sim.assSelect
+        assOthers = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
+
+        cntSelect = len(assSels)
+        cntOthers = len(assOthers)
+        msg = f"[sim] Resolve Selected Assets( {cntSelect} ) and Delete Others( {cntOthers} ) Success!"
+
+        if not assSels or cntSelect == 0: raise RuntimeError("Selected not found")
+
+        lg.info(f"[sim:selOk] reslove assets[{cntSelect}] delete[ {cntOthers} ]")
+
+        # Resolve selected assets
+        db.pics.setResloveBy(assSels)
+
+        # Delete other assets
+        if assOthers:
+            for a in assOthers:
+                lg.info(f"[sim:selOk] delete asset #[{a.autoId}] Id[ {a.id} ]")
+
+            immich.trashByAssets(assOthers)
+            db.pics.deleteBy(assOthers)
+
+        now.pg.sim.clearAll()
+
+        if not now.pg.sim.autoNext:
+            now.pg.sim.activeTab = "tab-pending"
+        else:
+            queueNext(sto)
+
+        return sto, msg
+    except Exception as e:
+        msg = f"[sim] Resolve selected failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.pg.sim.clearAll()
@@ -1058,15 +1156,16 @@ def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
         msg = f"[sim] set Resloved Assets( {cntAll} ) Success!"
 
         if not assets or cnt == 0: raise RuntimeError("Current Assets not found")
+        lg.info(f"[sim:allReslove] reslove assets[{cntAll}] ")
 
         db.pics.setResloveBy(assets)
 
         now.pg.sim.clearAll()
-        now.pg.sim.activeTab = "tab-pending"
 
-        nfy.success(msg)
-
-        cnt.refreshFromDB()
+        if not now.pg.sim.autoNext:
+            now.pg.sim.activeTab = "tab-pending"
+        else:
+            queueNext(sto)
 
         return sto, msg
     except Exception as e:
@@ -1087,62 +1186,21 @@ def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         if not assets or cntAll == 0: raise RuntimeError("Current Assets not found")
 
-        for a in assets:
-            lg.info(f"[sim:delAll] delete asset #[{a.autoId}] Id[ {a.id} ]")
+        lg.info(f"[sim:allDel] delete assets[{cntAll}] ")
 
         immich.trashByAssets(assets)
         db.pics.deleteBy(assets)
 
         now.pg.sim.clearAll()
-        now.pg.sim.activeTab = "tab-pending"
 
-        cnt.refreshFromDB()
-
-        nfy.success(msg)
+        if not now.pg.sim.autoNext:
+            now.pg.sim.activeTab = "tab-pending"
+        else:
+            queueNext(sto)
 
         return sto, msg
     except Exception as e:
         msg = f"[sim] Delete all failed: {str(e)}"
-        nfy.error(msg)
-        lg.error(traceback.format_exc())
-        now.pg.sim.clearAll()
-
-        raise RuntimeError(msg)
-
-def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
-    try:
-        assAlls = now.pg.sim.assCur
-        assSels = now.pg.sim.assSelect
-        assOthers = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
-
-        cntSelect = len(assSels)
-        cntOthers = len(assOthers)
-        msg = f"[sim] Resolve Selected Assets( {cntSelect} ) and Delete Others( {cntOthers} ) Success!"
-
-        if not assSels or cntSelect == 0: raise RuntimeError("Selected not found")
-
-        # Resolve selected assets
-        db.pics.setResloveBy(assSels)
-
-        # Delete other assets
-        if assOthers:
-            for a in assOthers:
-                lg.info(f"[sim:resolveSelected] delete asset #[{a.autoId}] Id[ {a.id} ]")
-
-            immich.trashByAssets(assOthers)
-            db.pics.deleteBy(assOthers)
-
-        now.pg.sim.clearAll()
-        now.pg.sim.activeTab = "tab-pending"
-
-        cnt.refreshFromDB()
-
-        nfy.success(msg)
-
-        return sto, msg
-    except Exception as e:
-        msg = f"[sim] Resolve selected failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.pg.sim.clearAll()
