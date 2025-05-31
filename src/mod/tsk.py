@@ -33,7 +33,10 @@ class k:
 def render():
     return htm.Div([
         dbc.Row([
-            dbc.Col(htm.P("", id=k.txt), width=10),
+            dbc.Col(htm.P("", id=k.txt), width=6),
+            dbc.Col([
+                dbc.Button("Make Panel Float", id="task-float-btn", className="btn-warning btn-sm txt-sm", size="sm"),
+            ], className="text-end"),
         ]),
         dbc.Row([
             dbc.Col([
@@ -42,7 +45,7 @@ def render():
         ]),
 
         dbc.Row([
-            dbc.Col(htm.Div(id=k.rst), width=9),
+            dbc.Col(htm.Div(id=k.rst), width=10),
             dbc.Col([
                 dbc.Button("Test Ws", id="task-test-ws-btn", className="btn-success", size="sm", style=style_show if DEBUG else style_none),
                 dbc.Button("close", id=k.btn, className="btn-info", size="sm", disabled=True),
@@ -90,6 +93,19 @@ def tsk_onBtnClose(_nclk, dta_tsk):
         tsk.reset()
         lg.info("[tsk] close and reset..")
     return tsk.toDict()
+
+
+@callback(
+    out(k.div, "className"),
+    inp("task-float-btn", "n_clicks"),
+    ste(k.div, "className"),
+    prevent_initial_call=True
+)
+def tsk_onBtnFloat(_nclk, curCls):
+    if not curCls: curCls = "tskPanel"
+    if "fly" in curCls:
+        return "tskPanel"
+    return "tskPanel fly"
 
 
 @callback(

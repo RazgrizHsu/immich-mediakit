@@ -32,7 +32,7 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .page > div > div > .body > .main ~ div { flex: 1 0 50vw; }
 
-.txt-sm { font-size: 0.75rem; }
+.txt-sm { font-size: 0.75rem !important; }
 
 .footer { margin-top: auto; border-top: 1px solid #333333; background-color: #212121; padding: 15px 0; text-align: center; width: 100%; color: #A0A0A0; margin-bottom: 0; box-sizing: border-box; position: relative; }
 
@@ -168,6 +168,13 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 .tskPanel { margin: 10px 20px 15px 20px; padding: 10px 30px 10px 30px; border-radius: 16px; border: 2px solid #737373; box-shadow: 0 0 6px rgba(255, 255, 255, 0.2); background-image: linear-gradient(to bottom, #5c5c65, #33333F 50%, #292932); }
 
 .tskPanel .progress { border: #999999 1px solid; }
+
+.tskPanel.fly { position: fixed; top: 66px; right: 20px; margin: 0; width: 50vw; z-index: 1050; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); animation: slideIn 0.3s ease-out; }
+
+@keyframes slideIn { from { transform: translateX(100%);
+    opacity: 0; }
+  to { transform: translateX(0);
+    opacity: 1; } }
 
 /*======================== taber ========================*/
 .ITab .nav-tabs { border: none; }
