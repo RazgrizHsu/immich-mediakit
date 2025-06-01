@@ -36,6 +36,9 @@ def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=
 
         return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
 
+    if not rootId:
+        return htm.Div(dbc.Alert(f"non-rootId, assets:{assets}", color="warning"), className="text-center")
+
     rootSI = next((a.simInfos for a in assets if a.id == rootId), None)
 
     if not rootSI:
@@ -307,7 +310,6 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
                 htm.Span("createAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
 
             ], class_name="grid2"),
-
             # htm.Div([
             #     dbc.Button(
             #         "Details",

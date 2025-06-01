@@ -189,6 +189,14 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .ITab .nav .nav-link.dis { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; background: #444444; color: #999999; }
 
+.ITab .tab-acts { display: flex; justify-content: space-between; }
+
+.ITab .tab-acts .left { display: flex; }
+
+.ITab .tab-acts .right { display: flex; }
+
+.ITab .tab-acts .right > div:not(:last-child) { margin: auto 3px auto auto; }
+
 .ITab .tab-content { border-radius: 0 12px 12px 12px; border: 1px solid var(--bs-border-color); padding: 15px 10px 15px 10px; background: linear-gradient(to bottom, rgba(52, 99, 148, 0.5) 0%, rgba(52, 99, 148, 0.2) 10%, rgba(52, 99, 148, 0) 50%, rgba(52, 99, 148, 0.2) 90%, rgba(52, 99, 148, 0.5) 100%); }
 
 @keyframes fadeIn { from { opacity: 0; }

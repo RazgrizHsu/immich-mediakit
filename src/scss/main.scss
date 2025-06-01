@@ -177,7 +177,7 @@ body {
 }
 
 .txt-sm {
-	font-size:0.75rem!important;
+	font-size:0.75rem !important;
 }
 
 .footer {
@@ -647,25 +647,25 @@ body {
 	}
 
 	&.fly {
-		position: fixed;
-		top: 66px;
-		right: 20px;
-		margin: 0;
-		width: 50vw;
-		z-index: 1050;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-		animation: slideIn 0.3s ease-out;
+		position:fixed;
+		top:66px;
+		right:20px;
+		margin:0;
+		width:50vw;
+		z-index:1050;
+		box-shadow:0 4px 20px rgba(0, 0, 0, 0.5);
+		animation:slideIn 0.3s ease-out;
 	}
 }
 
 @keyframes slideIn {
 	from {
-		transform: translateX(100%);
-		opacity: 0;
+		transform:translateX(100%);
+		opacity:0;
 	}
 	to {
-		transform: translateX(0);
-		opacity: 1;
+		transform:translateX(0);
+		opacity:1;
 	}
 }
 
@@ -673,7 +673,7 @@ body {
 .ITab {
 
 	.nav-tabs {
-		border: none;
+		border:none;
 	}
 
 	.nav {
@@ -686,10 +686,10 @@ body {
 		}
 
 		.nav-link {
-			border: var(--bs-border-color) 1px solid;
+			border:var(--bs-border-color) 1px solid;
 			border-bottom:none;
-			margin-bottom: 0;
-			@include bg-gradient( #666666 );
+			margin-bottom:0;
+			@include bg-gradient(#666666);
 
 			&:hover {
 				background:var(--main-dkr);
@@ -712,8 +712,26 @@ body {
 		}
 	}
 
+	.tab-acts {
+		display:flex;
+		justify-content:space-between;
+
+		.left {
+			display:flex;
+		}
+
+		.right {
+
+			display:flex;
+
+			> div:not(:last-child) {
+				margin: auto 3px auto auto;
+			}
+		}
+	}
+
 	.tab-content {
-		border-radius: 0 12px 12px 12px;
+		border-radius:0 12px 12px 12px;
 		border:1px solid var(--bs-border-color);
 		padding:15px 10px 15px 10px;
 
@@ -872,7 +890,7 @@ body {
 			justify-content:start;
 
 			&.top {
-				bottom: auto;
+				bottom:auto;
 				top:5px;
 			}
 		}
@@ -886,9 +904,6 @@ body {
 			width:100%;
 		}
 	}
-
-
-
 
 
 	transition:transform 0.2s;
