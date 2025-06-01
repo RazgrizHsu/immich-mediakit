@@ -297,6 +297,7 @@ def vec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
         count = db.vecs.count()
         if count >= 0:
             db.vecs.cleanAll()
+            db.pics.clearAllVectored()
 
         doReport(90, f"Cleared {count} vector records")
 

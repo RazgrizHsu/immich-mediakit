@@ -241,9 +241,9 @@ class BaseDictModel:
 
 
     @classmethod
-    def fromDB(cls: Type[T], cursor: sqlite3.Cursor, row: tuple) -> Optional[T]:
+    def fromDB(cls: Type[T], cursor: sqlite3.Cursor, row: tuple) -> T:
         try:
-            if not row: return None
+            if not row: raise ValueError(f"row is empty")
 
             cursor_id = id(cursor)
             columns = cls._cursor_columns_cache.get(cursor_id)
@@ -290,4 +290,4 @@ class BaseDictModel:
                     raise e
         except Exception as e:
             lg.error(f"Error converting DB row to {cls.__name__}: {e}, row={row}")
-            return None
+            raise e

@@ -213,7 +213,6 @@ class Asset(BaseDictModel):
     isFavorite: Optional[int] = 0
     isVisible: Optional[int] = 0
     isArchived: Optional[int] = 0
-    libraryId: Optional[str] = None
     localDateTime: Optional[str] = None
     thumbnail_path: Optional[str] = None
     preview_path: Optional[str] = None
