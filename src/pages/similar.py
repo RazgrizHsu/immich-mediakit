@@ -176,26 +176,26 @@ def layout(autoId=None, **kwargs):
                                 htm.Div([
 
                                     htm.Div([
-                                        dbc.Button("delete select", id=k.btnCbxRm, color="danger", size="sm", disabled=True),
+                                        dbc.Button("------", id=k.btnCbxRm, color="danger", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNCRm, label="No-Confirm", className="sm"),
                                     ]
                                     ),
 
                                     htm.Div([
-                                        dbc.Button("resolve select", id=k.btnCbxRS, color="success", size="sm", disabled=True),
+                                        dbc.Button("------", id=k.btnCbxRS, color="success", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNCRS, label="No-Confirm", className="sm")
                                     ]),
 
                                     htm.Div([
-                                        dbc.Button("Mark All Delete", id=k.btnCbxRA, color="danger", size="sm", disabled=True),
+                                        dbc.Button("❌ Delete All", id=k.btnCbxRA, color="danger", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNCRA, label="No-Confirm", className="sm")
                                     ]),
 
                                     htm.Div([
-                                        dbc.Button("Mark All Resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True),
+                                        dbc.Button("✅ Keep All", id=k.btnCbxOk, color="success", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNCOk, label="No-Confirm", className="sm")
                                     ]),
@@ -580,13 +580,15 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
 def sim_OnNowChangeSelects(dta_now):
     now = Now.fromDict(dta_now)
 
-    selCnt = len(now.pg.sim.assSelect)
+    cntAll = len(now.pg.sim.assCur)
+    cntSel = len(now.pg.sim.assSelect)
+    cntDiff = cntAll - cntSel
 
     # if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
 
-    btnTextRm = f"delete selected ( {selCnt} ) and make others resloved"
-    btnTextRS = f"resolve selected ( {selCnt} ) and delete others"
-    btnDisabled = selCnt == 0
+    btnTextRm = f"❌ Delete( {cntSel} ) and ✅ Keep others"
+    btnTextRS = f"✅ Keep( {cntSel} ) and ❌ delete others"
+    btnDisabled = cntSel == 0
 
     return btnTextRm, btnDisabled, btnTextRS, btnDisabled
 

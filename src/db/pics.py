@@ -53,7 +53,6 @@ def init():
                     isFavorite       INTEGER,
                     isVisible        INTEGER,
                     isArchived       INTEGER,
-                    libraryId        TEXT,
                     localDateTime    TEXT,
                     thumbnail_path   TEXT,
                     preview_path     TEXT,
@@ -338,10 +337,10 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
             c.execute('''
                 Insert Into assets (id, ownerId, deviceId, type, originalFileName,
                 fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
-                libraryId, localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
-                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
+                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                assId,
+                str(assId),
                 str(asset.get('ownerId')),
                 asset.get('deviceId'),
                 asset.get('type'),
@@ -351,7 +350,6 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
                 1 if asset.get('isFavorite') else 0,
                 1 if asset.get('isVisible') else 0,
                 1 if asset.get('isArchived') else 0,
-                asset.get('libraryId'),
                 asset.get('localDateTime'),
                 asset.get('thumbnail_path'),
                 asset.get('preview_path'),
@@ -361,56 +359,9 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
 
             return True
 
-        # else:
-        #     lg.info(f"asset already exists, update it..")
-        #     ass = models.Asset.fromDB(c, row)
-        #     if onExist: onExist( ass )
-        #
-        #     c.execute('''
-        #         UPDATE assets SET
-        #         simOk = 0, simGID = 0, simInfos = '[]',
-        #         ownerId = ?, deviceId = ?, type = ?, originalFileName = ?,
-        #         fileCreatedAt = ?, fileModifiedAt = ?, isFavorite = ?, isVisible = ?, isArchived = ?,
-        #         libraryId = ?, localDateTime = ?, thumbnail_path = ?, preview_path = ?, fullsize_path = ?, jsonExif = ?
-        #         WHERE id = ?
-        #     ''', (
-        #         asset.get('ownerId'),
-        #         asset.get('deviceId'),
-        #         asset.get('type'),
-        #         asset.get('originalFileName'),
-        #         asset.get('fileCreatedAt'),
-        #         asset.get('fileModifiedAt'),
-        #         1 if asset.get('isFavorite') else 0,
-        #         1 if asset.get('isVisible') else 0,
-        #         1 if asset.get('isArchived') else 0,
-        #         asset.get('libraryId'),
-        #         asset.get('localDateTime'),
-        #         asset.get('thumbnail_path'),
-        #         asset.get('preview_path'),
-        #         asset.get('fullsize_path', asset.get('originalPath')),
-        #         jsonExif,
-        #         asset.get('id')
-        #     ))
         return False # ignore duplicates
     except Exception as e:
         raise mkErr("Failed to save asset information", e)
-
-
-# def deleteForUsr(usrId):
-#     import db.vecs as vecs
-#     try:
-#         with mkConn() as conn:
-#             c = conn.cursor()
-#             c.execute("Select id From assets Where ownerId = ?", (usrId,))
-#             assIds = [row[0] for row in c.fetchall()]
-#             lg.info(f"[pics] delete pics[{len(assIds)}] for usrId[{usrId}]")
-#             c.execute("Delete From assets Where ownerId = ?", (usrId,))
-#             conn.commit()
-#             lg.info(f"[pics] delete vectors for usrId[{usrId}]")
-#             for assId in assIds: vecs.deleteBy(assId)
-#             return True
-#     except Exception as e:
-#         raise mkErr("Failed to delete user assets", e)
 
 
 #========================================================================
@@ -690,6 +641,17 @@ def getAllSimOks(isOk=0) -> List[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get all simOk assets", e)
 
+def clearAllVectored():
+    try:
+        with mkConn() as cnn:
+            c = cnn.cursor()
+            c.execute("""
+                UPDATE assets 
+                SET isVectored=0
+            """)
+            cnn.commit()
+    except Exception as e:
+        raise mkErr(f"Failed to set isVectored to 0", e)
 
 # auto mark simOk=1 if simInfos only includes self
 def setSimAutoMark():

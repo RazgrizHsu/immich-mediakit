@@ -28,7 +28,6 @@ class SimpleAsset(BaseDictModel):
     type: str = ""
     isVisible: int = 1
     isArchived: int = 0
-    libraryId: str = ""
 
 @dataclass
 class Address(BaseDictModel):
@@ -77,7 +76,6 @@ def setup_simple_test_db(num_records: int = 1000) -> sqlite3.Connection:
 		isFavorite INTEGER,
 		isVisible INTEGER,
 		isArchived INTEGER,
-		libraryId TEXT,
 		isVectored INTEGER,
 		simOk INTEGER
 	)
@@ -99,7 +97,6 @@ def setup_simple_test_db(num_records: int = 1000) -> sqlite3.Connection:
             i % 2,
             1,
             0,
-            "lib1",
             i % 3,
             i % 2
         ))

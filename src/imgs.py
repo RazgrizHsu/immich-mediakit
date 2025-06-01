@@ -3,8 +3,11 @@ import time
 import torch
 import base64
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import multiprocessing
+import threading
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 from torchvision.models import resnet152, ResNet152_Weights
@@ -143,91 +146,122 @@ def getImgB64(path) -> Optional[str]:
     return toB64(path) if os.path.exists(path) else None
 
 
+def processAsset(asset: models.Asset, photoQ) -> Tuple[models.Asset, bool, Optional[str]]:
+    try:
+        img = getImg(asset.getImagePath(photoQ))
+        if not img:
+            return asset, False, f"Unable to get photo: assetId[{asset.id}], photoQ[{photoQ}]"
+
+        result = saveVectorBy(asset.id, img)
+        if result is True:
+            return asset, True, None
+        elif result is False or result is None:
+            return asset, None, None
+        else:
+            return asset, False, str(result)
+    except Exception as e:
+        return asset, False, f"Processing failed: {asset.id} - {str(e)}"
+
+
 def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = None) -> models.ProcessInfo:
     tS = time.time()
     pi = models.ProcessInfo(total=len(assets), done=0, skip=0, error=0)
-
     inPct = 15
 
+    numWorkers = min(multiprocessing.cpu_count(), 8)
+    commitBatch = 100
+
+    lock = threading.Lock()
+    processedCnt = 0
+    updAssets = []
+    lastUpdateTime = 0
+
     try:
-        with db.pics.mkConn() as conn:
-            cur = conn.cursor()
+        if onUpdate:
+            onUpdate(inPct, f"Preparing to process count[{pi.total}], quality: {photoQ}, workers: {numWorkers}")
 
-            if onUpdate:
-                onUpdate(inPct, f"Preparing to process count[{pi.total}], quality: {photoQ}")
+        with ThreadPoolExecutor(max_workers=numWorkers) as executor:
+            futures = {executor.submit(processAsset, asset, photoQ): asset for asset in assets}
 
-            for idx, asset in enumerate(assets):
-                assetId = asset.id
-
-                img = getImg(asset.getImagePath(photoQ))
-
-                if not img:
-                    lg.error(f"Unable to get photo: assetId[{assetId}], photoQ[{photoQ}]")
-                    pi.error += 1
-                    continue
-
+            for future in as_completed(futures):
+                asset = futures[future]
                 try:
-                    result = saveVectorBy(assetId, img)
+                    asset, result, error = future.result()
 
-                    if result is True:
-                        pi.done += 1
-
-                        db.pics.updVecBy(asset, cur=cur)
-                    elif result is False or result is None:
-                        pi.skip += 1
-                except Exception as e:
-                    lg.error(f"Processing failed: {assetId} - {str(e)}")
-                    pi.error += 1
-
-                # Calculate remaining time with moving average
-                processedCnt = idx + 1
-                tElapsed = time.time() - tS
-
-                if processedCnt >= 5:  # Wait for at least 5 items to get better average
-                    avgTimePerItem = tElapsed / processedCnt
-                    remainCnt = pi.total - processedCnt
-                    remainTimeSec = avgTimePerItem * remainCnt
-
-                    # Add 10% buffer for more realistic estimate
-                    remainTimeSec = remainTimeSec * 1.1
-
-                    # Format time display
-                    if remainTimeSec < 60:
-                        remainStr = f"{int(remainTimeSec)} seconds"
-                    elif remainTimeSec < 3600:
-                        mins = remainTimeSec / 60
-                        if mins < 1:
-                            remainStr = "< 1 minute"
+                    with lock:
+                        if error:
+                            lg.error(error)
+                            pi.error += 1
+                        elif result is True:
+                            pi.done += 1
+                            updAssets.append(asset)
+                        elif result is None:
+                            pi.skip += 1
                         else:
-                            remainStr = f"{mins:.1f} minutes"
-                    else:
-                        hours = int(remainTimeSec / 3600)
-                        mins = int((remainTimeSec % 3600) / 60)
-                        remainStr = f"{hours}h {mins}m"
-                else:
-                    remainStr = "Calculating..."
+                            pi.error += 1
 
-                # Update more frequently for better user experience
-                if onUpdate and (idx % 5 == 0 or idx == pi.total - 1 or idx < 10):
-                    percent = inPct + int(processedCnt / pi.total * (100 - inPct))
-                    # Also show items/sec for transparency
-                    if tElapsed > 0:
-                        itemsPerSec = processedCnt / tElapsed
-                        speedStr = f" ({itemsPerSec:.1f} items/sec)"
-                    else:
-                        speedStr = ""
+                        processedCnt += 1
 
-                    msg = f"Processing {processedCnt}/{pi.total}, done[{pi.done}] skip[{pi.skip}] error[{pi.error}]"
+                        if len(updAssets) >= commitBatch:
+                            assetsBatch = updAssets[:]
+                            updAssets = []
+                            with db.pics.mkConn() as conn:
+                                cur = conn.cursor()
+                                for a in assetsBatch:
+                                    db.pics.updVecBy(a, cur=cur)
+                                conn.commit()
 
-                    msg += f" ( Estimated remaining: {remainStr}{speedStr} )"
+                        currentTime = time.time()
+                        tElapsed = currentTime - tS
 
-                    onUpdate(percent, msg)
+                        needUpdate = (processedCnt % 10 == 0 or processedCnt == pi.total or
+                                    processedCnt < 10 or (currentTime - lastUpdateTime) > 1)
 
-            conn.commit()
-            if onUpdate:
-                onUpdate(100, f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
+                        if onUpdate and needUpdate:
+                            lastUpdateTime = currentTime
 
-            return pi
+                            if processedCnt >= 5:
+                                avgTimePerItem = tElapsed / processedCnt
+                                remainCnt = pi.total - processedCnt
+                                remainTimeSec = avgTimePerItem * remainCnt * 1.1
+
+                                if remainTimeSec < 60:
+                                    remainStr = f"{int(remainTimeSec)} seconds"
+                                elif remainTimeSec < 3600:
+                                    mins = remainTimeSec / 60
+                                    remainStr = f"{mins:.1f} minutes" if mins >= 1 else "< 1 minute"
+                                else:
+                                    hours = int(remainTimeSec / 3600)
+                                    mins = int((remainTimeSec % 3600) / 60)
+                                    remainStr = f"{hours}h {mins}m"
+                            else:
+                                remainStr = "Calculating..."
+
+                            percent = inPct + int(processedCnt / pi.total * (100 - inPct))
+                            itemsPerSec = processedCnt / tElapsed if tElapsed > 0 else 0
+                            speedStr = f" ({itemsPerSec:.1f} items/sec)" if itemsPerSec > 0 else ""
+
+                            msg = f"Processing {processedCnt}/{pi.total}, done[{pi.done}] skip[{pi.skip}] error[{pi.error}]"
+                            msg += f" ( Estimated remaining: {remainStr}{speedStr} )"
+                            onUpdate(percent, msg)
+
+                except Exception as e:
+                    with lock:
+                        lg.error(f"Future execution failed for {asset.id}: {str(e)}")
+                        pi.error += 1
+                        processedCnt += 1
+
+        if updAssets:
+            with db.pics.mkConn() as conn:
+                cur = conn.cursor()
+                for asset in updAssets:
+                    db.pics.updVecBy(asset, cur=cur)
+                conn.commit()
+
+        if onUpdate:
+            onUpdate(100, f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
+
+        return pi
 
     except Exception as e:
         raise mkErr("Failed to generate vectors for assets", e)
