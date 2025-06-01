@@ -169,8 +169,8 @@ def layout(autoId=None, **kwargs):
                             htm.Div([
 
                                 htm.Div([
-                                    dbc.Checkbox(id=k.cbxAutoNext, label="AutoFindNext", className="me-2", value=True),
-                                ], className="tab-acts-L inline me-4"),
+                                    dbc.Checkbox(id=k.cbxAutoNext, label="AutoFindNext", value=True),
+                                ], className="left"),
 
 
                                 htm.Div([
@@ -179,35 +179,28 @@ def layout(autoId=None, **kwargs):
                                         dbc.Button("delete select", id=k.btnCbxRm, color="danger", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNCRm, label="No-Confirm", className="sm"),
-                                    ],
-                                        className="inline me-2 txt-AL"
+                                    ]
                                     ),
 
                                     htm.Div([
                                         dbc.Button("resolve select", id=k.btnCbxRS, color="success", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNCRS, label="No-Confirm", className="sm")
-                                    ],
-                                        className="inline me-2 txt-AL"
-                                    ),
+                                    ]),
 
                                     htm.Div([
                                         dbc.Button("Mark All Delete", id=k.btnCbxRA, color="danger", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNCRA, label="No-Confirm", className="sm")
-                                    ],
-                                        className="inline me-2 txt-AL"
-                                    ),
+                                    ]),
 
                                     htm.Div([
                                         dbc.Button("Mark All Resolved", id=k.btnCbxOk, color="success", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNCOk, label="No-Confirm", className="sm")
-                                    ],
-                                        className="inline txt-AL"
-                                    ),
+                                    ]),
 
-                                ], className="text-end"),
+                                ], className="right"),
 
 
                             ],
@@ -291,9 +284,12 @@ def sim_OnTabChange(active_tab, dta_now):
     if not active_tab or not dta_now: return noUpd
 
     now = Now.fromDict(dta_now)
-    now.pg.sim.activeTab = active_tab
 
-    # lg.info(f"[sim:tab] Tab changed to: {active_tab}")
+    if now.pg.sim.activeTab == active_tab: return noUpd
+
+    now.pg.sim.activeTab = active_tab
+    lg.info(f"[sim:tab] Tab changed to: {active_tab} (from: {now.pg.sim.activeTab})")
+
 
     return now.toDict()
 
@@ -356,8 +352,10 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
     now = Now.fromDict(dta_now)
 
     if not dta_ass:
+        if not now.pg.sim.assFromUrl: return noUpd, noUpd
+
         now.pg.sim.assFromUrl = None
-        now.pg.sim.assId = None
+        # now.pg.sim.assId = None # clean here will make refresh assId failed
         return now.toDict(), noUpd
 
     ass = models.Asset.fromDict(dta_ass)
@@ -407,6 +405,10 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
     prevent_initial_call="initial_duplicate"
 )
 def sim_Load(dta_now, dta_nfy):
+
+
+    #lg.info( f"[sim:load] now: {dta_now}" )
+
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
 
@@ -465,7 +467,10 @@ def sim_Load(dta_now, dta_nfy):
     ])
 
     # Initialize or get pager
-    pgr = now.pg.sim.pagerPnd if now.pg.sim.pagerPnd else Pager(idx=1, size=20)
+    pgr = now.pg.sim.pagerPnd
+    if not pgr:
+        lg.info( "[sim:load] create pager" )
+        now.pg.sim.pagerPnd = Pager(idx=1, size=20)
 
     # Update pager total count
     pagerData = None
@@ -481,7 +486,7 @@ def sim_Load(dta_now, dta_nfy):
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:load] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assId[{now.pg.sim.assId}]")
+    lg.info(f"[sim:load] trig[{trgId}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assId[{now.pg.sim.assId}]")
     # lg.info(f"[sim:load] tgId[{trgId}] assId[{now.pg.sim.assId}] assCur[{len(now.pg.sim.assCur)}] assPend[{len(now.pg.sim.assPend)}]")
 
     # Load pending data - reload if count changed or no data
@@ -506,7 +511,9 @@ def sim_Load(dta_now, dta_nfy):
     tabDisabled = cntPn < 1
     tabLabel = f"pending ({cntPn})" if cntPn >= 1 else "pending"
 
-    nowDict = now.toDict()
+    # Only update now if there were actual changes
+    nowChanged = needReload or (pagerData is not None)
+    nowDict = now.toDict() if nowChanged else noUpd
 
     activeTab = now.pg.sim.activeTab if now.pg.sim.activeTab else "tab-current"
 
@@ -608,13 +615,13 @@ def sim_OnSwitchViewGroup(clks, dta_now):
     trgId = ctx.triggered_id
     assId = trgId["id"]
 
-    # lg.info(f"[sim:view-group] switch: id[{assId}] clks[{clks}]")
+    lg.info(f"[sim:vgrp] switch: id[{assId}] clks[{clks}]")
 
     now.pg.sim.assId = assId
     now.pg.sim.assCur = db.pics.getSimGroup(assId)
     now.pg.sim.assSelect = []
 
-    if DEBUG: lg.info(f"[sim:view-group] Loaded {len(now.pg.sim.assCur)} assets for group")
+    if DEBUG: lg.info(f"[sim:vgrp] Loaded {len(now.pg.sim.assCur)} assets for group")
 
     return now.toDict(), "tab-current"  # Switch to current tab
 
