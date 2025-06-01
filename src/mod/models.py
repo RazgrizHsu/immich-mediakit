@@ -279,9 +279,6 @@ class PageSim(BaseDictModel):
 
     assFromUrl: Optional[Asset] = None
 
-    thMin: Optional[float] = None
-    thMax: Optional[float] = None
-
     autoNext: bool = True
 
     def clearNow(self):

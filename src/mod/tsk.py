@@ -315,7 +315,6 @@ def tsk_OnData(wmsg):
                 tsk.cmd = None
                 dicTsk = tsk.toDict()
 
-            lg.info( f"[tws:dta] dicCnt, dicNfy, dicNow, dicTsk = ({type(dicCnt), type(dicNfy), type(dicNow), type(dicTsk)}) " )
             return dicCnt, dicNfy, dicNow, dicTsk
 
     except Exception as e:

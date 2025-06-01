@@ -2,7 +2,7 @@ import functools
 import traceback as tracebk
 from typing import Optional
 from dash import callback_context, no_update
-from util import log
+from . import log
 
 lg = log.get(__name__)
 

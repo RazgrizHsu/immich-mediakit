@@ -108,7 +108,7 @@ def layout(autoId=None, **kwargs):
                                     dbc.Col([
                                         dcc.RangeSlider(
                                             id=k.slideTh, min=0.5, max=1, step=0.01, marks=ks.defs.thMarks,
-                                            value=[0.9, 1.0],
+                                            value=[db.dto.simMin, db.dto.simMax],
                                             tooltip={
                                                 "placement": "top", "always_visible": True,
                                                 "style": {"padding": "3px 5px 3px 5px", "fontSize": "15px"},
@@ -470,7 +470,8 @@ def sim_Load(dta_now, dta_nfy):
     pgr = now.pg.sim.pagerPnd
     if not pgr:
         lg.info( "[sim:load] create pager" )
-        now.pg.sim.pagerPnd = Pager(idx=1, size=20)
+        pgr = Pager(idx=1, size=20)
+        now.pg.sim.pagerPnd = pgr
 
     # Update pager total count
     pagerData = None
@@ -796,8 +797,15 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
             return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
 
         thMin, thMax = thRange
-        thMin = now.pg.sim.thMin = co.valid.float(thMin, 0.80)
-        thMax = now.pg.sim.thMax = co.valid.float(thMax, 0.99)
+
+        lg.info( f"[thMin/thMax] min[{thMin}] max[{thMax}]" )
+
+
+
+        thMin = db.dto.simMin = co.valid.float(thMin, 0.90)
+        thMax = db.dto.simMax = co.valid.float(thMax, 1.00)
+
+        lg.info( f"[thMin/thMax] min[{thMin}] max[{thMax}]" )
 
         asset: Optional[models.Asset] = None
 
@@ -900,15 +908,11 @@ def queueNext(sto: tskSvc.ITaskStore):
     ass = db.pics.getAnyNonSim()
     if ass:
         lg.info(f"[sim] auto found non-simOk assetId[{ass.id}]")
-        thMin = now.pg.sim.thMin
-        thMax = now.pg.sim.thMax
-
-        # now.pg.sim.assId = ass.id
 
         mdl = models.Mdl()
         mdl.id = ks.pg.similar
         mdl.cmd = ks.cmd.sim.fdSim
-        mdl.args = {'thMin': thMin, 'thMax': thMax}
+        mdl.args = {'thMin': db.dto.simMin, 'thMax': db.dto.simMax}
 
         ntsk = mdl.mkTsk()
         ntsk.args['assetId'] = ass.id
@@ -922,7 +926,10 @@ def queueNext(sto: tskSvc.ITaskStore):
 def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt, tsk = sto.nfy, sto.now, sto.cnt, sto.tsk
 
-    thMin, thMax, isFromUrl = tsk.args.get("thMin", 0.80), tsk.args.get("thMax", 0.99), tsk.args.get("fromUrl", False)
+    thMin, thMax, isFromUrl = tsk.args.get("thMin"), tsk.args.get("thMax"), tsk.args.get("fromUrl", False)
+
+    thMin = co.valid.float(thMin, 0.9)
+    thMax = co.valid.float(thMax, 1.0)
 
     # 如果是從 URL 進入，清除引導避免重複搜尋
     if isFromUrl and now.pg.sim.assFromUrl:
@@ -935,8 +942,6 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         if not assetId and tsk.args.get('assetId'):
             lg.info(f"[sim:find] search from task args assetId[{assetId}]")
             assetId = tsk.args.get('assetId')
-        else:
-            lg.info(f"[sim:find] search assetId[{assetId}]")
 
         if not assetId: raise RuntimeError(f"[tsk] sim.assId is empty")
 
@@ -947,9 +952,11 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         if not asset:
             raise RuntimeError(f"[sim:find] not found assetId[{assetId}]")
 
+        lg.info(f"[sim:find] search assetId[{assetId}] thresholds[{thMin:.2f}-{thMax:.2f}]")
+
         processedCount = 0
         while True:
-            progressMsg = f"Searching for #{asset.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
+            progressMsg = f"[sim:find] Searching #{asset.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
             if processedCount > 0:
                 progressMsg = f"No similar found for {processedCount} assets, now searching #{asset.autoId}"
             doReport(10, progressMsg)
@@ -990,7 +997,13 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                         asset = nextAss
                         assetId = nextAss.id
                         now.pg.sim.assId = nextAss.id
-                        doReport(5, f"No similar found for #{asset.autoId - 1}, continuing to #{asset.autoId}...")
+
+                        cntAll = db.pics.count()
+                        cntOk = db.pics.countSimOk(1)
+
+                        pct = round( cntOk / cntAll * 100, 2 )
+
+                        doReport(pct, f"No similar found for #{asset.autoId - 1}, continuing to #{asset.autoId}...")
                         continue
                 else:
                     lg.info(f"[sim:find] break bcoz from url")

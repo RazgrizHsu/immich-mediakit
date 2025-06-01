@@ -38,6 +38,11 @@ def render():
     now.photoQ = photoQ
 
 
+    from conf import co
+    dto.simMin = co.valid.float( dto.simMin, 0.93 )
+    dto.simMax = co.valid.float( dto.simMax, 1.00 )
+
+
 
     cnt = models.Cnt()
     cnt.refreshFromDB()

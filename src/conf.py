@@ -26,9 +26,9 @@ class co:
     class tit(str):
         name: str = ''
         desc: str = ''
-        cmds: Dict[str, str] = None
+        cmds: Optional[Dict[str, str]] = None
 
-        def __new__(cls, v='', name='', cmds: Dict[str, str] = None, desc='') -> 'co.tit':
+        def __new__(cls, v='', name='', cmds: Optional[Dict[str, str]] = None, desc='') -> 'co.tit':
             me = super().__new__(cls, v)
             me.name = name
             me.cmds = cmds

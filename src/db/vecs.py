@@ -157,13 +157,13 @@ def save(assId, vector):
 #------------------------------------------------------------------------
 # only return different id
 #------------------------------------------------------------------------
-def findSimiliar(assId, thMin: float = 0.85, thMax: float = 1.0, limit=100) -> list[models.SimInfo]:
+def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[models.SimInfo]:
     try:
         if conn is None:
             lg.info("Qdrant connection not initialized")
             return []
 
-        lg.info(f"Finding similar assets for {assId}, threshold range[{thMin}-{thMax}]")
+        lg.info(f"Finding similar assets for {assId}, threshold[{thMin}-{thMax}]")
 
         target = conn.retrieve(
             collection_name=keyColl,
