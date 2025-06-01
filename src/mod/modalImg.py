@@ -68,7 +68,7 @@ def render():
         ),
 
         # Store for clicked image ID
-        dcc.Store(id=k.store, data=None)
+        dcc.Store(id=k.store, data=None),
     ]
 
 #------------------------------------------------------------------------
