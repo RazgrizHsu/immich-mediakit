@@ -271,11 +271,17 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .card.sim .grid > *:nth-child(2n) { justify-self: start; }
 
-.card.sim .grid2 { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
+.card.sim .grid2 { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px auto 5px auto; padding: 0px; }
 
 .card.sim .grid2 > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
 
 .card.sim .grid2 > *:nth-child(2n) { justify-self: start; }
+
+.card.sim .exif { margin: 5px 15px 5px 15px; }
+
+.card.sim .exif tr td { font-size: 12px; }
+
+.card.sim .exif tr td:first-child { color: #36CCFF; font-size: 10px; width: 30%; }
 
 /*======================== related group card ========================*/
 .related-group { border: 1px solid #4A4A4A; transition: all 0.3s ease; }
