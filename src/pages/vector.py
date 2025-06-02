@@ -164,10 +164,10 @@ def vec_Status(dta_tsk, dta_cnt):
 
     cntNeedVec = cnt.ass - cnt.vec
 
-    txtBtn = "Execute: Process Assets" if cntNeedVec else "No Asset Need it"
     disBtnRun = isTskin or cntNeedVec <= 0
     disBtnClr = isTskin or cnt.vec <= 0
     disPhotoQ = isTskin or cnt.vec >= 1
+    txtBtn = f"Process Assets( {cntNeedVec} )" if cntNeedVec else "No Asset Need it"
 
     lg.info(f"[vec] vec[{cnt.vec}] select[{disPhotoQ}]")
 

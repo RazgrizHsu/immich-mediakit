@@ -45,6 +45,25 @@ enabling advanced management capabilities through AI-powered similarity detectio
    - Deleted assets appear in Immich's trash where you can permanently delete or restore them
 
 
+
+## Usage Suggestions
+
+### Finding Duplicate Photos
+
+- **Start with High Threshold (0.97-1.00)**: Begin by searching with a similarity threshold of 0.97-1.00 to find photos that are nearly identical. This helps you quickly identify exact duplicates first.
+
+- **Rescan with Different Thresholds**: After processing all photos with one threshold, you can clear the similarity search history and rescan with a new threshold value. This allows you to:
+  - First remove exact duplicates (0.97-1.00)
+  - Then find near-duplicates (0.90-0.97)
+  - Finally identify similar shots (0.80-0.90)
+
+### Workflow Tips
+
+1. **Progressive Cleaning**: Start with the highest similarity threshold and work your way down
+2. **Clear and Rescan**: Use the "Clear All" function in the Similar page to reset similarity data before rescanning with a new threshold
+3. **Review Before Deletion**: Always review the detected similar photos before deleting, as lower thresholds may include photos that are similar but distinct
+
+
 ## Installation & Setup
 
 ### Prerequisites

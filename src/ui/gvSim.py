@@ -86,11 +86,11 @@ def mkRelatGroups(assets: list[models.Asset], minW=230, maxW=300):
             htm.Span("Related Groups ", className=""),
             htm.Span(f"({len(assets)})", className="badge bg-warning ms-2")
         ], className="mb-3"),
-        htm.Div([
-
-            mkGroupCard(rg) for rg in assets
-
-        ], style=styGrid)
+        # htm.Div([
+        #
+        #     mkGroupCard(rg) for rg in assets
+        #
+        # ], style=styGrid)
     ])
 
 
@@ -252,7 +252,7 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
 
     if not si:
         lg.error(f"[mkImgCardSim] asset:{ass}")
-        return dbc.Alert(f"Photo assetId[{assId}] SimNotFound not found", color="danger")
+        return dbc.Alert(f"Not Found SimInfo #{ass.autoId} assetId[{assId}] in {srcSIs}", color="danger")
 
     exi = ass.jsonExif
 
@@ -286,7 +286,7 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
         htm.Div([
             htm.Img(
                 src=imgSrc,
-                id={"type": "img-pop-multi", "id": ass.id, "autoId": ass.autoId}, n_clicks=0,
+                id={"type": "img-pop-multi", "id": ass.id, "autoId": ass.autoId, "selected": ass.selected}, n_clicks=0,
                 className="card-img"
             ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
             ,
@@ -360,14 +360,12 @@ def mkImgCardPending(ass: models.Asset, showRelated=True):
     htmRelated = None
     if hasattr(ass, 'relats') and ass.relats and showRelated:
         rids = []
-        for ra in ass.relats:
-            rids.append(htm.Span(f"#{ra.autoId}", className="badge bg-secondary me-1"))
 
         htmRelated = [
             htm.Hr(className="my-2"),
             htm.Div([
                 htm.Span("Related groups: ", className="text-muted"),
-                htm.Span(f"{len(ass.relats)}", className="badge bg-warning")
+                htm.Span(f"{ass.relats}", className="badge bg-warning")
             ]),
             htm.Div(rids)
         ]

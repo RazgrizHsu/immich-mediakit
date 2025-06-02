@@ -440,6 +440,32 @@ body {
 		flex:none;
 		padding:0;
 	}
+
+	.acts {
+		position:fixed;
+		bottom:0;
+		margin:auto auto 10px auto;
+		z-index:1000;
+		font-size:15px;
+
+		display:flex;
+		justify-content:center;
+		align-items:center;
+		height:100px;
+		width:96%;
+
+		gap: 10px;
+
+		span, button {
+			box-shadow: 0 0 5px #1F5C92;
+		}
+
+		span {
+			font-size: 20px;
+			padding: 5px 20px;
+		}
+
+	}
 }
 
 
@@ -725,7 +751,7 @@ body {
 			display:flex;
 
 			> div:not(:last-child) {
-				margin: auto 6px auto auto;
+				margin:auto 6px auto auto;
 			}
 		}
 	}
@@ -1038,22 +1064,22 @@ body {
 	}
 
 
-  .exif {
+	.exif {
 
-    margin: 5px 15px 5px 15px;
+		margin:5px 15px 5px 15px;
 
-    tr {
-      td {
-          font-size: 12px;
+		tr {
+			td {
+				font-size:12px;
 
-        &:first-child {
-          color: #36CCFF;
-          font-size: 10px;
-          width: 30%;
-        }
-      }
-    }
-  }
+				&:first-child {
+					color:#36CCFF;
+					font-size:10px;
+					width:30%;
+				}
+			}
+		}
+	}
 }
 
 

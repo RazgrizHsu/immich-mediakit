@@ -3,7 +3,6 @@ from typing import Optional
 import numpy as np
 import qdrant_client.http.models
 from qdrant_client import QdrantClient
-from qdrant_client.grpc import UpdateStatus
 from qdrant_client.http import models as qmod
 
 from conf import envs
@@ -88,8 +87,9 @@ def deleteBy(assIds: list[str]):
         )
 
         lg.info(f"[vec] delete status[{rst}] ids: {assIds}")
+        if rst.status != qmod.UpdateStatus.COMPLETED:
+            raise RuntimeError(f"Delete operation failed with status: {rst.status}")
 
-        return rst.status == UpdateStatus.COMPLETE
 
     except Exception as e:
         raise mkErr(f"Error deleting vector for asset {assIds}", e)
@@ -203,8 +203,6 @@ def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> l
 
         # distance = qmod.Distance.COSINE if method == ks.use.mth.cosine else qmod.Distance.EUCLID
 
-        # if thMin >= 0.97: thMin = 0.95
-
         rep = conn.query_points(collection_name=keyColl, query=vector, limit=limit, score_threshold=thMin, with_payload=True)
         rst = rep.points
         infos: list[models.SimInfo] = []
@@ -216,6 +214,7 @@ def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> l
             if hit.score <= thMax or hit.id == assId:  #always add self
                 isSelf = hit.id == assId
                 infos.append(models.SimInfo(hit.id, hit.score, isSelf))
+
 
         return infos
     except Exception as e:

@@ -14,6 +14,7 @@ class k:
     btnModeChg = "btn-img-mode-chg"
     btnPrev = "btn-img-prev"
     btnNext = "btn-img-next"
+    btnSelect = "btn-img-select"
     navCtrls = "img-nav-controls"
     autoIdBadge = "img-autoid-badge"
 
@@ -35,6 +36,21 @@ def render():
             ], close_button=True),
             dbc.ModalBody([
                 htm.Div(id=k.modalContent),
+                htm.Div([
+                    htm.Span(
+                        "",
+                        id=k.autoIdBadge,
+                        className="tag lg",
+                        style={"display": "none"}
+                    ),
+                    dbc.Button(
+                        "📌 Select",
+                        id="btn-img-select",
+                        color="info",
+                        className="",
+                        style={"display": "none"}
+                    ),
+                ], className="acts"),
                 dbc.Button(
                     "←",
                     id=k.btnPrev,
@@ -50,13 +66,6 @@ def render():
                     size="lg",
                     className="position-fixed end-0 top-50 translate-middle-y me-3",
                     style={"zIndex": 1000, "display": "none"}
-                ),
-                dbc.Badge(
-                    "",
-                    id=k.autoIdBadge,
-                    color="dark",
-                    className="position-fixed bottom-0 start-50 translate-middle-x mb-3",
-                    style={"zIndex": 1000, "display": "none", "fontSize": "1.2em"}
                 ),
             ]),
         ],
@@ -82,6 +91,9 @@ def render():
         out(k.btnNext, "style"),
         out(k.autoIdBadge, "style"),
         out(k.autoIdBadge, "children"),
+        out(k.btnSelect, "style"),
+        out(k.btnSelect, "children"),
+        out(k.btnSelect, "color"),
     ],
     inp(k.store, "data"),
     ste(k.modal, "is_open"),
@@ -89,13 +101,13 @@ def render():
 )
 def mdlImg_IsOpen(dta_mdl, is_open):
     ctx = dash.callback_context
-    if not ctx.triggered: return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
+    if not ctx.triggered: return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
 
     trigger_id = getTriggerId()
 
     # lg.info(f"[mdlImg] dta_mdl: {dta_mdl}")
 
-    if trigger_id != k.store: return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
+    if trigger_id != k.store: return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
 
     mdl = models.MdlImg.fromDict(dta_mdl)
 
@@ -111,13 +123,21 @@ def mdlImg_IsOpen(dta_mdl, is_open):
         prevStyle = {"display": "block", "opacity": "0.3" if mdl.curIdx <= 0 else "1"}
         nextStyle = {"display": "block", "opacity": "0.3" if mdl.curIdx >= len(mdl.args) - 1 else "1"}
 
-    badgeStyle = {"display": "block", "fontSize": "1.2em"} if mdl.isMulti else {"display": "none"}
+    badgeStyle = {"display": "block"} if mdl.isMulti else {"display": "none"}
     badgeText = ""
+    btnSelectStyle = {"display": "none"}
+    btnSelectText = "◻️ Select"
+    btnSelectColor = "primary"
 
     if mdl.isMulti and mdl.args and mdl.curIdx < len(mdl.args):
-        badgeText = f"#{mdl.args[mdl.curIdx].get('autoId', '')}"
+        curAss = mdl.args[mdl.curIdx]
+        badgeText = f"#{curAss.get('autoId', '')}"
+        btnSelectStyle = {"display": "block"}
+        if curAss.get('selected', False):
+            btnSelectText = "✅ Selected"
+            btnSelectColor = "success"
 
-    return mdl.open, htms, prevStyle, nextStyle, badgeStyle, badgeText
+    return mdl.open, htms, prevStyle, nextStyle, badgeStyle, badgeText, btnSelectStyle, btnSelectText, btnSelectColor
 
 
 @callback(
@@ -149,7 +169,7 @@ def mdlImg_OnImgPopClicked(clks, dta_mdl):
 
 @callback(
     out(k.store, "data", allow_duplicate=True),
-    inp({"type": "img-pop-multi", "id": dash.ALL, "autoId": dash.ALL}, "n_clicks"),
+    inp({"type": "img-pop-multi", "id": dash.ALL, "autoId": dash.ALL, "selected": dash.ALL}, "n_clicks"),
     ste(k.store, "data"),
     prevent_initial_call=True
 )
@@ -165,7 +185,7 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl):
     mdl.args = []
     for i, inp in enumerate(ctx.inputs_list[0]):
         if 'id' in inp['id'] and 'autoId' in inp['id']:
-            obj = {'id': inp['id']['id'], 'autoId': inp['id']['autoId']}
+            obj = {'id': inp['id']['id'], 'autoId': inp['id']['autoId'], 'selected': inp['id'].get('selected', False)}
             mdl.args.append(obj)
 
     lg.info(f"[mdlImg] mdl.args: {mdl.args}")
@@ -190,6 +210,8 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl):
         out(k.autoIdBadge, "children", allow_duplicate=True),
         out(k.btnPrev, "style", allow_duplicate=True),
         out(k.btnNext, "style", allow_duplicate=True),
+        out(k.btnSelect, "children", allow_duplicate=True),
+        out(k.btnSelect, "color", allow_duplicate=True),
     ],
     [
         inp(k.btnPrev, "n_clicks"),
@@ -199,14 +221,14 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl):
     prevent_initial_call=True
 )
 def mdlImg_OnNavClicked(prev_clicks, next_clicks, dta_mdl):
-    if not prev_clicks and not next_clicks: return noUpd, noUpd, noUpd, noUpd
+    if not prev_clicks and not next_clicks: return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
 
     ctx = dash.callback_context
-    if not ctx.triggered: return noUpd, noUpd, noUpd, noUpd
+    if not ctx.triggered: return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
 
     mdl = models.MdlImg.fromDict(dta_mdl)
 
-    if not mdl.isMulti or not mdl.args: return noUpd, noUpd, noUpd, noUpd
+    if not mdl.isMulti or not mdl.args: return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
 
     trigger_id = getTriggerId()
 
@@ -214,12 +236,12 @@ def mdlImg_OnNavClicked(prev_clicks, next_clicks, dta_mdl):
         if mdl.curIdx > 0:
             mdl.curIdx = mdl.curIdx - 1
         else:
-            return noUpd, noUpd, noUpd, noUpd
+            return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
     elif trigger_id == k.btnNext:
         if mdl.curIdx < len(mdl.args) - 1:
             mdl.curIdx = mdl.curIdx + 1
         else:
-            return noUpd, noUpd, noUpd, noUpd
+            return noUpd, noUpd, noUpd, noUpd, noUpd, noUpd
 
     curAss = mdl.args[mdl.curIdx]
     mdl.imgUrl = f"/api/img/{curAss['id']}?q=preview"
@@ -229,9 +251,57 @@ def mdlImg_OnNavClicked(prev_clicks, next_clicks, dta_mdl):
     prevStyle = {"display": "block", "opacity": "0.3" if mdl.curIdx <= 0 else "1"}
     nextStyle = {"display": "block", "opacity": "0.3" if mdl.curIdx >= len(mdl.args) - 1 else "1"}
 
-    lg.info(f"[mdlImg] nav to idx[{mdl.curIdx}] assId[{curAss['id']}] autoId[{curAss.get('autoId', '')}")
+    btnSelectText = "✅ Selected" if curAss.get('selected', False) else "📌 Select"
+    btnSelectColor = "success" if curAss.get('selected', False) else "primary"
 
-    return mdl.toDict(), badgeText, prevStyle, nextStyle
+    lg.info(f"[mdlImg] nav to idx[{mdl.curIdx}] assId[{curAss['id']}] autoId[{curAss.get('autoId', '')} selected[{curAss.get('selected', False)}]")
+
+    return mdl.toDict(), badgeText, prevStyle, nextStyle, btnSelectText, btnSelectColor
+
+
+@callback(
+    [
+        out(ks.sto.now, "data", allow_duplicate=True),
+        out(k.store, "data", allow_duplicate=True),
+        out(k.btnSelect, "children", allow_duplicate=True),
+        out(k.btnSelect, "color", allow_duplicate=True),
+    ],
+    inp(k.btnSelect, "n_clicks"),
+    [
+        ste(ks.sto.now, "data"),
+        ste(k.store, "data"),
+    ],
+    prevent_initial_call=True
+)
+def mdlImg_OnSelectClicked(n_clicks, dta_now, dta_mdl):
+    if not n_clicks: return noUpd, noUpd, noUpd, noUpd
+
+    now = models.Now.fromDict(dta_now)
+    mdl = models.MdlImg.fromDict(dta_mdl)
+
+    if not mdl.isMulti or not mdl.args or mdl.curIdx >= len(mdl.args):
+        return noUpd, noUpd, noUpd, noUpd
+
+    curAss = mdl.args[mdl.curIdx]
+    assId = curAss.get('id')
+
+    if not assId or not now.pg.sim.assCur:
+        return noUpd, noUpd, noUpd, noUpd
+
+    for ass in now.pg.sim.assCur:
+        if ass.id == assId:
+            ass.selected = not ass.selected
+            lg.info(f'[mdlImg:select] toggled: {ass.autoId}, selected: {ass.selected}')
+            mdl.args[mdl.curIdx]['selected'] = ass.selected
+            break
+
+    selected = [ass for ass in now.pg.sim.assCur if ass.selected]
+    now.pg.sim.assSelect = selected
+
+    btnText = "✅ Selected" if curAss.get('selected', False) else "◻️ Select"
+    btnColor = "success" if curAss.get('selected', False) else "primary"
+
+    return now.toDict(), mdl.toDict(), btnText, btnColor
 
 
 @callback(

@@ -19,7 +19,6 @@ def mkConn():
     """Context manager for database connections"""
     conn = None
     try:
-
         conn = sqlite3.connect(pathDb, check_same_thread=False, timeout=30.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA busy_timeout=30000")
@@ -77,7 +76,7 @@ def init():
 
             conn.commit()
 
-            lg.info( f"[pics] db connected: {pathDb}" )
+            lg.info(f"[pics] db connected: {pathDb}")
 
         return True
     except Exception as e:
@@ -104,7 +103,7 @@ def clearBy(usrId):
             cnt = c.rowcount
             conn.commit()
 
-            lg.info( f"[pics] delete userId[ {usrId} ] assets[ {cnt} ]" )
+            lg.info(f"[pics] delete userId[ {usrId} ] assets[ {cnt} ]")
             return cnt
     except Exception as e:
         raise mkErr(f"Failed to del assets by userId[{usrId}]", e)
@@ -238,7 +237,6 @@ def countFiltered(usrId="", opts="all", search="", favOnly=False):
         query = "Select Count(*) From assets"
         if cds: query += " WHERE " + " AND ".join(cds)
 
-
         with mkConn() as conn:
             cursor = conn.cursor()
             cursor.execute(query, pms)
@@ -294,13 +292,11 @@ def getFiltered(
         return []
 
 
-
-
 #========================================================================
 # update
 #========================================================================
 
-def updVecBy(asset: models.Asset, done=1, cur: Cursor = None):
+def setVectoredBy(asset: models.Asset, done=1, cur: Cursor = None):
     try:
         if cur:
             # Use provided cursor (for transactions)
@@ -316,10 +312,10 @@ def updVecBy(asset: models.Asset, done=1, cur: Cursor = None):
 
 def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
     try:
-        assId = asset.get('id', None )
+        assId = asset.get('id', None)
         if not assId: return False
 
-        if not isinstance( assId, str ): assId = str(assId)
+        if not isinstance(assId, str): assId = str(assId)
 
         exifInfo = asset.get('exifInfo', {})
         jsonExif = None
@@ -359,7 +355,7 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
 
             return True
 
-        return False # ignore duplicates
+        return False  # ignore duplicates
     except Exception as e:
         raise mkErr("Failed to save asset information", e)
 
@@ -372,7 +368,7 @@ def getAnyNonSim() -> Optional[models.Asset]:
     try:
         with mkConn() as conn:
             c = conn.cursor()
-            c.execute("Select * From assets Where simOk!=1 AND json_array_length(simINfos) == 0")
+            c.execute("Select * From assets Where isVectored = 1 AND simOk!=1 AND json_array_length(simINfos) == 0")
             row = c.fetchone()
             if row is None: return None
             asset = models.Asset.fromDB(c, row)
@@ -536,27 +532,28 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
 
 def deleteBy(assets: List[models.Asset]):
     try:
+        cntAll = len(assets)
         with mkConn() as conn:
             c = conn.cursor()
-            autoIds = [ass.autoId for ass in assets]
             assIds = [ass.id for ass in assets]
-            if not autoIds: return 0
+            if not assIds: raise RuntimeError(f"No asset IDs found")
 
-            qargs = ','.join(['?' for _ in autoIds])
-            c.execute(f"DELETE FROM assets WHERE autoId IN ({qargs})", autoIds)
-            conn.commit()
+            qargs = ','.join(['?' for _ in assIds])
+            c.execute(f"DELETE FROM assets WHERE id IN ({qargs})", assIds)
             count = c.rowcount
-            lg.info(f"[pics] delete by autoIds[{len(autoIds)}] rst[{count}]")
-            
+
+            if count != cntAll:
+                raise mkErr(f"Failed to delete assets( {cntAll} ) with effected[{count}], ")
+
+            lg.info(f"[pics] delete by assIds[{cntAll}] rst[{count}]")
+
             # Delete vectors from Qdrant
             if assIds:
                 import db.vecs as vecs
-                try:
-                    vecs.deleteBy(assIds)
-                    lg.info(f"[pics] deleted vectors for {len(assIds)} assets")
-                except Exception as e:
-                    lg.error(f"[pics] Failed to delete vectors: {str(e)}")
-            
+                vecs.deleteBy(assIds)
+
+            conn.commit()
+
             return count
     except Exception as e:
         raise mkErr("Failed to clear similarity results:", e)
@@ -738,31 +735,7 @@ def getPendingPaged(page=1, size=20) -> list[models.Asset]:
                 for sim in leader.simInfos:
                     if sim.id and not sim.isSelf: allRelIds.add(sim.id)
 
-            if allRelIds:
-                qargs = ','.join(['?' for _ in allRelIds])
-                cursor.execute(f"SELECT * FROM assets WHERE id IN ({qargs})", list(allRelIds))
-
-                relatMap = {}
-                for row in cursor.fetchall():
-                    relAsset = models.Asset.fromDB(cursor, row)
-                    relatMap[relAsset.id] = relAsset
-
-                for leader in leaders:
-                    seen = {leader.id}
-                    ldrSimIds = {s.id for s in leader.simInfos if s.id}
-
-                    for sim in leader.simInfos:
-                        if not sim.id or sim.id not in relatMap or sim.id in seen: continue
-
-                        relAsset = relatMap[sim.id]
-                        relSimIds = {s.id for s in relAsset.simInfos if s.id}
-
-                        if len(relSimIds) == 1 and leader.id in relSimIds: continue
-
-                        if relSimIds == ldrSimIds: continue
-
-                        leader.relats.append(relAsset)
-                        seen.add(sim.id)
+            leader.relats = len(allRelIds)
 
             return leaders
     except Exception as e:
