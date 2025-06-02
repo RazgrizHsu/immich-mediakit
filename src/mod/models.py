@@ -225,7 +225,7 @@ class Asset(BaseDictModel):
 
     # view only
     selected: Optional[bool] = False
-    relats: List['Asset'] = field(default_factory=list)
+    relats: int = 0
 
     def getImagePath(self, photoQ=None):
         if photoQ == ks.db.fullsize:

@@ -182,7 +182,7 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg 
                             with db.pics.mkConn() as conn:
                                 cur = conn.cursor()
                                 for a in assetsBatch:
-                                    db.pics.updVecBy(a, cur=cur)
+                                    db.pics.setVectoredBy(a, cur=cur)
                                 conn.commit()
 
                         currentTime = time.time()
@@ -229,7 +229,7 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg 
             with db.pics.mkConn() as conn:
                 cur = conn.cursor()
                 for asset in updAssets:
-                    db.pics.updVecBy(asset, cur=cur)
+                    db.pics.setVectoredBy(asset, cur=cur)
                 conn.commit()
 
         if onUpdate:

@@ -20,52 +20,26 @@ db.init()
 vecs.init()
 
 class TestBase(unittest.TestCase):
-    def test_base(self):
-        lg.info("ok")
 
-    def test_code(self):
-        mdl = models.Mdl()
-
-        mdl.id = ks.pg.fetch
-        mdl.cmd = ks.cmd.fetch.asset
-        mdl.args = {'a': 'what?'}
-
-        tsk = mdl.mkTsk()
-        if not tsk: self.fail("no task")
-
-        self.assertEqual(mdl.id, tsk.id)
-        self.assertEqual(mdl.cmd, tsk.cmd)
-        self.assertEqual(mdl.args, tsk.args)
-        lg.info(f"mdl: {mdl}")
-        lg.info(f"tsk: {tsk}")
-
-        self.assertEqual(tsk.name, ks.pg.fetch.name)
-
-        tit = ks.pg.find(tsk.id)
-        self.assertIsNotNone(tit, f'NotFound id[{tsk.id}]')
-
-        if tit:
-            lg.info(f'tit.cmds.fetch: {tit}')
+    def test_sim(self):
+        ass = db.pics.getAnyNonSim()
+        lg.info(f"asset: #{ass.autoId}")
 
 
-        class a(co.to):
-            a = 1
-            b = 2
+        infos = db.vecs.findSimiliar(ass.id, 0.80, 1.0)
 
-        lg.info(f"a.to: {a.dict()}")
+        simIds = [i.id for i in infos]
 
+        lg.info(f"Found {len(simIds)} similar, ids: {simIds}")
 
-    def test_sim_nonFinish(self):
-        asset = db.pics.getAnySimPending()
+        # select back all simIds assets
+        # db.pics.get()
 
-        lg.info(f"asset: {asset}")
-
-        if not asset:
-            return
-
-        for idx, info in enumerate(asset.simInfos):
+        for idx, info in enumerate(infos):
             aid, score = info.toTuple()
             lg.info(f"  Similar pair {idx + 1}: ID[{aid}], score[{score:.6f}]")
+
+
 
 
     def test_insert(self):
@@ -93,26 +67,26 @@ class TestBase(unittest.TestCase):
         lg.info( f"rst: {ps}" )
 
 
+    def test_spec(self):
+        aid = "8d84a68f-ff7c-4559-bbe8-034ba5162260"
 
-    def test_sim(self):
-        ass = db.pics.getAnyNonSim()
-        lg.info(f"asset: #{ass.autoId}")
+        ass = db.pics.getById(aid)
 
+        lg.info( f"ass: {ass}" )
 
-        infos = db.vecs.findSimiliar(ass.id, 0.80, 1.0)
+        pathImg = ass.getImagePath()
+        lg.info( f"path: {pathImg}" )
 
-        simIds = [i.id for i in infos]
+        img = imgs.getImg(pathImg)
+        vec = imgs.extractFeatures( img )
 
-        lg.info(f"Found {len(simIds)} similar, ids: {simIds}")
+        lg.info( f"vec: {vec}" )
 
-        # select back all simIds assets
-        # db.pics.get()
+        ps = vecs.search( vec, 0.5 )
+        cntPs = len(ps)
+        lg.info( f"rst({cntPs}): {ps}" )
 
-        for idx, info in enumerate(infos):
-            aid, score = info.toTuple()
-            lg.info(f"  Similar pair {idx + 1}: ID[{aid}], score[{score:.6f}]")
-
-
+        if cntPs <= 0: self.fail( "should had point in vec db" )
 
 
 

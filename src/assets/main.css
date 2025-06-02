@@ -109,6 +109,12 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .img-pop .modal-body { flex: none; padding: 0; }
 
+.img-pop .acts { position: fixed; bottom: 0; margin: auto auto 10px auto; z-index: 1000; font-size: 15px; display: flex; justify-content: center; align-items: center; height: 100px; width: 96%; gap: 10px; }
+
+.img-pop .acts span, .img-pop .acts button { box-shadow: 0 0 5px #1F5C92; }
+
+.img-pop .acts span { font-size: 20px; padding: 5px 20px; }
+
 .tag { border: #E0E0E099 1px solid; padding: 0 4px 0 4px; margin: 1px 3px; border-radius: 5px; font-size: 12px; vertical-align: middle; background-image: linear-gradient(to bottom, #576e87, #2D4A69 50%, #243b54); }
 
 .tag.second { background-image: linear-gradient(to bottom, #6e6e6e, #4A4A4A 50%, #3b3b3b); }

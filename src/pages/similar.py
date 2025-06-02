@@ -966,6 +966,37 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             # less will contains self
             infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
 
+            if not infos or len(infos) == 0:
+                lg.warn( f"[sim:find] asset #{asset.autoId} not found any similar, may not store vector" )
+                db.pics.setVectoredBy(asset, 0)
+
+                # 這邊應該找下一筆再重新尋找
+                processedCount += 1
+                
+                if not isFromUrl:
+                    nextAss = db.pics.getAnyNonSim()
+                    if nextAss:
+                        lg.info(f"[sim:find] No vector for #{asset.autoId}, auto-switch to next: #{nextAss.autoId}")
+                        asset = nextAss
+                        assetId = nextAss.id
+                        now.pg.sim.assId = nextAss.id
+                        
+                        cntAll = db.pics.count()
+                        cntOk = db.pics.countSimOk(1)
+                        
+                        pct = round( cntOk / cntAll * 100, 2 )
+                        
+                        doReport(pct, f"No vector for #{asset.autoId - 1}, continuing to #{asset.autoId}...")
+                        continue
+                else:
+                    lg.info(f"[sim:find] No vector for #{asset.autoId}, stop because from URL")
+                    doReport(100, f"No vector for #{asset.autoId}")
+                    msg = f"Asset #{asset.autoId} has no vector stored"
+                    nfy.info(msg)
+                    return sto, msg
+                
+                continue
+
             asset.simInfos = infos
 
             for idx, inf in enumerate(infos):
@@ -1104,8 +1135,8 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
             lg.info(f"[sim:delSelects] delete asset #[{a.autoId}] Id[ {a.id} ]")
 
         immich.trashByAssets(assSels)
-
         db.pics.deleteBy(assSels)
+
         db.pics.setResloveBy(assLefts)  # set unselected to resloved
 
         now.pg.sim.clearAll()
