@@ -834,7 +834,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
             ass = db.pics.getAnyNonSim()
             if ass:
                 asset = ass
-                lg.info(f"[sim] found non-simOk assetId[{ass.id}]")
+                lg.info(f"[sim] found non-simOk #{ass.autoId} assetId[{ass.id}]")
 
         if not isFromUrl:
             now.pg.sim.clearAll()
