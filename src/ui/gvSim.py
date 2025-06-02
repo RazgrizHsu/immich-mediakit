@@ -235,7 +235,7 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None, show
 #         ])
 #     ], className="mb-3")
 
-
+from ui import gvExif
 def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
     if not ass: return htm.Div("Photo not found")
 
@@ -275,7 +275,7 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
                             ] if isMain else
                             [
                                 htm.Span("score: "),
-                                htm.Span(f"{si.score:.6f}", className="tag lg ms-1")
+                                htm.Span(f"{si.score:.4f}", className="tag lg ms-1")
                             ]
 
                             , className="d-flex justify-content-end")
@@ -300,17 +300,22 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
             ])
         ], className="img"),
         dbc.CardBody([
+
             dbc.Row([
                 htm.Span("id"), htm.Span(f"{ass.id}", className="badge bg-success text-truncate"),
+                htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="text-truncate"),
+                htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
 
-            ], class_name="grid"),
+            ], class_name="grid2"
+            ),
 
             dbc.Row([
-                htm.Span("fileName"), htm.Span(f"{ass.originalFileName}", className="text-truncate"),
-                htm.Span("createAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
 
-            ], class_name="grid2"),
-            # htm.Div([
+                htm.Table(
+                    htm.Tbody(gvExif.mkExifRows(ass))
+                , className="exif"),
+            ]),
+    # htm.Div([
             #     dbc.Button(
             #         "Details",
             #         id={"type": "details-btn", "id": assId},

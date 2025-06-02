@@ -453,8 +453,7 @@ def getSimGroup(assId: str) -> Optional[List[models.Asset]]:
 
 def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
     if not infos or len(infos) <= 0:
-        lg.warn(f"Can't setSimIds id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
-        return
+        raise RuntimeError(f"Can't setSimIds id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
 
     try:
         with mkConn() as conn:

@@ -1012,13 +1012,14 @@ body {
 		}
 	}
 
+
 	.grid2 {
 		width:96%;
 		@include optional-border(red, 1px, dotted);
 		display:grid;
 		grid-template-columns: 20% 80%;
 		gap:2px 2px;
-		margin:5px 3px 5px 3px;
+		margin:5px auto 5px auto;
 		padding:0px;
 
 		> *:nth-child(2n-1) {
@@ -1035,6 +1036,24 @@ body {
 			@include optional-border(white, 1px, dotted);
 		}
 	}
+
+
+  .exif {
+
+    margin: 5px 15px 5px 15px;
+
+    tr {
+      td {
+          font-size: 12px;
+
+        &:first-child {
+          color: #36CCFF;
+          font-size: 10px;
+          width: 30%;
+        }
+      }
+    }
+  }
 }
 
 

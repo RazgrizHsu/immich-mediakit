@@ -1,10 +1,23 @@
 import dash.html as htm
 import dash_bootstrap_components as dbc
 from util import log
-from conf import ks
+from conf import ks, co
 
 lg = log.get(__name__)
 
+from mod import models
+
+
+
+def mkExifRows( asset:models.Asset ):
+
+    rows = []
+
+    if asset.jsonExif:
+        rows = mkExifGrid( asset.jsonExif.toDict() )
+        pass
+
+    return rows
 
 def mkExifGrid( dicExif:dict ):
     table = []
@@ -26,23 +39,24 @@ def mkExifGrid( dicExif:dict ):
             elif key == "fNumber" and isinstance(value, (int, float)):
                 display_value = f"f/{value}"
             else:
-                display_value = str(value)
+                if not value: continue
+                display_value = co.fmt.date(value)
 
             table.append(
                 htm.Tr([
-                    htm.Td(display_key, style={"fontWeight": "bold", "padding": "2px 8px"}),
-                    htm.Td(display_value, style={"padding": "2px 8px"})
+                    htm.Td(display_key),
+                    htm.Td(display_value),
                 ])
             )
 
-    for key, value in dicExif.items():
-        if key not in ks.defs.exif and value is not None:
-            table.append(
-                htm.Tr([
-                    htm.Td(key, style={"fontWeight": "bold", "padding": "2px 8px"}),
-                    htm.Td(str(value), style={"padding": "2px 8px"})
-                ])
-            )
+    # for key, value in dicExif.items():
+    #     if key not in ks.defs.exif and value is not None:
+    #         table.append(
+    #             htm.Tr([
+    #                 htm.Td(key),
+    #                 htm.Td(str(value)),
+    #             ])
+    #         )
 
     return table
 

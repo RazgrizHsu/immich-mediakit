@@ -63,6 +63,23 @@ class co:
                 return fv
             except (ValueError, TypeError):
                 return default
+    class fmt:
+        @staticmethod
+        def date(v):
+            rst = str(v)
+            if isinstance(rst, str) and 'T' in rst and '+' in rst:
+                ps = rst.split('T')
+                if len(ps) == 2 and '+' in ps[1]:
+                    tz = ps[1]
+                    if '.' in tz and ('+' in tz or '-' in tz):
+                        ptm = tz.split('.')
+                        if len(ptm) == 2:
+                            base_time = ptm[0]
+                            tz_part = ptm[1].split('+')[-1] if '+' in ptm[1] else ptm[1].split('-')[-1]
+                            sign = '+' if '+' in ptm[1] else '-'
+                            tz = f"{base_time}{sign}{tz_part}"
+                    rst = f"{ps[0]} {tz}"
+            return rst
 
 # ------------------------------------------------------------------------
 # keys
@@ -128,6 +145,9 @@ class ks:
 
     class defs:
         exif = {
+            "exifImageWidth": "Width",
+            "exifImageHeight": "Height",
+            "fileSizeInByte": "File Size",
             "dateTimeOriginal": "Capture Time",
             "modifyDate": "Modify Time",
             "make": "Camera Brand",
@@ -137,9 +157,6 @@ class ks:
             "focalLength": "Focal Length",
             "exposureTime": "Exposure Time",
             "iso": "ISO",
-            "exifImageWidth": "Width",
-            "exifImageHeight": "Height",
-            "fileSizeInByte": "File Size",
             "orientation": "Orientation",
             "latitude": "Latitude",
             "longitude": "Longitude",
@@ -156,8 +173,8 @@ class ks:
             "bitsPerSample": "Bits Per Sample",
             "autoStackId": "Auto Stack ID",
             "rating": "Rating",
-            "updatedAt": "Updated At",
-            "updateId": "Update ID"
+            # "updatedAt": "Updated At",
+            # "updateId": "Update ID"
         }
         thMarks = {0.5:"0.5", 0.7: "0.7", 0.8: "0.8", 0.85:"0.85", 0.9: "0.9", 0.95: "0.95", 1: "1"}
 
@@ -186,15 +203,15 @@ def pathFromRoot(path):
 class envs:
     isDev = False if isDock else os.getenv('IsDev')
     isDock = False if not isDock else True
-    immichPath = os.getenv('IMMICH_PATH')
-    qdrantUrl = 'http://immich-mediakit-qdrant:6333' if isDock else os.getenv('QDRANT_URL')
-    psqlHost = os.getenv('PSQL_HOST')
-    psqlPort = os.getenv('PSQL_PORT')
-    psqlDb = os.getenv('PSQL_DB')
-    psqlUser = os.getenv('PSQL_USER')
-    psqlPass = os.getenv('PSQL_PASS')
-    mkitPort = os.getenv('MKIT_PORT', '8086')
-    mkitPortWs = os.getenv('MIKT_PORTWS', '8087')
+    immichPath:str = os.getenv('IMMICH_PATH', '')
+    qdrantUrl:str = 'http://immich-mediakit-qdrant:6333' if isDock else os.getenv('QDRANT_URL','')
+    psqlHost:str = os.getenv('PSQL_HOST','')
+    psqlPort:str = os.getenv('PSQL_PORT','')
+    psqlDb:str = os.getenv('PSQL_DB','')
+    psqlUser:str = os.getenv('PSQL_USER','')
+    psqlPass:str = os.getenv('PSQL_PASS','')
+    mkitPort:str = os.getenv('MKIT_PORT', '8086')
+    mkitPortWs:str = os.getenv('MIKT_PORTWS', '8087')
 
     if os.getcwd().startswith(os.path.join(pathRoot, 'tests')):
         mkitData = os.path.join(pathRoot, 'data/')

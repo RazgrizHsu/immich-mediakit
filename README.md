@@ -11,7 +11,7 @@ enabling advanced management capabilities through AI-powered similarity detectio
 <a href="https://buymeacoffee.com/razgrizhsu" target="_blank"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-yellow.svg?style=flat-square&logo=buy-me-a-coffee" alt="Buy Me A Coffee"/></a>
 </p>
 
-## Key Features
+## Features
 
 - **Asset Management**: Import and manage photo assets from Immich
 - **AI-Powered Vector**: Convert photos to feature vectors using ResNet152 for advanced similarity detection
@@ -26,21 +26,11 @@ enabling advanced management capabilities through AI-powered similarity detectio
 <img src="docs/intro.jpg" alt="preview" />
 </p>
 
+### processing
 <p align="center">
-<img src="docs/intro-view.jpg" alt="preview" />
+<img src="docs/process.gif" alt="preview" />
 </p>
 
-## Implementation Status
-
-- [x] Fetch Immich assets
-- [x] Generate vectors
-- [x] Store vectors for comparison
-- [x] Display library with filtering
-- [x] Find similar
-  - [x] Threshold settings
-  - [x] Single-Group duplicate comparison similar
-  - [x] Provide Deletion
-- [ ] Batch processing
 
 ## How It Works
 
@@ -61,7 +51,6 @@ enabling advanced management capabilities through AI-powered similarity detectio
 
 - Access to an Immich installation with trash feature enabled
 - A configured `.env` file (see above)
--
 
 
 ### Connecting to Immich Database
