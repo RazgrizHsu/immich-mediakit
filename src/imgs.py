@@ -73,7 +73,7 @@ transform = Compose([
     Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-def extractFeatures(image):
+def extractFeatures(image) -> np.ndarray:
     image_tensor = transform(image).unsqueeze(0)
     image_tensor = image_tensor.to(conf.device)
     with torch.no_grad():
@@ -89,33 +89,14 @@ def extractFeatures(image):
 
     features = torch.nn.functional.normalize(features, p=2, dim=0)
 
-    np_features = features.cpu().numpy()
-    if np_features is None or np_features.size == 0 or not np.isfinite(np_features).all():
+    vec = features.cpu().numpy()
+    if vec is None or vec.size == 0 or not np.isfinite(vec).all():
         raise ValueError("Extracted vector is empty or contains invalid values")
 
-    return np_features
+    if not isinstance(vec, np.ndarray) or vec.size != 2048:
+        raise ValueError(f"vector incorrect: size[{vec.size if isinstance(vec, np.ndarray) else 'unknown'}]")
 
-def saveVectorBy(assetId, img):
-    try:
-        if img is None:
-            lg.warn(f'assetId[{assetId}] image is None')
-            return None
-
-        try:
-            features = extractFeatures(img)
-
-            if not isinstance(features, np.ndarray) or features.size != 2048:
-                raise ValueError(f"assetId[{assetId}] vector incorrect: size={features.size if isinstance(features, np.ndarray) else 'unknown'}")
-
-            saved = db.vecs.save(assetId, features)
-        except ValueError as ve:
-            return f"assetId[{assetId}] vector processing error: {str(ve)}"
-
-        if saved: return True
-
-        return False
-    except Exception as e:
-        raise RuntimeError( f"Error processing asset {assetId}: {str(e)}" )
+    return vec
 
 
 def fixPath(path: Optional[str]):
@@ -146,24 +127,21 @@ def getImgB64(path) -> Optional[str]:
     return toB64(path) if os.path.exists(path) else None
 
 
-def processAsset(asset: models.Asset, photoQ) -> Tuple[models.Asset, bool, Optional[str]]:
+def saveVectorBy(asset: models.Asset, photoQ) -> Tuple[models.Asset, Optional[str]]:
     try:
-        img = getImg(asset.getImagePath(photoQ))
-        if not img:
-            return asset, False, f"Unable to get photo: assetId[{asset.id}], photoQ[{photoQ}]"
+        path = asset.getImagePath(photoQ)
+        img = getImg(path)
 
-        result = saveVectorBy(asset.id, img)
-        if result is True:
-            return asset, True, None
-        elif result is False or result is None:
-            return asset, None, None
-        else:
-            return asset, False, str(result)
+        vec = extractFeatures(img)
+        db.vecs.save(asset.id, vec)
+
+        return asset, None
+
     except Exception as e:
-        return asset, False, f"Processing failed: {asset.id} - {str(e)}"
+        return asset, f"save vector failed: {asset.id} - {str(e)}"
 
 
-def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = None) -> models.ProcessInfo:
+def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = None) -> models.ProcessInfo:
     tS = time.time()
     pi = models.ProcessInfo(total=len(assets), done=0, skip=0, error=0)
     inPct = 15
@@ -172,7 +150,7 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = Non
     commitBatch = 100
 
     lock = threading.Lock()
-    processedCnt = 0
+    cntDone = 0
     updAssets = []
     lastUpdateTime = 0
 
@@ -181,26 +159,22 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = Non
             onUpdate(inPct, f"Preparing to process count[{pi.total}], quality: {photoQ}, workers: {numWorkers}")
 
         with ThreadPoolExecutor(max_workers=numWorkers) as executor:
-            futures = {executor.submit(processAsset, asset, photoQ): asset for asset in assets}
+            futures = {executor.submit(saveVectorBy, asset, photoQ): asset for asset in assets}
 
             for future in as_completed(futures):
                 asset = futures[future]
                 try:
-                    asset, result, error = future.result()
+                    asset, error = future.result()
 
                     with lock:
                         if error:
                             lg.error(error)
                             pi.error += 1
-                        elif result is True:
+                        else:
                             pi.done += 1
                             updAssets.append(asset)
-                        elif result is None:
-                            pi.skip += 1
-                        else:
-                            pi.error += 1
 
-                        processedCnt += 1
+                        cntDone += 1
 
                         if len(updAssets) >= commitBatch:
                             assetsBatch = updAssets[:]
@@ -214,15 +188,15 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = Non
                         currentTime = time.time()
                         tElapsed = currentTime - tS
 
-                        needUpdate = (processedCnt % 10 == 0 or processedCnt == pi.total or
-                                    processedCnt < 10 or (currentTime - lastUpdateTime) > 1)
+                        needUpdate = (cntDone % 10 == 0 or cntDone == pi.total or
+                                      cntDone < 10 or (currentTime - lastUpdateTime) > 1)
 
                         if onUpdate and needUpdate:
                             lastUpdateTime = currentTime
 
-                            if processedCnt >= 5:
-                                avgTimePerItem = tElapsed / processedCnt
-                                remainCnt = pi.total - processedCnt
+                            if cntDone >= 5:
+                                avgTimePerItem = tElapsed / cntDone
+                                remainCnt = pi.total - cntDone
                                 remainTimeSec = avgTimePerItem * remainCnt * 1.1
 
                                 if remainTimeSec < 60:
@@ -237,11 +211,11 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = Non
                             else:
                                 remainStr = "Calculating..."
 
-                            percent = inPct + int(processedCnt / pi.total * (100 - inPct))
-                            itemsPerSec = processedCnt / tElapsed if tElapsed > 0 else 0
+                            percent = inPct + int(cntDone / pi.total * (100 - inPct))
+                            itemsPerSec = cntDone / tElapsed if tElapsed > 0 else 0
                             speedStr = f" ({itemsPerSec:.1f} items/sec)" if itemsPerSec > 0 else ""
 
-                            msg = f"Processing {processedCnt}/{pi.total}, done[{pi.done}] skip[{pi.skip}] error[{pi.error}]"
+                            msg = f"Processing {cntDone}/{pi.total}, done[{pi.done}] skip[{pi.skip}] error[{pi.error}]"
                             msg += f" ( Estimated remaining: {remainStr}{speedStr} )"
                             onUpdate(percent, msg)
 
@@ -249,7 +223,7 @@ def toVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = Non
                     with lock:
                         lg.error(f"Future execution failed for {asset.id}: {str(e)}")
                         pi.error += 1
-                        processedCnt += 1
+                        cntDone += 1
 
         if updAssets:
             with db.pics.mkConn() as conn:

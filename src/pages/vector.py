@@ -263,7 +263,7 @@ def vec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
         cntAll = len(assets)
         doReport(8, f"Found [ {cntAll} ] starting processing")
 
-        rst = imgs.toVectors(assets, photoQ, onUpdate=doReport)
+        rst = imgs.processVectors(assets, photoQ, onUpdate=doReport)
 
         cnt.vec = db.vecs.count()
 

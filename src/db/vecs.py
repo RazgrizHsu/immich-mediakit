@@ -1,7 +1,9 @@
 from typing import Optional
 
 import numpy as np
+import qdrant_client.http.models
 from qdrant_client import QdrantClient
+from qdrant_client.grpc import UpdateStatus
 from qdrant_client.http import models as qmod
 
 from conf import envs
@@ -68,7 +70,7 @@ def cleanAll():
 
 def count():
     try:
-        if conn is None: return 0
+        if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
 
         rst = conn.count(collection_name=keyColl)
         return rst.count
@@ -76,14 +78,9 @@ def count():
         raise mkErr(f"Error checking database population", e)
 
 
-def hasData():
-    c = count()
-    return c > 0
-
-
 def deleteBy(assIds: list[str]):
     try:
-        if conn is None: return False
+        if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
 
         rst = conn.delete(
             collection_name=keyColl,
@@ -92,125 +89,127 @@ def deleteBy(assIds: list[str]):
 
         lg.info(f"[vec] delete status[{rst}] ids: {assIds}")
 
-        return True
+        return rst.status == UpdateStatus.COMPLETE
+
     except Exception as e:
         raise mkErr(f"Error deleting vector for asset {assIds}", e)
 
 
-def save(assId, vector):
+def save(assId: str, vector: np.ndarray, confirm=True):
     try:
-        if conn is None:
-            return False
+        if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
 
-        if isinstance(vector, np.ndarray):
-            vector_list = vector.tolist()
-        elif hasattr(vector, 'tolist') and callable(getattr(vector, 'tolist')):
-            vector_list = vector.tolist()
-        elif isinstance(vector, list):
-            vector_list = vector
-        else:
-            try:
-                vector_list = list(vector)
-            except:
-                raise ValueError(f"Cannot convert vector from {type(vector)} to list")
+        if not isinstance(vector, np.ndarray):
+            raise ValueError(f"[vecs] Cannot convert vector from {type(vector)} to list")
 
-        if not vector_list or len(vector_list) != 2048:
-            raise ValueError(f"Vector length is incorrect, expected 2048, actual {len(vector_list) if vector_list else 0}")
+        vecList = vector.tolist()
+        if not vecList or len(vecList) != 2048:
+            raise ValueError(f"[vecs] Vector length is incorrect, expected 2048, actual {len(vecList) if vecList else 0}")
 
-        # lg.info(f"Saving vector to Qdrant: assId={assId}, vector length={len(vector_list)}")
-
+        # override exists
         conn.upsert(
             collection_name=keyColl,
-            points=[
-                qmod.PointStruct(
-                    id=assId,
-                    vector=vector_list,
-                    payload={
-                        "id": assId
-                    }
-                )
-            ]
+            points=[qmod.PointStruct(id=assId, vector=vecList, payload={"id": assId})]
         )
 
-        try:
-            stored = conn.retrieve(
-                collection_name=keyColl,
-                ids=[assId], with_vectors=True
-            )
-            if not stored:
-                lg.info(f"Warning: Vector not successfully saved to Qdrant")
-                return False
+        if confirm:
+            try:
+                stored = conn.retrieve(
+                    collection_name=keyColl,
+                    ids=[assId], with_vectors=True
+                )
+                if not stored: raise RuntimeError(f"[vecs] Failed save vector assId[{assId}]")
+                if not hasattr(stored[0], 'vector') or stored[0].vector is None: raise RuntimeError(f"[vecs] Stored vector is null assId[{assId}]")
 
-            if not hasattr(stored[0], 'vector') or stored[0].vector is None:
-                lg.warn(f"Stored vector is null")
+            except Exception as ve:
+                lg.error(f"Error validating vector storage: {str(ve)}")
+                raise
 
-            #lg.info(f"Vector successfully saved: length={len(stored[0].vector)}")
-        except Exception as ve:
-            lg.error(f"Error validating vector storage: {str(ve)}")
-            raise
-
-        return True
     except Exception as e:
         raise mkErr(f"Error saving vector for asset {assId}", e)
 
+
+def getBy(assId):
+    try:
+        if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
+
+        dst = conn.retrieve(
+            collection_name=keyColl,
+            ids=[assId],
+            with_payload=True, with_vectors=True
+        )
+
+        if not dst: raise RuntimeError(f"[vecs] Vector for asset {assId} does not exist")
+
+        if not hasattr(dst[0], 'vector') or dst[0].vector is None:
+            raise RuntimeError(f"[vecs] Vector for asset {assId} is empty")
+
+        vector = dst[0].vector
+
+        # lg.info(f"Original vector data type: {type(vector)}")
+
+        if isinstance(vector, np.ndarray):
+            raise RuntimeError(f"[vecs] Vector is a NumPy array, converting to list")
+        if hasattr(vector, 'tolist') and callable(getattr(vector, 'tolist')):
+            raise RuntimeError(f"[vecs] Vector has tolist method, attempting conversion")
+
+        if not hasattr(vector, '__len__') or len(vector) == 0:
+            raise RuntimeError(f"[vecs] Vector format for asset assId[{assId}] is incorrect: {type(vector)}")
+
+        if not isinstance(vector, list):
+            raise RuntimeError(f"[vecs] Vector not a list: {type(vector)}")
+            # try:
+            #     vector = list(vector)
+            #     lg.warn(f"[vecs] Converted vector from {type(vector)} to list, length: {len(vector)}")
+            # except Exception as e:
+            #     raise RuntimeError(f"[vecs] Cannot convert vector to list: {str(e)}")
+
+        return vector
+
+    except Exception as e:
+        raise mkErr(f"[vecs] Error get asset vector assId[{assId}]", e)
+
+
+def search(vec, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[qdrant_client.http.models.ScoredPoint]:
+    try:
+        if conn is None: raise RuntimeError("Qdrant connection not initialized")
+
+        # distance = qmod.Distance.COSINE if method == ks.use.mth.cosine else qmod.Distance.EUCLID
+
+        # if thMin >= 0.97: thMin = 0.95
+
+        rep = conn.query_points(collection_name=keyColl, query=vec, limit=limit, score_threshold=thMin, with_payload=True)
+        rst = rep.points
+
+        return rst
+
+    except Exception as e:
+        raise mkErr(f"[vecs] Error searching {vec}", e)
 
 #------------------------------------------------------------------------
 # only return different id
 #------------------------------------------------------------------------
 def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[models.SimInfo]:
     try:
-        if conn is None:
-            lg.info("Qdrant connection not initialized")
-            return []
+        if conn is None: raise RuntimeError("Qdrant connection not initialized")
 
-        lg.info(f"Finding similar assets for {assId}, threshold[{thMin}-{thMax}]")
-
-        target = conn.retrieve(
-            collection_name=keyColl,
-            ids=[assId],
-            with_payload=True, with_vectors=True
-        )
-
-        if not target: raise RuntimeError(f"Vector for asset {assId} does not exist")
-
-        # lg.info(f"Successfully retrieved vector for asset {assId}")
-
-        if not hasattr(target[0], 'vector') or target[0].vector is None:
-            raise RuntimeError(f"Vector for asset {assId} is empty")
-
-        vector = target[0].vector
-
-        # lg.info(f"Original vector data type: {type(vector)}")
-
-        if isinstance(vector, np.ndarray):
-            lg.warn(f"Vector is a NumPy array, converting to list")
-            vector = vector.tolist()
-        elif hasattr(vector, 'tolist') and callable(getattr(vector, 'tolist')):
-            lg.warn(f"Vector has tolist method, attempting conversion")
-            vector = vector.tolist()
-
-        if not hasattr(vector, '__len__') or len(vector) == 0:
-            raise RuntimeError(f"Vector format for asset {assId} is incorrect: {type(vector)}")
-
-        if not isinstance(vector, list):
-            try:
-                vector = list(vector)
-                lg.warn(f"Converted vector from {type(vector)} to list, length: {len(vector)}")
-            except Exception as e:
-                raise RuntimeError(f"Cannot convert vector to list: {str(e)}")
+        lg.info(f"[vecs] Finding similar assets for {assId}, threshold[{thMin}-{thMax}]")
+        vector = getBy(assId)
 
         count = conn.count(collection_name=keyColl)
-        lg.info(f"Total vectors in database: {count.count}")
+        lg.info(f"[vecs] Total vectors in database: {count.count}")
 
-        lg.info(f"Searching for similar assets, threshold: {thMin}, limit: {limit}...")
+        lg.info(f"[vecs] Searching for similar assets, threshold: {thMin}, limit: {limit}...")
 
         # distance = qmod.Distance.COSINE if method == ks.use.mth.cosine else qmod.Distance.EUCLID
 
-        rst = conn.search(collection_name=keyColl, query_vector=vector, limit=limit, score_threshold=thMin, with_payload=True)
+        # if thMin >= 0.97: thMin = 0.95
 
+        rep = conn.query_points(collection_name=keyColl, query=vector, limit=limit, score_threshold=thMin, with_payload=True)
+        rst = rep.points
         infos: list[models.SimInfo] = []
 
-        #lg.info(f"[vecs] search results( {len(rst)} ):")
+        lg.info(f"[vecs] search results( {len(rst)} ):")
         for i, hit in enumerate(rst):
             #lg.info(f"    no.{i + 1}: ID[{hit.id}], score[{hit.score:.6f}] self[{hit.id == assId}]")
 
