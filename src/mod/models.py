@@ -114,6 +114,7 @@ class MdlImg(BaseDictModel):
     isMulti: bool = False
     curIdx: int = 0
     helpCollapsed: bool = False
+    infoCollapsed: bool = False
 
 
 @dataclass

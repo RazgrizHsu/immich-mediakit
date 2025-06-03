@@ -33,6 +33,13 @@ document.addEventListener( 'keydown', function ( ev ){
 			const btn = modal.querySelector( '#btn-img-mode' );
 			if ( btn ) btn.click();
 		}
+		else if ( ev.key == 'i' )
+		{
+			ev.preventDefault();
+			const btn = modal.querySelector( '#btn-img-info' );
+			if ( btn ) btn.click();
+		}
+
 		else if ( ev.key == '?' )
 		{
 			ev.preventDefault();

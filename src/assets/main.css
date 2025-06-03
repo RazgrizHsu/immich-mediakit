@@ -12,6 +12,8 @@ html, body { margin: 0; padding: 0; }
 
 body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-color: #505050; color: #EFEFEF; min-height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
 
+.hide { display: none; }
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 
 ::-webkit-scrollbar-track { background: #1A1A1A; }
@@ -89,21 +91,31 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .modal-dialog.img-pop .modal-body { margin: auto; text-align: center; padding: 5px 0px; }
 
-.img-pop img { max-width: 99vw; margin: auto; }
+.img-pop img { max-width: 98vw; margin: auto; }
 
-.img-pop.auto img { max-height: 90vh; }
+.img-pop.auto img { max-height: calc(100vh - 70px); }
 
-.img-pop .modal-body { flex: none; padding: 0; }
+.img-pop .modal-header { background-image: linear-gradient(to bottom, #607b99, #385A7F 50%, #2d4866); }
 
-.img-pop .acts { position: fixed; bottom: 0; margin: auto auto 10px auto; z-index: 1000; font-size: 15px; display: flex; justify-content: center; align-items: center; width: 96%; gap: 10px; }
+.img-pop .modal-body { flex: none; padding: 0; max-height: calc(100vh - 70px); overflow: auto; }
+
+.img-pop .modal-content { max-height: 100vh; }
+
+.img-pop .acts { position: fixed; bottom: 0; margin: auto auto 10px auto; z-index: 1000; display: flex; justify-content: center; align-items: center; width: 96%; gap: 10px; }
 
 .img-pop .acts span, .img-pop .acts button { box-shadow: 0 0 5px #1F5C92; }
 
-.img-pop .acts span { font-size: 20px; padding: 5px 20px; }
+.img-pop .acts.L { width: auto; justify-content: start; }
 
-.img-pop .acts.L { border: red 1px solid; width: auto; justify-content: start; }
+.img-pop .acts.R { width: auto; right: 0px; justify-content: end; }
 
-.img-pop .acts.R { border: #4ACDFF 1px solid; width: auto; right: 0px; justify-content: end; }
+.img-pop .acts.B { bottom: 42px; }
+
+.img-pop .acts table { font-size: 13px; }
+
+.img-pop .acts table td { text-align: left; }
+
+.img-pop .acts table td:first-child { font-size: 11px; }
 
 .img-pop .help { position: fixed; border: #1F5C92 1px solid; width: auto; right: 25px; top: 55%; background: rgba(30, 30, 30, 0.95); border-radius: 8px; padding: 12px; max-width: 280px; }
 
@@ -121,15 +133,33 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .img-pop .help .desc .help-content table td code { background: rgba(74, 205, 255, 0.15); color: #4ACDFF; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
 
-.tag { border: #E0E0E099 1px solid; padding: 0 4px 0 4px; margin: 1px 3px; border-radius: 5px; font-size: 12px; vertical-align: middle; background-image: linear-gradient(to bottom, #576e87, #2D4A69 50%, #243b54); }
+.img-pop .info { position: fixed; border: #1F5C92 1px solid; width: auto; left: 10px; top: 55%; background: rgba(30, 30, 30, 0.95); border-radius: 8px; padding: 12px; max-width: 350px; max-height: 400px; overflow: auto; }
+
+.img-pop .info.collapsed { padding: 8px; min-width: auto; }
+
+.img-pop .info.collapsed .info-content { display: none; }
+
+.img-pop .info .desc { position: relative; }
+
+.img-pop .info .desc .info-content h6 { color: #4ACDFF; margin: 0 0 8px 0; }
+
+.img-pop .info .desc .info-content table { margin: 0; width: 100%; background: transparent; color: #E0E0E0; }
+
+.img-pop .info .desc .info-content table td { padding: 4px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+
+.img-pop .info .desc .info-content table td:first-child { font-weight: bold; color: #4ACDFF; width: 28%; padding: 0 0 0 0; }
+
+.tag { border: #E0E0E099 1px solid; padding: 0 4px 0 4px; margin: 1px 3px; border-radius: 5px; font-size: 12px !important; vertical-align: middle; background-image: linear-gradient(to bottom, #576e87, #2D4A69 50%, #243b54); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .tag.second { background-image: linear-gradient(to bottom, #6e6e6e, #4A4A4A 50%, #3b3b3b); }
 
 .tag.info { background-image: linear-gradient(to bottom, #8abb55, #6DAA2B 50%, #578822); }
 
-.tag.lg { font-size: 15px; padding: 0 4px 2px 4px; }
+.tag.sm { font-size: 10px !important; padding: 0 2px 2px 5px; }
 
-.tag.sm { font-size: 10px; padding: 0 2px 2px 5px; }
+.tag.lg { font-size: 15px !important; padding: 0 4px 2px 4px; }
+
+.tag.xl { font-size: 19px !important; padding: 0 8px 2px 8px; }
 
 .tag.no-border { border: none; }
 
