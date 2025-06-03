@@ -10,7 +10,7 @@ from mod import mapFns
 from ui import gvSim as gvs
 from mod import models, tskSvc
 from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk
-from ui import pager
+from ui import pager, settings
 
 lg = log.get(__name__)
 
@@ -31,7 +31,6 @@ class k:
     txtCntOk = 'sim-txt-cnt-ok'
     txtCntNo = 'sim-txt-cnt-no'
     txtCntSel = 'sim-txt-cnt-sel'
-    slideTh = "sim-inp-threshold"
 
     btnFind = "sim-btn-find"
     btnClear = "sim-btn-clear"
@@ -43,7 +42,6 @@ class k:
     cbxNCRm = "sim-btn-CbxNCRm"
     cbxNCRS = "sim-btn-CbxNCRS"
     cbxNCRA = "sim-btn-CbxNCRA"
-    cbxAutoNext = "sim-cbx-auto-next"
 
     tabs = 'sim-tabs'
     pagerPnd = "sim-pager-pnd"
@@ -70,10 +68,10 @@ def layout(autoId=None, **kwargs):
         #====== top start =======================================================
         dcc.Store(id=k.assFromUrl, data=guideAss),
 
-        dbc.Row([
-            dbc.Col(htm.H3(f"{ks.pg.similar.name}"), width=3),
-            dbc.Col(htm.Small(f"{ks.pg.similar.desc}", className="text-muted"))
-        ], className="mb-4"),
+        htm.Div([
+            htm.H3(f"{ks.pg.similar.name}"),
+            htm.Small(f"{ks.pg.similar.desc}", className="text-muted")
+        ], className="body-header"),
 
 
         dbc.Row([
@@ -98,38 +96,8 @@ def layout(autoId=None, **kwargs):
             ], width=4),
 
             dbc.Col([
-                dbc.Card([
-                    dbc.CardHeader("Search Settings"),
-                    dbc.CardBody([
-                        dbc.Row([
-                            dbc.Col([
-                                dbc.Label("Similarity Threshold Range", className="txt-sm"),
-                                dbc.Row([
-                                    dbc.Col([
-                                        dcc.RangeSlider(
-                                            id=k.slideTh, min=0.5, max=1, step=0.01, marks=ks.defs.thMarks,
-                                            value=[db.dto.simMin, db.dto.simMax],
-                                            tooltip={
-                                                "placement": "top", "always_visible": True,
-                                                "style": {"padding": "3px 5px 3px 5px", "fontSize": "15px"},
-                                            },
-                                            className="mb-0"
-                                        ),
-                                    ], className="mt-2"),
-                                ])
-                            ]),
-                        ]),
 
-                        dbc.Row([
-                            htm.Small(
-                                "A threshold range sets similarity limits to find matches that are similar enough without being too strict or loose. (Default settings usually work fine.)"
-                                ,
-                                className="text-muted"
-                            )
-                        ])
-                    ])
-                ], className="mb-0"),
-
+                settings.renderCard(),
 
                 dbc.Row([
                     dbc.Col([
@@ -169,7 +137,6 @@ def layout(autoId=None, **kwargs):
                             htm.Div([
 
                                 htm.Div([
-                                    dbc.Checkbox(id=k.cbxAutoNext, label="AutoFindNext", value=True),
                                 ], className="left"),
 
 
@@ -208,12 +175,10 @@ def layout(autoId=None, **kwargs):
                             ),
 
 
-                            dbc.Spinner(
+                            # dbc.Spinner(
                                 htm.Div(id=k.gvSim),
-                                color="success",
-                                type="border",
-                                spinner_style={"width": "3rem", "height": "3rem"},
-                            ),
+                            #     color="success",type="border",spinner_style={"width": "3rem", "height": "3rem"},
+                            # ),
                         ]
                     ),
                     dbc.Tab(
@@ -227,12 +192,10 @@ def layout(autoId=None, **kwargs):
                                 *pager.createPager(pgId=k.pagerPnd, idx=0, className="mb-3"),
 
                                 # Grid view
-                                dbc.Spinner(
+                                # dbc.Spinner(
                                     htm.Div(id=k.gvPnd),
-                                    color="success",
-                                    type="border",
-                                    spinner_style={"width": "3rem", "height": "3rem"},
-                                ),
+                                # color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
+                                # ),
 
                                 # bottom pager
                                 *pager.createPager(pgId=k.pagerPnd, idx=1, className="mt-3"),
@@ -285,11 +248,10 @@ def sim_OnTabChange(active_tab, dta_now):
 
     now = Now.fromDict(dta_now)
 
-    if now.pg.sim.activeTab == active_tab: return noUpd
+    if now.sim.activeTab == active_tab: return noUpd
 
-    now.pg.sim.activeTab = active_tab
-    lg.info(f"[sim:tab] Tab changed to: {active_tab} (from: {now.pg.sim.activeTab})")
-
+    now.sim.activeTab = active_tab
+    lg.info(f"[sim:tab] Tab changed to: {active_tab} (from: {now.sim.activeTab})")
 
     return now.toDict()
 
@@ -312,19 +274,19 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     pgr = Pager.fromDict(dta_pgr)
 
     # Check if we're already on this page with same data
-    oldPgr = now.pg.sim.pagerPnd
+    oldPgr = now.sim.pagerPnd
     if oldPgr and oldPgr.idx == pgr.idx and oldPgr.size == pgr.size and oldPgr.cnt == pgr.cnt:
         if DEBUG: lg.info(f"[sim:pager] Already on page {pgr.idx}, skipping reload")
         return noUpd, noUpd
 
-    now.pg.sim.pagerPnd = pgr
+    now.sim.pagerPnd = pgr
 
     paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
-    now.pg.sim.assPend = paged
+    now.sim.assPend = paged
 
     lg.info(f"[sim:pager] paged: {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
 
-    gvPnd = gvs.mkPndGrid(now.pg.sim.assPend, onEmpty=[
+    gvPnd = gvs.mkPndGrid(now.sim.assPend, onEmpty=[
         dbc.Alert("No pending items on this page", color="secondary", className="text-center"),
     ])
 
@@ -344,35 +306,40 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     inp(k.assFromUrl, "data"),
     [
         ste(ks.sto.now, "data"),
-        ste(k.slideTh, "value"),
     ],
-    prevent_initial_call=True
+    prevent_initial_call="initial_duplicate"
 )
-def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
+def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     now = Now.fromDict(dta_now)
 
     if not dta_ass:
-        if not now.pg.sim.assFromUrl: return noUpd, noUpd
+        if not now.sim.assFromUrl:
+            return noUpd, noUpd
 
-        now.pg.sim.assFromUrl = None
-        # now.pg.sim.assId = None # clean here will make refresh assId failed
+        now.sim.assFromUrl = None
+        # now.sim.assId = None # clean here will make refresh assId failed
         return now.toDict(), noUpd
 
     ass = models.Asset.fromDict(dta_ass)
 
     lg.info(f"[sim:sync] asset from url: #{ass.autoId} id[{ass.id}]")
 
-    now.pg.sim.assFromUrl = ass
-    now.pg.sim.assId = ass.id
+    now.sim.assFromUrl = ass
+    now.sim.assId = ass.id
 
-    thMin, thMax = thVals
+    thMin = co.vad.float(db.dto.simMin, 0.7)
+    thMax = co.vad.float(db.dto.simMax, 1.0)
 
-    tsk = Tsk()
-    tsk.id = ks.pg.similar
-    tsk.cmd = ks.cmd.sim.fdSim
-    tsk.name = f'Find similar for #{ass.autoId}'
-    tsk.msg = f'Search images similar to {ass.originalFileName} with threshold [{thMin:.2f} - {thMax:.2f}]'
-    tsk.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': True}
+    mdl = Mdl()
+    mdl.id = ks.pg.similar
+    mdl.cmd = ks.cmd.sim.fdSim
+    mdl.name = f'Find similar for #{ass.autoId}'
+    mdl.msg = f'Search images similar to {ass.originalFileName} with threshold [{thMin:.2f} - {thMax:.2f}]'
+    mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': True}
+
+    tsk = mdl.mkTsk()
+
+    lg.info(f"[sim:sync] to task: {tsk}")
 
     return now.toDict(), tsk.toDict()
 
@@ -405,8 +372,6 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now, thVals):
     prevent_initial_call="initial_duplicate"
 )
 def sim_Load(dta_now, dta_nfy):
-
-
     #lg.info( f"[sim:load] now: {dta_now}" )
 
     now = Now.fromDict(dta_now)
@@ -431,12 +396,12 @@ def sim_Load(dta_now, dta_nfy):
     disFind = cntNo <= 0 or (cntPn >= cntNo) or isTaskRunning
     disCler = cntOk <= 0 and cntPn <= 0
 
-    cntAssets = len(now.pg.sim.assCur) if now.pg.sim.assCur else -1
+    cntAssets = len(now.sim.assCur) if now.sim.assCur else -1
     disOk = cntAssets <= 0
     disDel = cntAssets <= 0
 
     if cntAssets >= 1:
-        #lg.info(f"[sim:load] assets: {now.pg.sim.assets[0]}")
+        #lg.info(f"[sim:load] assets: {now.sim.assets[0]}")
         pass
 
     gvSim = []
@@ -446,15 +411,15 @@ def sim_Load(dta_now, dta_nfy):
 
     # todo: 動態獲取關聯群組
     # relatedGroups = []
-    # if now.pg.sim.assId:
-    #     asset = db.pics.getById(now.pg.sim.assId)
+    # if now.sim.assId:
+    #     asset = db.pics.getById(now.sim.assId)
     #     if asset and hasattr(asset, 'simGID') and asset.simGID:
     #         # 找出所有相同群組的其他代表
     #         relatedAssets = db.pics.getAssetsByGID(asset.simGID)
     #
     #         # 對每個關聯群組獲取其完整的相似照片群組
     #         for ra in relatedAssets:
-    #             if ra.id != now.pg.sim.assId:
+    #             if ra.id != now.sim.assId:
     #                 # 獲取這個群組的所有相似照片
     #                 groupAssets = db.pics.getSimGroup(ra.id)
     #                 if groupAssets:
@@ -462,16 +427,16 @@ def sim_Load(dta_now, dta_nfy):
     #                     ra.groupAssets = groupAssets
     #                     relatedGroups.append(ra)
 
-    gvSim = gvs.mkGrid(now.pg.sim.assCur, now.pg.sim.assId, onEmpty=[
+    gvSim = gvs.mkGrid(now.sim.assCur, now.sim.assId, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
     ])
 
     # Initialize or get pager
-    pgr = now.pg.sim.pagerPnd
+    pgr = now.sim.pagerPnd
     if not pgr:
-        lg.info( "[sim:load] create pager" )
+        lg.info("[sim:load] create pager")
         pgr = Pager(idx=1, size=20)
-        now.pg.sim.pagerPnd = pgr
+        now.sim.pagerPnd = pgr
 
     # Update pager total count
     pagerData = None
@@ -482,18 +447,18 @@ def sim_Load(dta_now, dta_nfy):
         totalPages = (cntPn + pgr.size - 1) // pgr.size if cntPn > 0 else 1
         if pgr.idx > totalPages:
             pgr.idx = max(1, totalPages)
-        now.pg.sim.pagerPnd = pgr
+        now.sim.pagerPnd = pgr
         # Only update pager store if count actually changed
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:load] trig[{trgId}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assId[{now.pg.sim.assId}]")
-    # lg.info(f"[sim:load] tgId[{trgId}] assId[{now.pg.sim.assId}] assCur[{len(now.pg.sim.assCur)}] assPend[{len(now.pg.sim.assPend)}]")
+    lg.info(f"[sim:load] trig[{trgId}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assId[{now.sim.assId}]")
+    # lg.info(f"[sim:load] tgId[{trgId}] assId[{now.sim.assId}] assCur[{len(now.sim.assCur)}] assPend[{len(now.sim.assPend)}]")
 
     # Load pending data - reload if count changed or no data
     needReload = False
     if cntPn > 0:
-        if not now.pg.sim.assPend or len(now.pg.sim.assPend) == 0:
+        if not now.sim.assPend or len(now.sim.assPend) == 0:
             needReload = True
         elif oldPn != cntPn:
             needReload = True
@@ -502,9 +467,9 @@ def sim_Load(dta_now, dta_nfy):
     if needReload:
         paged = db.pics.getPendingPaged(page=pgr.idx, size=pgr.size)
         lg.info(f"[sim:load] pend reload, idx[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
-        now.pg.sim.assPend = paged
+        now.sim.assPend = paged
 
-    gvPnd = gvs.mkPndGrid(now.pg.sim.assPend, onEmpty=[
+    gvPnd = gvs.mkPndGrid(now.sim.assPend, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
     ])
 
@@ -516,7 +481,7 @@ def sim_Load(dta_now, dta_nfy):
     nowChanged = needReload or (pagerData is not None)
     nowDict = now.toDict() if nowChanged else noUpd
 
-    activeTab = now.pg.sim.activeTab if now.pg.sim.activeTab else "tab-current"
+    activeTab = now.sim.activeTab if now.sim.activeTab else "tab-current"
 
     return cntOk, cntPn, cntNo, disFind, disCler, disOk, disDel, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd, tabDisabled, tabLabel, activeTab
 
@@ -537,20 +502,20 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
     hasClk = any(clks_crd)
     if not hasClk: return noUpd
 
-    lg.info(f"[sim:select] any[{hasClk}] {clks_crd}")
+    # lg.info(f"[sim:select] any[{hasClk}] {clks_crd}")
 
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
 
     selected = []
 
-    if ctx.triggered and now.pg.sim.assCur:
+    if ctx.triggered and now.sim.assCur:
         trgId = ctx.triggered_id
 
         tid = trgId['id']
         # lg.info(f"[sim:select] selected[{tid}]")
 
-        for ass in now.pg.sim.assCur:
+        for ass in now.sim.assCur:
             if ass.id == tid:
                 ass.selected = not ass.selected
                 lg.info(f'[header-click] toggled: {ass.autoId}, selected: {ass.selected}')
@@ -558,8 +523,8 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
             if ass.selected:
                 selected.append(ass)
 
-    lg.info(f'[sim:select] Selected: {len(selected)}/{len(now.pg.sim.assCur)}')
-    now.pg.sim.assSelect = selected
+    lg.info(f'[sim:select] Selected: {len(selected)}/{len(now.sim.assCur)}')
+    now.sim.assSelect = selected
 
     return now.toDict()
 
@@ -580,8 +545,8 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
 def sim_OnNowChangeSelects(dta_now):
     now = Now.fromDict(dta_now)
 
-    cntAll = len(now.pg.sim.assCur)
-    cntSel = len(now.pg.sim.assSelect)
+    cntAll = len(now.sim.assCur)
+    cntSel = len(now.sim.assSelect)
     cntDiff = cntAll - cntSel
 
     # if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
@@ -620,11 +585,11 @@ def sim_OnSwitchViewGroup(clks, dta_now):
 
     lg.info(f"[sim:vgrp] switch: id[{assId}] clks[{clks}]")
 
-    now.pg.sim.assId = assId
-    now.pg.sim.assCur = db.pics.getSimGroup(assId)
-    now.pg.sim.assSelect = []
+    now.sim.assId = assId
+    now.sim.assCur = db.pics.getSimGroup(assId)
+    now.sim.assSelect = []
 
-    if DEBUG: lg.info(f"[sim:vgrp] Loaded {len(now.pg.sim.assCur)} assets for group")
+    if DEBUG: lg.info(f"[sim:vgrp] Loaded {len(now.sim.assCur)} assets for group")
 
     return now.toDict(), "tab-current"  # Switch to current tab
 
@@ -648,7 +613,6 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         inp(k.btnCbxRA, "n_clicks"),
     ],
     [
-        ste(k.slideTh, "value"),
         ste(ks.sto.now, "data"),
         ste(ks.sto.cnt, "data"),
         ste(ks.sto.mdl, "data"),
@@ -658,11 +622,10 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         ste(k.cbxNCRm, "value"),
         ste(k.cbxNCRS, "value"),
         ste(k.cbxNCRA, "value"),
-        ste(k.cbxAutoNext, "value"),
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRS, ncRA, autoNext):
+def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRS, ncRA):
     if not clk_fnd and not clk_clr and not clk_rm and not clk_rs and not clk_ok and not clk_ra: return noUpd, noUpd, noUpd, noUpd
 
     trgId = getTriggerId()
@@ -672,9 +635,6 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
     mdl = Mdl.fromDict(dta_mdl)
     tsk = Tsk.fromDict(dta_tsk)
     nfy = Nfy.fromDict(dta_nfy)
-
-    # Save autoNext state
-    now.pg.sim.autoNext = autoNext if autoNext is not None else True
 
     # Check if any task is already running
     from mod.mgr.tskSvc import mgr
@@ -698,7 +658,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
 
     #------------------------------------------------------------------------
     if trgId == k.btnCbxOk:
-        ass = now.pg.sim.assCur
+        ass = now.sim.assCur
         cnt = len(ass)
 
         lg.info(f"[sim:reslove] {cnt} assets")
@@ -714,7 +674,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
                 mdl.reset()
     #------------------------------------------------------------------------
     elif trgId == k.btnCbxRm:
-        ass = now.pg.sim.assSelect
+        ass = now.sim.assSelect
         cnt = len(ass)
 
         lg.info(f"[sim:delSels] {cnt} assets selected")
@@ -734,8 +694,8 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
 
     #------------------------------------------------------------------------
     elif trgId == k.btnCbxRS:
-        assSel = now.pg.sim.assSelect
-        assAll = now.pg.sim.assCur
+        assSel = now.sim.assSelect
+        assAll = now.sim.assCur
         cnt = len(assSel)
 
         lg.info(f"[sim:resolveSels] {cnt} assets selected")
@@ -755,7 +715,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
 
     #------------------------------------------------------------------------
     elif trgId == k.btnCbxRA:
-        ass = now.pg.sim.assCur
+        ass = now.sim.assCur
         cnt = len(ass)
 
         lg.info(f"[sim:delAll] {cnt} assets to delete")
@@ -795,26 +755,21 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
     elif trgId == k.btnFind:
         if cnt.vec <= 0:
             nfy.error("No vector data to process")
-            now.pg.sim.clearAll()
+            now.sim.clearAll()
             return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
 
-        thMin, thMax = thRange
 
-        lg.info( f"[thMin/thMax] min[{thMin}] max[{thMax}]" )
+        thMin = db.dto.simMin
+        thMax = db.dto.simMax
 
-
-
-        thMin = db.dto.simMin = co.valid.float(thMin, 0.90)
-        thMax = db.dto.simMax = co.valid.float(thMax, 1.00)
-
-        lg.info( f"[thMin/thMax] min[{thMin}] max[{thMax}]" )
+        lg.info(f"[thMin/thMax] min[{thMin}] max[{thMax}]")
 
         asset: Optional[models.Asset] = None
 
         # asset from url
         isFromUrl = False
-        if now.pg.sim.assFromUrl:
-            ass = now.pg.sim.assFromUrl  #consider read from db again?
+        if now.sim.assFromUrl:
+            ass = now.sim.assFromUrl  #consider read from db again?
             if ass:
                 if ass.simOk != 1:
                     lg.info(f"[sim] use selected asset id[{ass.id}]")
@@ -822,11 +777,11 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
                     isFromUrl = True
                 else:
                     nfy.info(f"[sim] the asset #{ass.autoId} already resolved")
-                    now.pg.sim.assFromUrl = None
+                    now.sim.assFromUrl = None
                     return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
             else:
-                nfy.warn(f"[sim] not found dst assetId[{now.pg.sim.assFromUrl}]")
-                now.pg.sim.assFromUrl = None
+                nfy.warn(f"[sim] not found dst assetId[{now.sim.assFromUrl}]")
+                now.sim.assFromUrl = None
                 return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
 
         # find from db
@@ -837,11 +792,11 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, thRange, dta_
                 lg.info(f"[sim] found non-simOk #{ass.autoId} assetId[{ass.id}]")
 
         if not isFromUrl:
-            now.pg.sim.clearAll()
+            now.sim.clearAll()
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
         else:
-            now.pg.sim.assId = asset.id
+            now.sim.assId = asset.id
 
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.fdSim
@@ -884,9 +839,9 @@ def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         doReport(90, "Updating dynamic data...")
 
-        now.pg.sim.assFromUrl = None
+        now.sim.assFromUrl = None
 
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
         doReport(100, "Clear completed")
 
@@ -930,16 +885,16 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
     thMin, thMax, isFromUrl = tsk.args.get("thMin"), tsk.args.get("thMax"), tsk.args.get("fromUrl", False)
 
-    thMin = co.valid.float(thMin, 0.9)
-    thMax = co.valid.float(thMax, 1.0)
+    thMin = co.vad.float(thMin, 0.9)
+    thMax = co.vad.float(thMax, 1.0)
 
     # 如果是從 URL 進入，清除引導避免重複搜尋
-    if isFromUrl and now.pg.sim.assFromUrl:
-        lg.info(f"[sim:find] Clearing URL guidance for asset {now.pg.sim.assFromUrl.autoId if now.pg.sim.assFromUrl else 'unknown'}")
-        now.pg.sim.assFromUrl = None
+    if isFromUrl and now.sim.assFromUrl:
+        lg.info(f"[sim:find] Clearing URL guidance for asset {now.sim.assFromUrl.autoId if now.sim.assFromUrl else 'unknown'}")
+        now.sim.assFromUrl = None
 
     try:
-        assetId = now.pg.sim.assId
+        assetId = now.sim.assId
 
         if not assetId and tsk.args.get('assetId'):
             lg.info(f"[sim:find] search from task args assetId[{assetId}]")
@@ -967,25 +922,25 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             infos = db.vecs.findSimiliar(asset.id, thMin, thMax)
 
             if not infos or len(infos) == 0:
-                lg.warn( f"[sim:find] asset #{asset.autoId} not found any similar, may not store vector" )
+                lg.warn(f"[sim:find] asset #{asset.autoId} not found any similar, may not store vector")
                 db.pics.setVectoredBy(asset, 0)
 
                 # 這邊應該找下一筆再重新尋找
                 processedCount += 1
-                
+
                 if not isFromUrl:
                     nextAss = db.pics.getAnyNonSim()
                     if nextAss:
                         lg.info(f"[sim:find] No vector for #{asset.autoId}, auto-switch to next: #{nextAss.autoId}")
                         asset = nextAss
                         assetId = nextAss.id
-                        now.pg.sim.assId = nextAss.id
-                        
+                        now.sim.assId = nextAss.id
+
                         cntAll = db.pics.count()
                         cntOk = db.pics.countSimOk(1)
-                        
-                        pct = round( cntOk / cntAll * 100, 2 )
-                        
+
+                        pct = round(cntOk / cntAll * 100, 2)
+
                         doReport(pct, f"No vector for #{asset.autoId - 1}, continuing to #{asset.autoId}...")
                         continue
                 else:
@@ -994,7 +949,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                     msg = f"Asset #{asset.autoId} has no vector stored"
                     nfy.info(msg)
                     return sto, msg
-                
+
                 continue
 
             asset.simInfos = infos
@@ -1029,12 +984,12 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                         lg.info(f"[sim:find] Next: #{nextAss.autoId}")
                         asset = nextAss
                         assetId = nextAss.id
-                        now.pg.sim.assId = nextAss.id
+                        now.sim.assId = nextAss.id
 
                         cntAll = db.pics.count()
                         cntOk = db.pics.countSimOk(1)
 
-                        pct = round( cntOk / cntAll * 100, 2 )
+                        pct = round(cntOk / cntAll * 100, 2)
 
                         doReport(pct, f"No similar found for #{asset.autoId - 1}, continuing to #{asset.autoId}...")
                         continue
@@ -1085,14 +1040,14 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         doReport(95, f"Finalizing similar photo relationships")
 
-        now.pg.sim.assId = asset.id
-        now.pg.sim.assCur = db.pics.getSimGroup(asset.id)
-        now.pg.sim.assSelect = []
-        now.pg.sim.activeTab = "tab-current"
+        now.sim.assId = asset.id
+        now.sim.assCur = db.pics.getSimGroup(asset.id)
+        now.sim.assSelect = []
+        now.sim.activeTab = "tab-current"
 
         lg.info(f"[sim:find] done, asset #{asset.autoId}")
 
-        if not now.pg.sim.assCur:
+        if not now.sim.assCur:
             raise RuntimeError(f"the get SimGroup not found by asset.id[{asset.id}]")
 
         doReport(100, f"Completed finding similar photos for #{asset.autoId}")
@@ -1115,15 +1070,15 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         msg = f"[sim:find] Similar search failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
         raise RuntimeError(msg)
 
 
 def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
-        assAlls = now.pg.sim.assCur
-        assSels = now.pg.sim.assSelect
+        assAlls = now.sim.assCur
+        assSels = now.sim.assSelect
         assLefts = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
 
         cntSelect = len(assSels)
@@ -1139,10 +1094,10 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         db.pics.setResloveBy(assLefts)  # set unselected to resloved
 
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
-        if not now.pg.sim.autoNext:
-            now.pg.sim.activeTab = "tab-pending"
+        if not db.dto.autoNext:
+            now.sim.activeTab = "tab-pending"
         else:
             queueNext(sto)
 
@@ -1153,7 +1108,7 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
         msg = f"[sim] Delete selected failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
         raise RuntimeError(msg)
 
@@ -1161,8 +1116,8 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
-        assAlls = now.pg.sim.assCur
-        assSels = now.pg.sim.assSelect
+        assAlls = now.sim.assCur
+        assSels = now.sim.assSelect
         assOthers = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
 
         cntSelect = len(assSels)
@@ -1184,10 +1139,10 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
             immich.trashByAssets(assOthers)
             db.pics.deleteBy(assOthers)
 
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
-        if not now.pg.sim.autoNext:
-            now.pg.sim.activeTab = "tab-pending"
+        if not db.dto.autoNext:
+            now.sim.activeTab = "tab-pending"
         else:
             queueNext(sto)
 
@@ -1196,7 +1151,7 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
         msg = f"[sim] Resolve selected failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
         raise RuntimeError(msg)
 
@@ -1204,7 +1159,7 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
 def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
-        assets = now.pg.sim.assCur
+        assets = now.sim.assCur
         cntAll = len(assets)
         msg = f"[sim] set Resloved Assets( {cntAll} ) Success!"
 
@@ -1213,10 +1168,10 @@ def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         db.pics.setResloveBy(assets)
 
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
-        if not now.pg.sim.autoNext:
-            now.pg.sim.activeTab = "tab-pending"
+        if not db.dto.autoNext:
+            now.sim.activeTab = "tab-pending"
         else:
             queueNext(sto)
 
@@ -1225,7 +1180,7 @@ def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
         msg = f"[sim] Resloved All failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
         raise RuntimeError(msg)
 
@@ -1233,7 +1188,7 @@ def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
 def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
-        assets = now.pg.sim.assCur
+        assets = now.sim.assCur
         cntAll = len(assets)
         msg = f"[sim] Delete All Assets( {cntAll} ) Success!"
 
@@ -1244,10 +1199,10 @@ def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
         immich.trashByAssets(assets)
         db.pics.deleteBy(assets)
 
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
-        if not now.pg.sim.autoNext:
-            now.pg.sim.activeTab = "tab-pending"
+        if not db.dto.autoNext:
+            now.sim.activeTab = "tab-pending"
         else:
             queueNext(sto)
 
@@ -1256,7 +1211,7 @@ def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
         msg = f"[sim] Delete all failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
-        now.pg.sim.clearAll()
+        now.sim.clearAll()
 
         raise RuntimeError(msg)
 

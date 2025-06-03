@@ -24,11 +24,10 @@ def layout():
     return ui.renderBody([
         #====== top start =======================================================
 
-        dbc.Row([
-            dbc.Col(htm.H3(f"{ks.pg.vector.name}"), width=3),
-            dbc.Col(htm.Small(f"{ks.pg.vector.desc}", className="text-muted"))
-        ], className="mb-4"),
-
+        htm.Div([
+            htm.H3(f"{ks.pg.vector.name}"),
+            htm.Small(f"{ks.pg.vector.desc}", className="text-muted")
+        ], className="body-header"),
 
         dbc.Row([
             dbc.Col([

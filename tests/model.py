@@ -443,7 +443,7 @@ class TestBaseDictModel(unittest.TestCase):
 
         now = Now()
 
-        lg.info( f"pg.sim: {now.pg.sim}" )
+        lg.info( f"pg.sim: {now.sim}" )
 
     def test_fromDict_error_handling(self):
         # Test with required field missing (will cause TypeError in __init__)
@@ -469,7 +469,7 @@ class TestBaseDictModel(unittest.TestCase):
     def test_fromStr_basic(self):
         usr = Usr(id="1", name="TestUser", email="test@example.com", key="test-key")
         json_str = usr.toJson()
-        
+
         usr_restored = Usr.fromStr(json_str)
         self.assertEqual(usr_restored.id, "1")
         self.assertEqual(usr_restored.name, "TestUser")
@@ -479,10 +479,10 @@ class TestBaseDictModel(unittest.TestCase):
     def test_fromStr_with_nested_model(self):
         usr = Usr(id="1", name="User1", email="user1@example.com")
         now = Now(usr=usr, useType="test")
-        
+
         json_str = now.toJson()
         now_restored = Now.fromStr(json_str)
-        
+
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")
         self.assertEqual(now_restored.usr.name, "User1")
@@ -492,10 +492,10 @@ class TestBaseDictModel(unittest.TestCase):
         usr1 = Usr(id="1", name="User1")
         usr2 = Usr(id="2", name="User2")
         now = Now(usrs=[usr1, usr2])
-        
+
         json_str = now.toJson()
         now_restored = Now.fromStr(json_str)
-        
+
         self.assertEqual(len(now_restored.usrs), 2)
         self.assertIsInstance(now_restored.usrs[0], Usr)
         self.assertIsInstance(now_restored.usrs[1], Usr)
@@ -505,10 +505,10 @@ class TestBaseDictModel(unittest.TestCase):
     def test_fromStr_with_datetime(self):
         test_dt = datetime(2023, 1, 1, 12, 0, 0)
         tsk = Tsk(id="task1", name="Test Task", args={"created_at": test_dt})
-        
+
         json_str = tsk.toJson()
         tsk_restored = Tsk.fromStr(json_str)
-        
+
         self.assertEqual(tsk_restored.id, "task1")
         self.assertEqual(tsk_restored.name, "Test Task")
         self.assertIn("created_at", tsk_restored.args)
@@ -517,7 +517,7 @@ class TestBaseDictModel(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             Usr.fromStr("not a json string")
         self.assertIn("Invalid JSON string", str(ctx.exception))
-        
+
         with self.assertRaises(ValueError) as ctx:
             Usr.fromStr("{invalid json}")
         self.assertIn("Invalid JSON string", str(ctx.exception))
@@ -526,7 +526,7 @@ class TestBaseDictModel(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             Usr.fromStr("[1, 2, 3]")
         self.assertIn("Expected dict after JSON parse", str(ctx.exception))
-        
+
         with self.assertRaises(ValueError) as ctx:
             Usr.fromStr('"string value"')
         self.assertIn("Expected dict after JSON parse", str(ctx.exception))
@@ -538,10 +538,10 @@ class TestBaseDictModel(unittest.TestCase):
             originalFileName="test.jpg",
             simInfos=[SimInfo('a', 0.5), SimInfo('b', 0.6)]
         )
-        
+
         json_str = asset.toJson()
         asset_restored = Asset.fromStr(json_str)
-        
+
         self.assertEqual(asset_restored.id, "test-asset")
         self.assertEqual(asset_restored.ownerId, "user1")
         self.assertEqual(len(asset_restored.simInfos), 2)
@@ -581,19 +581,19 @@ class TestBaseDictModel(unittest.TestCase):
             message="Processing...",
             status=TskStatus.RUNNING
         )
-        
+
         self.assertEqual(msg.tsn, "task-123")
         self.assertEqual(msg.status, TskStatus.RUNNING)
-        
+
         # Test 2: Convert to dict
         msg_dict = msg.toDict()
         self.assertEqual(msg_dict["tsn"], "task-123")
         self.assertEqual(msg_dict["status"], TskStatus.RUNNING)
-        
+
         # Test 3: Convert to JSON and back
         json_str = msg.toJson()
         self.assertIn('"tsn": "task-123"', json_str)
-        
+
         # Test 4: FromStr with enum
         msg_restored = WsMsg.fromStr(json_str)
         self.assertEqual(msg_restored.tsn, "task-123")
@@ -602,7 +602,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(msg_restored.message, "Processing...")
         # Enum might be converted to string in JSON
         self.assertTrue(msg_restored.status == TskStatus.RUNNING or msg_restored.status == "running")
-        
+
         # Test 5: FromDict with enum value
         dict_with_enum = {
             "tsn": "task-456",
@@ -614,7 +614,7 @@ class TestBaseDictModel(unittest.TestCase):
         msg_from_dict = WsMsg.fromDict(dict_with_enum)
         self.assertEqual(msg_from_dict.tsn, "task-456")
         self.assertEqual(msg_from_dict.status, TskStatus.COMPLETED)
-        
+
         # Test 6: FromDict with enum string value
         dict_with_string = {
             "tsn": "task-789",
@@ -627,7 +627,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(msg_from_string.tsn, "task-789")
         # Check if it can handle string value for enum
         self.assertTrue(msg_from_string.status == TskStatus.FAILED or msg_from_string.status == "failed")
-        
+
         # Test 7: All enum values
         for status in TskStatus:
             msg = WsMsg(tsn=f"test-{status.value}", status=status)
@@ -645,7 +645,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertIsNone(msg.name)
         self.assertIsNone(msg.message)
         self.assertIsNone(msg.status)
-        
+
         # Convert to JSON and back
         json_str = msg.toJson()
         restored = WsMsg.fromStr(json_str)
@@ -658,7 +658,7 @@ class TestBaseDictModel(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             WsMsg.fromStr("not json")
         self.assertIn("Invalid JSON string", str(ctx.exception))
-        
+
         # Test non-dict JSON
         with self.assertRaises(ValueError) as ctx:
             WsMsg.fromStr('["array", "not", "dict"]')

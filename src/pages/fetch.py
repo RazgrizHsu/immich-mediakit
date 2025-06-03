@@ -8,7 +8,7 @@ lg = log.get(__name__)
 
 dash.register_page(
     __name__,
-    path='/',
+    path=f'/{ks.pg.fetch}',
     title=f"{ks.title}: " + ks.pg.fetch.name,
 )
 
@@ -29,30 +29,31 @@ def layout():
     return ui.renderBody([
         #====== top start =======================================================
 
-        dbc.Row([
-            dbc.Col(htm.H3(f"{ks.pg.fetch.name}"), width=3),
-            dbc.Col(htm.Small(f"{ks.pg.fetch.desc}", className="text-muted"))
-        ], className="mb-4"),
+        htm.Div([
+            htm.H3(f"{ks.pg.fetch.name}"),
+            htm.Small(f"{ks.pg.fetch.desc}", className="text-muted")
+        ], className="body-header"),
 
         dbc.Card([
             dbc.CardHeader("Settings"),
             dbc.CardBody([
-                htm.Div([
-                    htm.Div([
-                        dbc.Row([
-                            dbc.Col([
-                                dbc.Label("Select User"),
-                                dcc.Dropdown(
-                                    id=k.selectUsr,
-                                    options=[],
-                                    placeholder="Select user.",
-                                    clearable=False
-                                ),
-                            ], width=12),
-                        ]),
-                    ]),
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Label("Select User"),
+                        dcc.Dropdown(
+                            id=k.selectUsr,
+                            options=[],
+                            placeholder="Select user.",
+                            clearable=False
+                        ),
+                    ], width=12),
+                ],
+                    className="mb-2"
+                ),
+                htm.Ul([
+                    htm.Li("Assets that already exist locally will be skipped"),
+                    htm.Li("Assets without generated thumbnails in Immich will also be skipped"),
                 ]),
-
             ])
         ], className="mb-4"),
 
@@ -66,9 +67,7 @@ def layout():
                     className="w-100",
                     disabled=True,
                 ),
-                htm.Div(
-                    "Asset that already exist locally will be skipped"
-                    , className="p-2 text-center")
+
             ], width=5),
 
             dbc.Col([
@@ -81,7 +80,7 @@ def layout():
                 ),
             ], width=4),
             dbc.Col([
-                htm.Div( "Please proceed with caution", className="txt-sm" ),
+                htm.Div("Please proceed with caution", className="txt-sm"),
                 dbc.Button(
                     "Reset All local data",
                     id=k.btnReset,
@@ -158,7 +157,6 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
     cnt = models.Cnt.fromDict(dta_cnt)
     nfy = models.Nfy.fromDict(dta_nfy)
 
-
     hasData = cnt.vec > 0 or cnt.ass > 0
 
     isTasking = tsk.id is not None
@@ -185,7 +183,7 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
     if not now.usrId:
         disBtnRun = disBtnClr = True
         txtBtn = "Please select user"
-        nfy.info( txtBtn )
+        nfy.info(txtBtn)
 
     elif usrId == "":
         disBtnRun = disBtnClr = True
@@ -248,7 +246,7 @@ def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk,
         mdl.id = ks.pg.fetch
         mdl.cmd = ks.cmd.fetch.reset
         mdl.msg = [
-            htm.Div([ htm.B('Warning:'), ' Reset all local data' ], className="p-5")
+            htm.Div([htm.B('Warning:'), ' Reset all local data'], className="p-5")
         ]
     elif trgSrc == k.btnClean:
         if not now.usrId:
@@ -256,7 +254,7 @@ def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk,
             mdl.reset()
         else:
             usr = db.psql.fetchUser(now.usrId)
-            cnt = db.pics.count( now.usrId )
+            cnt = db.pics.count(now.usrId)
 
             mdl.id = ks.pg.fetch
             mdl.cmd = ks.cmd.fetch.clear
@@ -413,6 +411,7 @@ def onFetchClear(doReport: IFnProg, sto: tskSvc.ITaskStore):
         msg = f"Failed to clear user data: {str(e)}"
         nfy.error(msg)
         raise RuntimeError(msg)
+
 #------------------------------------------------------------------------
 def onFetchReset(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
@@ -421,7 +420,6 @@ def onFetchReset(doReport: IFnProg, sto: tskSvc.ITaskStore):
     import db
 
     try:
-
         doReport(10, f"Starting reset assets")
         db.resetAllData()
 

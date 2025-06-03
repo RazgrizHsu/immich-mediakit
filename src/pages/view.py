@@ -40,10 +40,11 @@ def layout():
 
     return ui.renderBody([
         #====== top start =======================================================
-        dbc.Row([
-            dbc.Col(htm.H3(f"{ks.pg.view.name}"), width=3),
-            dbc.Col(htm.Small(f"{ks.pg.view.desc}", className="text-muted"))
-        ], className="mb-4"),
+
+        htm.Div([
+            htm.H3(f"{ks.pg.view.name}"),
+            htm.Small(f"{ks.pg.view.desc}", className="text-muted")
+        ], className="body-header"),
 
         dbc.Card([
             dbc.CardHeader("View Settings"),

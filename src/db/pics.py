@@ -536,7 +536,9 @@ def deleteBy(assets: List[models.Asset]):
         with mkConn() as conn:
             c = conn.cursor()
             assIds = [ass.id for ass in assets]
-            if not assIds: raise RuntimeError(f"No asset IDs found")
+            gids = [ass.simGID for ass in assets]
+
+            if not assIds or not gids: raise RuntimeError(f"No asset IDs found")
 
             qargs = ','.join(['?' for _ in assIds])
             c.execute(f"DELETE FROM assets WHERE id IN ({qargs})", assIds)
@@ -544,6 +546,10 @@ def deleteBy(assets: List[models.Asset]):
 
             if count != cntAll:
                 raise mkErr(f"Failed to delete assets( {cntAll} ) with effected[{count}], ")
+
+            # reset same gid
+            c.execute(f"UPDATE assets SET simGID = 0 and simInfos= '[]' WHERE simOk = 0 AND simGID IN ({qargs})", gids)
+
 
             lg.info(f"[pics] delete by assIds[{cntAll}] rst[{count}]")
 

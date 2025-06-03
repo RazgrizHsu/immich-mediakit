@@ -27,25 +27,22 @@ def render():
     nfy: models.Nfy = models.Nfy()
     tsk: models.Tsk = models.Tsk()
     mdl: models.Mdl = models.Mdl()
+    cnt: models.Cnt = models.Cnt()
+
+    cnt.refreshFromDB()
 
 
     now.usrId = dto.usrId
 
+
     photoQ = dto.photoQ
     if not photoQ or photoQ not in [ ks.db.thumbnail, ks.db.preview, ks.db.fullsize ]:
-        photoQ = dto.photoQ = ks.db.thumbnail
-
-    now.photoQ = photoQ
-
+        dto.photoQ = ks.db.thumbnail
 
     from conf import co
-    dto.simMin = co.valid.float( dto.simMin, 0.93 )
-    dto.simMax = co.valid.float( dto.simMax, 1.00 )
+    dto.simMin = co.vad.float(dto.simMin, 0.93, mi=0.50, mx=0.99)
+    dto.simMax = co.vad.float(dto.simMax, 1.00, mi=0.51, mx=1.00)
 
-
-
-    cnt = models.Cnt()
-    cnt.refreshFromDB()
 
 
     mk(ks.sto.now, now.toDict())

@@ -54,7 +54,7 @@ class co:
                     if getattr(obj, key) == value: return obj
             return None
 
-    class valid:
+    class vad:
         @staticmethod
         def float(v, default, mi=0.01, mx=1):
             try:
@@ -107,11 +107,11 @@ class ks:
     cmd = cmds
 
     class pg(co.find):
-        fetch = co.tit('fetch', 'FetchAssets', cmds.fetch.dict(), desc='Get photo asset from (Api/Psql) and save to local db')
-        vector = co.tit('vector', 'ToVectors', cmds.vec.dict(), desc='Process photos to generate feature vectors for similarity calculations. This step reads each photo and generates a 2048-dimensional vector')
-        similar = co.tit('similar', 'Similarity', cmds.sim.dict(), desc='Find similar photos based on image content. This uses AI-generated vector embeddings to find visually similar assets')
-        system = co.tit('system', 'System', desc='display system settings')
+        fetch = co.tit('fetch', 'Fetch', cmds.fetch.dict(), desc='Get photo asset from Immich')
+        vector = co.tit('vector', 'Vectors', cmds.vec.dict(), desc='Process to generate vectors for similarity calculations')
+        similar = co.tit('similar', 'Similar', cmds.sim.dict(), desc='Find similar photos based on settings')
         view = co.tit('view', 'View', desc='Use the filters and sorting options to customize your view')
+        setting = co.tit('settings', 'Settings', desc='system settings')
 
 
     class db:

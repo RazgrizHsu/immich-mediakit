@@ -266,8 +266,9 @@ class Cnt(BaseDictModel):
         return cnt
 
 
+
 @dataclass
-class PageSim(BaseDictModel):
+class PgSim(BaseDictModel):
     pagerPnd: Optional[Pager] = None
     activeTab: Optional[str] = "tab-current"
 
@@ -277,8 +278,6 @@ class PageSim(BaseDictModel):
     assPend: List[Asset] = field(default_factory=list)
 
     assFromUrl: Optional[Asset] = None
-
-    autoNext: bool = True
 
     def clearNow(self):
         self.assId = self.assFromUrl = None
@@ -290,15 +289,20 @@ class PageSim(BaseDictModel):
         self.assPend = []
 
 @dataclass
-class Pages(BaseDictModel):
-    sim: PageSim = field(default_factory=PageSim)
+class Sets(BaseDictModel):
+    photoQ: str = ks.db.thumbnail
+    thMin: float = 0.93
+    thMax: float = 1.00
+
+    autoNext: bool = True
+    showInfo: bool = True
+
 
 @dataclass
 class Now(BaseDictModel):
     usrId: Optional[str] = None
-    photoQ: Optional[str] = None
 
-    pg: Pages = field(default_factory=Pages)
+    sim: PgSim = field(default_factory=PgSim)
 
 from enum import Enum
 
