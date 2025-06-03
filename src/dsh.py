@@ -6,7 +6,7 @@ import dash_bootstrap_components as dbc
 # noinspection PyUnresolvedReferences
 from dash import html as htm, dcc
 # noinspection PyUnresolvedReferences
-from dash import callback, no_update as noUpd, callback_context as ctx
+from dash import callback as cbk, callback_context as ctx
 # noinspection PyUnresolvedReferences
 from dash.dependencies import ALL, MATCH
 # noinspection PyUnresolvedReferences
@@ -22,7 +22,7 @@ lg = log.get(__name__)
 os.makedirs(pathCache, exist_ok=True)
 
 
-def getTriggerId(ctx=None):
+def getTrgId(ctx=None):
     ctx = dash.callback_context if ctx is None else ctx
     return ctx.triggered[0]['prop_id'].split('.')[0]
 
@@ -54,3 +54,22 @@ def registerScss():
     observer = Observer()
     observer.schedule(ScssHandler(), pathFromRoot('src/scss'), recursive=True)
     observer.start()
+
+
+class NoUpdList(list):
+    def idx(self, idx, vals):
+        result = self.copy()
+        if not isinstance(vals, list): vals = [vals]
+        for i, v in enumerate(vals):
+            if idx + i < len(result): result[idx + i] = v
+        return result
+
+
+# noinspection PyProtectedMember
+class NoUpd(dash._callback.NoUpdate):
+    @classmethod
+    def by(cls, count: int):
+        return NoUpdList([dash.no_update for i in range(count)])
+
+
+noUpd = NoUpd()

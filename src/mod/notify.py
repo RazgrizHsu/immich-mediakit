@@ -1,4 +1,4 @@
-from dsh import dash, htm, dbc, out, inp, ste, callback, ALL
+from dsh import dash, htm, dbc, out, inp, ste, cbk, ALL
 from util import log
 from mod import models
 from conf import ks
@@ -29,7 +29,7 @@ def render():
         )
     ])
 
-@callback(
+@cbk(
     out(k.divId, 'children'),
     inp(ks.sto.nfy, 'data')
 )
@@ -63,7 +63,7 @@ def update_notifications(dta_nfy):
     # lg.info( f"[notify] Update notifications, total[{len(divs)}]" )
     return divs
 
-@callback(
+@cbk(
     out(ks.sto.nfy, 'data', allow_duplicate=True),
     inp({'type': 'notify-alert', 'index': ALL}, 'is_open'),
     ste({'type': 'notify-alert', 'index': ALL}, 'id'),

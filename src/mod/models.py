@@ -9,15 +9,15 @@ from .bse.baseModel import BaseDictModel
 
 lg = log.get(__name__)
 
-# ------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # types
-# ------------------------------------------------------------------------
+#------------------------------------------------------------------------
 IFnProg = Callable[[int, str], None]
 IFnRst = Tuple['ITaskStore', Optional[str | List[str]]]
 IFnCall = Callable[[IFnProg, 'ITaskStore'], IFnRst]
 
 
-# ------------------------------------------------------------------------
+#------------------------------------------------------------------------
 @dataclass
 class Nfy(BaseDictModel):
     msgs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
@@ -113,8 +113,7 @@ class MdlImg(BaseDictModel):
     imgUrl: Optional[str] = None
     isMulti: bool = False
     curIdx: int = 0
-
-    args: List[Dict[str, Any]] = field(default_factory=list)
+    helpCollapsed: bool = False
 
 
 @dataclass

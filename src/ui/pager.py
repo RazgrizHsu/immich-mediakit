@@ -1,7 +1,7 @@
 from typing import List, Optional, Callable, Literal
 import json
 
-from dsh import htm, dbc, dcc, callback, out, inp, ste, ctx, ALL
+from dsh import htm, dbc, dcc, cbk, out, inp, ste, ctx, ALL
 from util import log
 from mod import models
 
@@ -223,7 +223,7 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
     lg.info( f"[pager] registering callbacks for {pgrId}" )
 
     # Handle page clicks
-    @callback(
+    @cbk(
         out(id.store(pgrId), "data"),
         [
             inp({"type": f"pgr-{pgrId}-page", "page": ALL, "idx": ALL}, "n_clicks"),
@@ -296,7 +296,7 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
     #------------------------------------------------------------------------
     # Update pager UI when store changes
     #------------------------------------------------------------------------
-    @callback(
+    @cbk(
         out({"type": f"pgr-{pgrId}-container", "idx": ALL}, "children"),
         [
             inp(id.store(pgrId), "data"),

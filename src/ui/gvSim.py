@@ -1,7 +1,9 @@
 from dsh import htm, dbc
+from conf import co
 from util import log
 from mod import models
 import db
+
 lg = log.get(__name__)
 
 from ui import gvExif
@@ -83,14 +85,16 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
                     dbc.Col(
                         dbc.Checkbox(label=f"#{ass.autoId}", value=checked)
                     ),
-                    dbc.Col([
-                                htm.Span(f"Main", className="tag info lg ms-1")
-                            ] if isMain else
-                            [
-                                htm.Span("score: "),
-                                htm.Span(f"{si.score:.4f}", className="tag lg ms-1")
-                            ]
-                            , className="d-flex justify-content-end")
+                    dbc.Col(
+                        [
+                            htm.Span(f"Main", className="tag info lg ms-1")
+                        ]
+                        if isMain else
+                        [
+                            htm.Span("score: ", className="tag sm second no-border"),
+                            htm.Span(f"{si.score:.4f}", className="tag lg ms-1")
+                        ]
+                    )
                 ])
             ], id={"type": "card-select", "id": assId}),
             className="p-2 curP"
@@ -98,7 +102,7 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
         htm.Div([
             htm.Img(
                 src=imgSrc,
-                id={"type": "img-pop-multi", "id": ass.id, "autoId": ass.autoId, "selected": ass.selected}, n_clicks=0,
+                id={"type": "img-pop-multi", "id": ass.id, "autoId": ass.autoId}, n_clicks=0,
                 className="card-img"
             ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
             ,
@@ -106,9 +110,10 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
                 htm.Span(f"#{ass.autoId} @{ass.simGID}", className="tag"),
             ]),
             htm.Div([
-                htm.Span(f"{imgW}", className="tag lg"),
-                htm.Span("x"),
-                htm.Span(f"{imgH}", className="tag lg"),
+
+                htm.Span(f"{co.fmt.size(ass.jsonExif.fileSizeInByte)}", className="tag")
+                if ass.jsonExif else None,
+                htm.Span(f"{imgW} x {imgH}", className="tag lg"),
             ])
         ], className="img"),
         dbc.CardBody([
@@ -119,13 +124,13 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
                 htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
 
             ], class_name="grid2"
-            )if db.dto.showGridInfo else None,
+            ) if db.dto.showGridInfo else None,
 
             dbc.Row([
                 htm.Table(
                     htm.Tbody(gvExif.mkExifRows(ass))
                     , className="exif"),
-            ])if db.dto.showGridInfo else None,
+            ]) if db.dto.showGridInfo else None,
 
             dbc.Row(),
 
@@ -140,7 +145,6 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
 
         ], className="p-2"),
     ], className=cssClass)
-
 
 
 # def mkRelatGroups(assets: list[models.Asset], minW=230, maxW=300):
@@ -257,9 +261,6 @@ def mkGroupCard(ass: models.Asset):
     ], className="h-100 related-group")
 
 
-
-
-
 def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
     if not assets or len(assets) == 0:
         if onEmpty:
@@ -278,7 +279,7 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
             "gap": "1rem",
             "justifyContent": "start"
         }
-        styItem = {"flex": f"1 1 {minW}px", "maxWidth":f"{maxW}px"}
+        styItem = {"flex": f"1 1 {minW}px", "maxWidth": f"{maxW}px"}
     else:
         styGrid = {
             "display": "grid",
@@ -292,8 +293,6 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
     lg.info(f"[sim:gvPnd] assets[{len(assets)}] rows[{len(rows)}]")
 
     return htm.Div(rows, style=styGrid)
-
-
 
 
 def mkCardPnd(ass: models.Asset, showRelated=True):

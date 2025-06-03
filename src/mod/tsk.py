@@ -1,7 +1,7 @@
 from typing import Tuple, Callable, Optional, List
 import json, time, asyncio
 
-from dsh import htm, dbc, inp, out, ste, callback, noUpd
+from dsh import htm, dbc, inp, out, ste, cbk, noUpd
 from conf import ks
 from util import log
 
@@ -63,7 +63,7 @@ def render():
 #========================================================================
 # callbacks
 #========================================================================
-@callback(
+@cbk(
     [
         out(k.div, "style"),
         out(k.txt, "children"),
@@ -81,7 +81,7 @@ def tsk_PanelStatus(dta_tsk):
     return style, f"⌖ {tsk.name} ⌖"
 
 
-@callback(
+@cbk(
     out(ks.sto.tsk, "data", allow_duplicate=True),
     inp(k.btn, "n_clicks"),
     ste(ks.sto.tsk, "data"),
@@ -95,7 +95,7 @@ def tsk_onBtnClose(_nclk, dta_tsk):
     return tsk.toDict()
 
 
-@callback(
+@cbk(
     out(k.div, "className"),
     inp("task-float-btn", "n_clicks"),
     ste(k.div, "className"),
@@ -108,7 +108,7 @@ def tsk_onBtnFloat(_nclk, curCls):
     return "tskPanel fly"
 
 
-@callback(
+@cbk(
     out("ws-state", "children"),
     [
         inp(k.wsId, "state"),
@@ -126,7 +126,7 @@ def tsk_WsConnStatus(state, error):
 
     return "ws connecting..."
 
-@callback(
+@cbk(
     out("ws-state", "children", allow_duplicate=True),
     inp(k.wsId, "message"),
     prevent_initial_call=True
@@ -143,7 +143,7 @@ def tsk_OnWsConnected(msg):
     return noUpd
 
 
-@callback(
+@cbk(
     [
         out(ks.sto.tsk, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -160,7 +160,7 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt):
     now = models.Now.fromDict(dta_now)
     cnt = models.Cnt.fromDict(dta_cnt)
 
-    if not tsk.id or not tsk.cmd: return noUpd, noUpd
+    if not tsk.id or not tsk.cmd: return noUpd.by(2)
 
     #prevent task concurrent
     from .mgr.tskSvc import mgr
@@ -203,7 +203,7 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt):
         return tsk.toDict(), nfy.toDict()
 
 
-@callback(
+@cbk(
     [
         out(k.prg, "value"),
         out(k.prg, "label"),
@@ -215,7 +215,7 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt):
     prevent_initial_call=True
 )
 def tsk_UpdUI(wmsg, dta_tsk, rstChs):
-    if not wmsg: return noUpd, noUpd, noUpd
+    if not wmsg: return noUpd.by(3)
 
     # lg.info(f"[tws:uui] received: {wmsg}, tsk: {dta_tsk}")
     try:
@@ -263,11 +263,11 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
     except Exception as e:
         lg.error(f"[tws:uui] Error parsing message: {e}")
 
-    return noUpd, noUpd, noUpd
+    return noUpd.by(3)
 
 
 # 處理任務完成並更新 store
-@callback(
+@cbk(
     [
         out(ks.sto.cnt, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -278,7 +278,7 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
     prevent_initial_call=True
 )
 def tsk_OnData(wmsg):
-    if not wmsg: return noUpd, noUpd, noUpd, noUpd
+    if not wmsg: return noUpd.by(4)
 
     try:
         # lg.info(f"[tws:dta] Called with msg: {wmsg}")
@@ -292,7 +292,7 @@ def tsk_OnData(wmsg):
             from .mgr import tskSvc
             sto = tskSvc.getResultBy(data.get('tsn'))
 
-            dicCnt, dicNfy, dicNow, dicTsk = noUpd, noUpd, noUpd, noUpd
+            dicCnt, dicNfy, dicNow, dicTsk = noUpd.by(4)
 
             # every task refresh cnt
             dicCnt = models.Cnt.mkNewCnt().toDict()
@@ -320,10 +320,10 @@ def tsk_OnData(wmsg):
     except Exception as e:
         lg.error(f"[tws:dta] Error in tsk_OnComplete: {e}", exc_info=True)
 
-    return noUpd, noUpd, noUpd, noUpd
+    return noUpd.by(4)
 
 
-@callback(
+@cbk(
     out(k.btn, "disabled"),
     inp(k.wsId, "message"),
     ste(ks.sto.tsk, "data"),
@@ -350,7 +350,7 @@ def tsk_OnStatus(wmsg, dta_tsk):
 
 
 # only for test
-# @callback(
+# @cbk(
 #     out("task-test-ws-btn", "disabled"),
 #     inp("task-test-ws-btn", "n_clicks"),
 #     ste(ks.sto.tsk, "data"),

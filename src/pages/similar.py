@@ -4,7 +4,7 @@ from typing import Optional
 import immich
 import db
 from conf import ks, co
-from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd, ctx, ALL
+from dsh import dash, htm, dcc, cbk, dbc, inp, out, ste, getTrgId, noUpd, ctx, ALL
 from util import log
 from mod import mapFns
 from ui import gvSim as gvs
@@ -44,6 +44,8 @@ class k:
     cbxNCRA = "sim-btn-CbxNCRA"
 
     tabs = 'sim-tabs'
+    tabCur = "tab-current"
+    tabPnd = "tab-pending"
     pagerPnd = "sim-pager-pnd"
 
     gvSim = "sim-gvSim"
@@ -126,11 +128,11 @@ def layout(autoId=None, **kwargs):
             # Tabs
             dbc.Tabs(
                 id=k.tabs,
-                active_tab="tab-current",
+                active_tab=k.tabCur,
                 children=[
                     dbc.Tab(
                         label="current",
-                        tab_id="tab-current",
+                        tab_id=k.tabCur,
                         children=[
 
                             # Action buttons
@@ -176,15 +178,15 @@ def layout(autoId=None, **kwargs):
 
 
                             # dbc.Spinner(
-                                htm.Div(id=k.gvSim),
+                            htm.Div(id=k.gvSim),
                             #     color="success",type="border",spinner_style={"width": "3rem", "height": "3rem"},
                             # ),
                         ]
                     ),
                     dbc.Tab(
                         label="pending",
-                        tab_id="tab-pending",
-                        id="tab-pending",
+                        tab_id=k.tabPnd,
+                        id=k.tabPnd,
                         disabled=True,
                         children=[
                             htm.Div([
@@ -193,7 +195,7 @@ def layout(autoId=None, **kwargs):
 
                                 # Grid view
                                 # dbc.Spinner(
-                                    htm.Div(id=k.gvPnd),
+                                htm.Div(id=k.gvPnd),
                                 # color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
                                 # ),
 
@@ -237,7 +239,7 @@ pager.regCallbacks(k.pagerPnd)
 #------------------------------------------------------------------------
 # Sync tab changes to now state
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     out(ks.sto.now, "data", allow_duplicate=True),
     inp(k.tabs, "active_tab", ),
     ste(ks.sto.now, "data"),
@@ -258,7 +260,7 @@ def sim_OnTabChange(active_tab, dta_now):
 #------------------------------------------------------------------------
 # Handle pager changes - reload pending data
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(k.gvPnd, "children", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
@@ -268,7 +270,7 @@ def sim_OnTabChange(active_tab, dta_now):
     prevent_initial_call=True
 )
 def sim_onPagerChanged(dta_pgr, dta_now):
-    if not dta_pgr or not dta_now: return noUpd, noUpd
+    if not dta_pgr or not dta_now: return noUpd.by(2)
 
     now = Now.fromDict(dta_now)
     pgr = Pager.fromDict(dta_pgr)
@@ -277,7 +279,7 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     oldPgr = now.sim.pagerPnd
     if oldPgr and oldPgr.idx == pgr.idx and oldPgr.size == pgr.size and oldPgr.cnt == pgr.cnt:
         if DEBUG: lg.info(f"[sim:pager] Already on page {pgr.idx}, skipping reload")
-        return noUpd, noUpd
+        return noUpd.by(2)
 
     now.sim.pagerPnd = pgr
 
@@ -298,7 +300,7 @@ def sim_onPagerChanged(dta_pgr, dta_now):
 #------------------------------------------------------------------------
 # assert from url
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(ks.sto.now, "data", allow_duplicate=True),
         out(ks.sto.tsk, "data", allow_duplicate=True),
@@ -314,7 +316,7 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
 
     if not dta_ass:
         if not now.sim.assFromUrl:
-            return noUpd, noUpd
+            return noUpd.by(2)
 
         now.sim.assFromUrl = None
         # now.sim.assId = None # clean here will make refresh assId failed
@@ -347,7 +349,7 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
 #------------------------------------------------------------------------
 # onStatus
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(k.txtCntOk, "children"),
         out(k.txtCntRs, "children"),
@@ -361,8 +363,8 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
         out(pager.id.store(k.pagerPnd), "data", allow_duplicate=True),
-        out("tab-pending", "disabled"),
-        out("tab-pending", "label"),
+        out(k.tabPnd, "disabled"),
+        out(k.tabPnd, "label"),
         out(k.tabs, "active_tab", allow_duplicate=True),
     ],
     inp(ks.sto.now, "data"),
@@ -377,7 +379,7 @@ def sim_Load(dta_now, dta_nfy):
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
 
-    trgId = getTriggerId()
+    trgId = getTrgId()
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
@@ -485,15 +487,22 @@ def sim_Load(dta_now, dta_nfy):
     nowChanged = needReload or (pagerData is not None)
     nowDict = now.toDict() if nowChanged else noUpd
 
-    activeTab = now.sim.activeTab if now.sim.activeTab else "tab-current"
+    activeTab = now.sim.activeTab if now.sim.activeTab else k.tabCur
 
-    return cntOk, cntPn, cntNo, disFind, disCler, disOk, disDel, gvSim, gvPnd, nfy.toDict(), nowDict, pagerData.toDict() if pagerData else noUpd, tabDisabled, tabLabel, activeTab
+    return [
+        cntOk, cntPn, cntNo,
+        disFind, disCler, disOk, disDel,
+        gvSim, gvPnd,
+        nfy.toDict(), nowDict,
+        pagerData.toDict() if pagerData else noUpd,
+        tabDisabled, tabLabel, activeTab
+    ]
 
 
 #------------------------------------------------------------------------
 # Update status counters
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     out(ks.sto.now, "data"),
     [
         inp({"type": "card-select", "id": ALL}, "n_clicks"),
@@ -545,7 +554,7 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
 #------------------------------------------------------------------------
 # Update button state based on selections
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(k.btnCbxRm, "children"),
         out(k.btnCbxRm, "disabled"),
@@ -574,7 +583,7 @@ def sim_OnNowChangeSelects(dta_now):
 #------------------------------------------------------------------------
 # Handle group view button click
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(ks.sto.now, "data", allow_duplicate=True),
         out(k.tabs, "active_tab", allow_duplicate=True),  # Switch to current tab
@@ -586,10 +595,10 @@ def sim_OnNowChangeSelects(dta_now):
     prevent_initial_call=True
 )
 def sim_OnSwitchViewGroup(clks, dta_now):
-    if not ctx.triggered: return noUpd, noUpd
+    if not ctx.triggered: return noUpd.by(2)
 
     # Check if any button was actually clicked
-    if not any(clks): return noUpd, noUpd
+    if not any(clks): return noUpd.by(2)
 
     now = Now.fromDict(dta_now)
 
@@ -604,13 +613,13 @@ def sim_OnSwitchViewGroup(clks, dta_now):
 
     if DEBUG: lg.info(f"[sim:vgrp] Loaded {len(now.sim.assCur)} assets for group")
 
-    return now.toDict(), "tab-current"  # Switch to current tab
+    return now.toDict(), k.tabCur  # Switch to current tab
 
 
 #========================================================================
 # trigger modal
 #========================================================================
-@callback(
+@cbk(
     [
         out(ks.sto.mdl, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -639,9 +648,9 @@ def sim_OnSwitchViewGroup(clks, dta_now):
     prevent_initial_call=True
 )
 def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRS, ncRA):
-    if not clk_fnd and not clk_clr and not clk_rm and not clk_rs and not clk_ok and not clk_ra: return noUpd, noUpd, noUpd, noUpd
+    if not clk_fnd and not clk_clr and not clk_rm and not clk_rs and not clk_ok and not clk_ra: return noUpd.by(4)
 
-    trgId = getTriggerId()
+    trgId = getTrgId()
 
     now = Now.fromDict(dta_now)
     cnt = Cnt.fromDict(dta_cnt)
@@ -662,7 +671,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
             ti = mgr.getInfo(tsk.id)
             if ti.status in ['pending', 'running']:
                 nfy.warn(f"[similar] Task already running: {tsk.id}")
-                return noUpd, noUpd, noUpd, noUpd
+                return noUpd.by(4)
             # lg.info(f"[similar] Clearing completed task: {tsk.id}")
             tsk.id = None
             tsk.cmd = None
@@ -752,7 +761,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
         cntRs = db.pics.countHasSimIds()
         if cntOk <= 0 and cntRs <= 0:
             nfy.warn(f"[similar] DB does not contain any similarity records")
-            return noUpd, nfy.toDict(), noUpd, noUpd
+            return noUpd, nfy.toDict(), noUpd.by(2)
 
         mdl.reset()
         mdl.id = ks.pg.similar
@@ -770,7 +779,6 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
             nfy.error("No vector data to process")
             now.sim.clearAll()
             return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
-
 
         thMin = db.dto.simMin
         thMax = db.dto.simMax
@@ -908,6 +916,8 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
     try:
         assetId = now.sim.assId
+        simIds = []
+        doneIds = []
 
         if not assetId and tsk.args.get('assetId'):
             lg.info(f"[sim:find] search from task args assetId[{assetId}]")
@@ -925,6 +935,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         lg.info(f"[sim:find] search assetId[{assetId}] thresholds[{thMin:.2f}-{thMax:.2f}]")
 
         processedCount = 0
+        pgAll = 0
         while True:
             progressMsg = f"[sim:find] Searching #{asset.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
             if processedCount > 0:
@@ -980,9 +991,6 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             simIds = [i.id for i in infos if not i.isSelf]
             doneIds = {asset.id}
 
-            pgBse = 10.0
-            pgMax = 90.0
-
             pgAll = len(simIds)
             if pgAll == 0:
                 lg.info(f"[sim:find] NoFound #{asset.autoId}")
@@ -1020,6 +1028,8 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             break
 
         cntDone = 0
+        pgBse = 10.0
+        pgMax = 90.0
 
         # looping find all childs
         while simIds:
@@ -1056,7 +1066,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         now.sim.assId = asset.id
         now.sim.assCur = db.pics.getSimGroup(asset.id)
         now.sim.assSelect = []
-        now.sim.activeTab = "tab-current"
+        now.sim.activeTab = k.tabCur
 
         lg.info(f"[sim:find] done, asset #{asset.autoId}")
 
@@ -1110,7 +1120,7 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
         now.sim.clearAll()
 
         if not db.dto.autoNext:
-            now.sim.activeTab = "tab-pending"
+            now.sim.activeTab = k.tabPnd
         else:
             queueNext(sto)
 
@@ -1155,7 +1165,7 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
         now.sim.clearAll()
 
         if not db.dto.autoNext:
-            now.sim.activeTab = "tab-pending"
+            now.sim.activeTab = k.tabPnd
         else:
             queueNext(sto)
 
@@ -1184,7 +1194,7 @@ def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
         now.sim.clearAll()
 
         if not db.dto.autoNext:
-            now.sim.activeTab = "tab-pending"
+            now.sim.activeTab = k.tabPnd
         else:
             queueNext(sto)
 
@@ -1215,7 +1225,7 @@ def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
         now.sim.clearAll()
 
         if not db.dto.autoNext:
-            now.sim.activeTab = "tab-pending"
+            now.sim.activeTab = k.tabPnd
         else:
             queueNext(sto)
 

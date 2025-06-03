@@ -1,4 +1,4 @@
-from dsh import htm, dcc, dbc, inp, out, ste, callback, noUpd
+from dsh import htm, dcc, dbc, inp, out, ste, cbk, noUpd
 
 from util import log
 
@@ -45,17 +45,17 @@ def renderCard():
                 htm.Div([
                     dbc.Checkbox(id=k.id(k.autoNxt), label="Auto Find Next", value=db.dto.autoNext),
                     dbc.Checkbox(id=k.id(k.shGdInfo), label="Show Grid Info", value=db.dto.showGridInfo),
-                    dbc.Checkbox(id=k.id(k.simIncRelGrp), label="Include Relates", value=db.dto.simIncRelGrp),
+                    dbc.Checkbox(id=k.id(k.simIncRelGrp), label="Include Related", value=db.dto.simIncRelGrp),
                 ], className="icbxs mt-2 mb-2"),
                 htm.Ul([
-                    htm.Li([htm.B("Inlcude Relates:"), htm.Br(), "在顯示相似群組的時候，同時帶入接近的相關群組，選擇此選項將會同時帶入許多照片，請小心使用"], className="text-muted")
+                    htm.Li([htm.B("Inlcude Related: "), "Include nearby related groups (may load many photos)"], className="text-muted")
                 ])
             ], className="irow"),
         ])
     ], className="mb-0")
 
 
-@callback(
+@cbk(
     [
         out(ks.sto.now, "data", allow_duplicate=True),
     ],
