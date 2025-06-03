@@ -285,18 +285,18 @@ def mdlImg_OnSelectClicked(n_clicks, dta_now, dta_mdl):
     curAss = mdl.args[mdl.curIdx]
     assId = curAss.get('id')
 
-    if not assId or not now.pg.sim.assCur:
+    if not assId or not now.sim.assCur:
         return noUpd, noUpd, noUpd, noUpd
 
-    for ass in now.pg.sim.assCur:
+    for ass in now.sim.assCur:
         if ass.id == assId:
             ass.selected = not ass.selected
             lg.info(f'[mdlImg:select] toggled: {ass.autoId}, selected: {ass.selected}')
             mdl.args[mdl.curIdx]['selected'] = ass.selected
             break
 
-    selected = [ass for ass in now.pg.sim.assCur if ass.selected]
-    now.pg.sim.assSelect = selected
+    selected = [ass for ass in now.sim.assCur if ass.selected]
+    now.sim.assSelect = selected
 
     btnText = "✅ Selected" if curAss.get('selected', False) else "◻️ Select"
     btnColor = "success" if curAss.get('selected', False) else "primary"

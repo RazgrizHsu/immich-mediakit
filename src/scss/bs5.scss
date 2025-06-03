@@ -45,14 +45,15 @@ a {
 }
 
 .form-control, .form-select, .form-check-input, input, select, textarea {
-	background-color:#484848 !important;
-	border:var(--bs-border-width) var(--bs-border-style) #666666 !important;
+	background-color:#2D4A69 !important;
+	border:1px solid #3CABD6 !important;
 	color:#FFFFFF !important;
+	box-shadow:0 0 0 2px #FFFFFF22 !important;
 
 	&:focus {
 		background-color:#484848 !important;
 		color:#FFFFFF !important;
-		border-color:#3772FF !important;
+		border-color:#4ACDFF !important;
 		box-shadow:0 0 0 0.25rem rgba(55, 114, 255, 0.25) !important;
 	}
 }
@@ -176,7 +177,7 @@ select {
 
 	&-muted {
 
-		color:color-mix(in srgb, var(--dark-bs) 50%, white) !important;
+		color:color-mix(in srgb, var(--dark-bs) 38%, white) !important;
 	}
 
 	&-white {
@@ -528,5 +529,16 @@ select {
 
 	&-dark {
 		@include colors(var(--dark-bs), white);
+	}
+}
+
+
+
+.card{
+	&-header {
+		font-size: 15px;
+	}
+	&-body{
+		padding: 10px 15px 10px 15px;
 	}
 }

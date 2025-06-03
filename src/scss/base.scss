@@ -56,7 +56,7 @@
 	--dark-bs:#333333;
 	--dark-dk:#2D2D2D;
 	--dark-dkr:#222222;
-	--dark-lig:#444444;
+	--dark-lig:#555555;
 	--nav-bs:#0F79A1;
 	--nav-hov:#1A95C3;
 	--nav-act:#085C7C;
@@ -84,6 +84,10 @@
 	--shadow-box-white:0 0px 2px rgba(255, 255, 255, 0.67);
 }
 
+ul {
+	margin-bottom: 0;
+	padding-left: 1rem;
+}
 
 div {
 	.inline {

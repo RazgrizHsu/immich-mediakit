@@ -35,16 +35,6 @@ body {
 }
 
 @media (max-width:768px) {
-	.sidebar-column {
-		margin-bottom:20px;
-		min-height:auto;
-	}
-
-	.notification-container {
-		width:90%;
-		right:5%;
-	}
-
 	.image-grid {
 		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 	}
@@ -57,18 +47,23 @@ body {
 .sidebar {
 
 	position:relative;
-	width:0px;
-	height:0px;
+	width:0;
+	height:0;
+
+	> div:first-child {
+		margin-top:29px;
+	}
 
 	> div {
-		//border: red dotted 2px;
+		margin-top:18px;
+		margin-left:20px;
 		width:250px;
-		margin:28px 0 0 20px;
 
 		small {
 			font-size:12px;
 		}
 	}
+
 }
 
 .page {
@@ -100,6 +95,12 @@ body {
 		align-items:flex-start;
 		gap:$gy $gx;
 		padding:$pad;
+
+		.body-header {
+			display:flex;
+			justify-content:space-between;
+			margin:0 10px 6px 10px;
+		}
 
 		> .main {
 			flex:0 0 calc(100vw - #{$spac});
@@ -207,27 +208,9 @@ body {
 	}
 }
 
-.notification-container {
-	position:fixed;
-	bottom:20px;
-	left:20px;
-	width:350px;
-	z-index:1000;
-	max-height:80vh;
-	overflow-y:auto;
-}
 
 .alert.fade {
 	transition:opacity 0.5s linear !important;
-}
-
-.sidebar-column {
-	min-height:calc(100vh - 200px);
-	height:100%;
-}
-
-.content-column {
-	min-height:calc(100vh - 200px);
 }
 
 
@@ -454,15 +437,15 @@ body {
 		height:100px;
 		width:96%;
 
-		gap: 10px;
+		gap:10px;
 
 		span, button {
-			box-shadow: 0 0 5px #1F5C92;
+			box-shadow:0 0 5px #1F5C92;
 		}
 
 		span {
-			font-size: 20px;
-			padding: 5px 20px;
+			font-size:20px;
+			padding:5px 20px;
 		}
 
 	}
@@ -742,6 +725,8 @@ body {
 		display:flex;
 		justify-content:space-between;
 
+		margin-bottom:10px;
+
 		.left {
 			display:flex;
 		}
@@ -885,6 +870,25 @@ body {
 
 	&-body {
 		color:#E0E0E0;
+	}
+
+	.irow {
+		margin:0;
+
+		&:not(:last-child) {
+			border-bottom:1px solid #888888AA;
+			padding-bottom:8px; // 加這行
+		}
+
+		&:nth-child(n+2) {
+			margin-top: 10px;
+		}
+	}
+
+	.icbxs {
+		> div {
+			margin-right:10px;
+		}
 	}
 }
 
