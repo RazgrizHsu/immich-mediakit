@@ -10,7 +10,7 @@ from mod import mapFns
 from ui import gvSim as gvs
 from mod import models, tskSvc
 from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk
-from ui import pager, settings
+from ui import pager, cardSets
 
 lg = log.get(__name__)
 
@@ -97,7 +97,7 @@ def layout(autoId=None, **kwargs):
 
             dbc.Col([
 
-                settings.renderCard(),
+                cardSets.renderCard(),
 
                 dbc.Row([
                     dbc.Col([
@@ -469,9 +469,13 @@ def sim_Load(dta_now, dta_nfy):
         lg.info(f"[sim:load] pend reload, idx[{pgr.idx}] size[{pgr.size}] got[{len(paged)}]")
         now.sim.assPend = paged
 
-    gvPnd = gvs.mkPndGrid(now.sim.assPend, onEmpty=[
-        dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
-    ])
+    # Only rebuild gvPnd if pending data changed
+    if needReload:
+        gvPnd = gvs.mkPndGrid(now.sim.assPend, onEmpty=[
+            dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
+        ])
+    else:
+        gvPnd = noUpd
 
     # Update pending tab state based on cntPn
     tabDisabled = cntPn < 1
@@ -507,24 +511,33 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
 
-    selected = []
-
     if ctx.triggered and now.sim.assCur:
         trgId = ctx.triggered_id
-
         tid = trgId['id']
-        # lg.info(f"[sim:select] selected[{tid}]")
 
+        # 找到被點擊的資產並切換選擇狀態
+        targetAss = None
         for ass in now.sim.assCur:
             if ass.id == tid:
                 ass.selected = not ass.selected
+                targetAss = ass
                 lg.info(f'[header-click] toggled: {ass.autoId}, selected: {ass.selected}')
+                break
 
-            if ass.selected:
-                selected.append(ass)
+        if targetAss:
+            # 增量更新 assSelect
+            if not now.sim.assSelect:
+                now.sim.assSelect = []
 
-    lg.info(f'[sim:select] Selected: {len(selected)}/{len(now.sim.assCur)}')
-    now.sim.assSelect = selected
+            if targetAss.selected:
+                # 新增到選擇清單
+                if not any(a.id == targetAss.id for a in now.sim.assSelect):
+                    now.sim.assSelect.append(targetAss)
+            else:
+                # 從選擇清單移除
+                now.sim.assSelect = [a for a in now.sim.assSelect if a.id != targetAss.id]
+
+            lg.info(f'[sim:select] Selected: {len(now.sim.assSelect)}/{len(now.sim.assCur)}')
 
     return now.toDict()
 

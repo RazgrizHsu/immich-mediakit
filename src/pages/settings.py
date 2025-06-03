@@ -1,7 +1,10 @@
+
 from conf import ks, envs
 from dsh import dash, htm, dbc, dcc
 from util import log
 import db
+
+from ui import cardSets
 
 lg = log.get(__name__)
 
@@ -71,27 +74,9 @@ def layout():
 
 
             htm.Div([
-                dbc.Card([
-                    dbc.CardHeader([
-                        "Similar Settings"
-                    ]),
-                    dbc.CardBody([
-                        htm.Div([
-                            htm.Small("Threshold Range", className="text-muted"),
-                            htm.Div([
-                                dcc.RangeSlider(
-                                    id="test", min=0.5, max=1, step=0.01, marks=ks.defs.thMarks,
-                                    value=[db.dto.simMin, db.dto.simMax],
-                                    tooltip={
-                                        "placement": "top", "always_visible": True,
-                                        "style": {"padding": "3px 5px 3px 5px", "fontSize": "15px"},
-                                    },
-                                ),
-                            ],
-                            className="w-75"),
-                        ], className="d-flex justify-content-between align-items-center py-2 border-bottom"),
-                    ])
-                ])
+
+                cardSets.renderCard()
+
             ], className="border-0 shadow-sm")
 
         ], className="row"),

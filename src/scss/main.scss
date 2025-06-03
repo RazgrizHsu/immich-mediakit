@@ -881,8 +881,16 @@ body {
 		}
 
 		&:nth-child(n+2) {
-			margin-top: 10px;
+			margin-top:10px;
 		}
+
+
+		li {
+			b { font-size:15px; }
+
+			font-size:12px;
+		}
+
 	}
 
 	.icbxs {

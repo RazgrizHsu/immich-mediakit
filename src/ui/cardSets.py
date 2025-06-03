@@ -1,4 +1,4 @@
-from dsh import htm, dcc, dbc, inp, out, ste, callback
+from dsh import htm, dcc, dbc, inp, out, ste, callback, noUpd
 
 from util import log
 
@@ -6,12 +6,13 @@ lg = log.get(__name__)
 
 from conf import ks, co
 import db
-
+from mod import models
 
 class k:
     ths = "thresholds"
     autoNxt = "autoNext"
     shGdInfo = "showGridInfo"
+    simIncRelGrp = "incRelGrp"
 
     @staticmethod
     def id(name):
@@ -44,25 +45,41 @@ def renderCard():
                 htm.Div([
                     dbc.Checkbox(id=k.id(k.autoNxt), label="Auto Find Next", value=db.dto.autoNext),
                     dbc.Checkbox(id=k.id(k.shGdInfo), label="Show Grid Info", value=db.dto.showGridInfo),
-                ], className="icbxs mt-2 mb-1"),
+                    dbc.Checkbox(id=k.id(k.simIncRelGrp), label="Include Relates", value=db.dto.simIncRelGrp),
+                ], className="icbxs mt-2 mb-2"),
+                htm.Ul([
+                    htm.Li([htm.B("Inlcude Relates:"), htm.Br(), "在顯示相似群組的時候，同時帶入接近的相關群組，選擇此選項將會同時帶入許多照片，請小心使用"], className="text-muted")
+                ])
             ], className="irow"),
         ])
     ], className="mb-0")
 
 
 @callback(
-    [],
+    [
+        out(ks.sto.now, "data", allow_duplicate=True),
+    ],
     inp(k.id(k.ths), "value"),
     inp(k.id(k.autoNxt), "value"),
     inp(k.id(k.shGdInfo), "value"),
+    ste(ks.sto.now, "data"),
+    prevent_initial_call=True
 )
-def settings_ChgThs(ths, auNxt, shGdInfo):
+def settings_ChgThs(ths, auNxt, shGdInfo, dta_now):
+    retNow = noUpd
+
+    now = models.Now.fromDict(dta_now)
     mi, mx = ths
 
     db.dto.simMin = co.vad.float(mi, 0.93, 0.50, 0.99)
     db.dto.simMax = co.vad.float(mx, 1.00, 0.51, 1.00)
 
     db.dto.autoNext = auNxt
-    db.dto.showGridInfo = shGdInfo
+
+    if db.dto.showGridInfo != shGdInfo:
+        db.dto.showGridInfo = shGdInfo
+        retNow = now.toDict()
 
     lg.info(f"[settings] changed: {ths}, {auNxt}, {shGdInfo}")
+
+    return [retNow]

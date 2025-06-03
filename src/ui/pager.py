@@ -47,7 +47,7 @@ def createStore(
     ]
 
 
-def createPager(pgId: str, idx: int = 0, className: str = None, showInfo: bool = True, avFirstLast: bool = True, avPrevNext: bool = True, btnSize: int = 5, page: int = 1, size: int = 20, total: int = 0) -> List:
+def createPager(pgId: str, idx: int = 0, className: str = None, showInfo: bool = True, avFirstLast: bool = True, avPrevNext: bool = True, btnSize: int = 7, page: int = 1, size: int = 20, total: int = 0) -> List:
     htms = _buildUI(
         pgrId=pgId,
         idx=idx,
