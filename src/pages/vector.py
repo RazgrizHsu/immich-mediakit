@@ -1,6 +1,6 @@
 import db
 from conf import ks
-from dsh import dash, htm, callback, dbc, inp, out, ste, getTriggerId, noUpd
+from dsh import dash, htm, cbk, dbc, inp, out, ste, getTrgId, noUpd
 from util import log
 from mod import models, mapFns, tskSvc
 
@@ -97,7 +97,7 @@ def layout():
 #========================================================================
 # Page initialization
 #========================================================================
-@callback(
+@cbk(
     [
         out(K.btnDoVec, "children"),
         out(K.btnDoVec, "disabled"),
@@ -137,7 +137,7 @@ def vec_OnInit(dta_cnt):
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(K.btnDoVec, "children", allow_duplicate=True),
         out(K.btnDoVec, "disabled", allow_duplicate=True),
@@ -153,8 +153,8 @@ def vec_OnInit(dta_cnt):
     prevent_initial_call=True
 )
 def vec_Status(dta_tsk, dta_cnt):
-    # trgId = getTriggerId()
-    # if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd, noUpd, noUpd
+    # trgId = getTrgId()
+    # if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd.rep(5)
 
     tsk = models.Tsk.fromDict(dta_tsk)
     cnt = models.Cnt.fromDict(dta_cnt)
@@ -177,7 +177,7 @@ def vec_Status(dta_tsk, dta_cnt):
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(ks.sto.mdl, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -198,13 +198,13 @@ def vec_Status(dta_tsk, dta_cnt):
     prevent_initial_call=True
 )
 def vec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy):
-    if not nclk_proc and not nclk_clear: return noUpd, noUpd, noUpd
+    if not nclk_proc and not nclk_clear: return noUpd.by(3)
 
-    trgId = getTriggerId()
-    if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd, noUpd, noUpd
+    trgId = getTrgId()
+    if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd.by(3)
 
     tsk = models.Tsk.fromDict(dta_tsk)
-    if tsk.id: return noUpd, noUpd, noUpd
+    if tsk.id: return noUpd.by(3)
 
     now = models.Now.fromDict(dta_now)
     cnt = models.Cnt.fromDict(dta_cnt)

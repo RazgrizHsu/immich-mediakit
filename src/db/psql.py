@@ -149,10 +149,10 @@ def count(usrId=None, assetType="IMAGE"):
         raise mkErr(f"Failed to count assets", e)
 
 
-# ------------------------------------------------------
+#------------------------------------------------------
 # 因為db裡的值會帶upload/ (經由web上傳的)
 # 要對應到真實路徑, 必需要把upload替換為實際路徑
-# ------------------------------------------------------
+#------------------------------------------------------
 def fixPrefix(path: Optional[str]):
     if path and path.startswith('upload/'): return path[7:]
     return path
@@ -215,9 +215,9 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: models.IFnProg = None
                 # lg.info(f"Found {cntAll} {asType.lower()} assets...")
                 onUpdate(15, f"start querying {cntAll}")
 
-                # ----------------------------------------------------------------
+                #----------------------------------------------------------------
                 # query assets
-                # ----------------------------------------------------------------
+                #----------------------------------------------------------------
                 sql = "Select * From assets Where status = 'active' And type = %s"
 
                 params = [asType]
@@ -261,9 +261,9 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: models.IFnProg = None
 
                 onUpdate(30, "main assets done... query for files..")
 
-                # ----------------------------------------------------------------
+                #----------------------------------------------------------------
                 # query asset files
-                # ----------------------------------------------------------------
+                #----------------------------------------------------------------
                 flsSql = """
                    Select "assetId", type, path
                    From asset_files
@@ -291,9 +291,9 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: models.IFnProg = None
                     if assetId not in dictFiles: dictFiles[assetId] = {}
                     dictFiles[assetId][typ] = path
 
-                # ----------------------------------------------------------------
+                #----------------------------------------------------------------
                 # query exif
-                # ----------------------------------------------------------------
+                #----------------------------------------------------------------
                 exifSql = """
                     Select *
                     From exif
@@ -327,9 +327,9 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: models.IFnProg = None
 
                     chunkPct = min((idx + 1) * szChunk, len(assetIds))
 
-                # ----------------------------------------------------------------
+                #----------------------------------------------------------------
                 # combine & fetch thumbnail image
-                # ----------------------------------------------------------------
+                #----------------------------------------------------------------
                 onUpdate(45, "files ready, combine data...")
 
                 cntOk = 0

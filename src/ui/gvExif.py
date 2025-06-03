@@ -27,13 +27,8 @@ def mkExifGrid( dicExif:dict ):
             display_key = ks.defs.exif.get(key, key)
 
             value = dicExif[key]
-            if key == "fileSizeInByte" and isinstance(value, (int, float)):
-                if value > 1024 * 1024:
-                    display_value = f"{value / (1024 * 1024):.2f} MB"
-                elif value > 1024:
-                    display_value = f"{value / 1024:.2f} KB"
-                else:
-                    display_value = f"{value} B"
+            if key == "fileSizeInByte":
+                display_value = co.fmt.size(value)
             elif key == "focalLength" and isinstance(value, (int, float)):
                 display_value = f"{value} mm"
             elif key == "fNumber" and isinstance(value, (int, float)):

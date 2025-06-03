@@ -1,5 +1,5 @@
 from conf import ks
-from dsh import htm, dbc, inp, out, callback
+from dsh import htm, dbc, inp, out, cbk
 from util import log
 from mod import tsk, models
 
@@ -91,7 +91,7 @@ def renderBody(top, bottom):
 
 #========================================================================
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     out(k.nav.vec, 'disabled'),
     out(k.nav.sim, 'disabled'),
     out(k.nav.view, 'disabled'),

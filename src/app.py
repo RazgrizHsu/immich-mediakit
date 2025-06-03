@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from dsh import dash, htm, dcc, dbc
 from dash_extensions import WebSocket
 from util import log, err
-from mod import notify, modalImg, session, modal, tsk
+from mod import notify, mdlImg, session, mdl, tsk
 from mod.mgr import tskSvc
 import conf, db
 
@@ -53,8 +53,8 @@ app.layout = htm.Div([
 
     notify.render(),
     session.render(),
-    *modal.render(),
-    *modalImg.render(),
+    *mdl.render(),
+    *mdlImg.render(),
 
     ui.renderHeader(),
 

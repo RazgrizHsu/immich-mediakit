@@ -1,4 +1,4 @@
-from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
+from dsh import dash, htm, dcc, cbk, dbc, inp, out, ste, getTrgId, noUpd
 from util import log
 from mod import models, tskSvc
 import db
@@ -108,7 +108,7 @@ dis_show = {"display": "block"}
 dis_hide = {"display": "none"}
 
 #========================================================================
-@callback(
+@cbk(
     [
         out(k.selectUsr, "options"),
         out(k.selectUsr, "value"),
@@ -133,7 +133,7 @@ def assets_Init(dta_pi, dta_now):
 #------------------------------------------------------------------------
 # Update button text and enabled status based on selected data source and user
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(k.btnFetch, "children"),
         out(k.btnFetch, "disabled"),
@@ -212,7 +212,7 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(ks.sto.mdl, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True)
@@ -232,15 +232,15 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
     prevent_initial_call=True
 )
 def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
-    if not clk_feh and not clk_clr and not clk_rst: return noUpd, noUpd
+    if not clk_feh and not clk_clr and not clk_rst: return noUpd.by(2)
 
     now = models.Now.fromDict(dta_now)
     mdl = models.Mdl.fromDict(dta_mdl)
     tsk = models.Tsk.fromDict(dta_tsk)
     nfy = models.Nfy.fromDict(dta_nfy)
 
-    if tsk.id: return noUpd, noUpd
-    trgSrc = getTriggerId()
+    if tsk.id: return noUpd.by(2)
+    trgSrc = getTrgId()
 
     if trgSrc == k.btnReset:
         mdl.id = ks.pg.fetch

@@ -5,3 +5,5 @@ ul { margin-bottom: 0; padding-left: 1rem; }
 div .inline { display: inline-block; }
 
 div .txt-AL { text-align: left; }
+
+button { text-decoration: none; }

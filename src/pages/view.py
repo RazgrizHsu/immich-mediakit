@@ -1,6 +1,6 @@
 import db
 from conf import ks
-from dsh import dash, htm, dcc, callback, dbc, inp, out, ste, getTriggerId, noUpd
+from dsh import dash, htm, dcc, cbk, dbc, inp, out, ste, getTrgId, noUpd
 from mod import models
 from mod.models import Pager
 from ui.gv import createGrid
@@ -153,7 +153,7 @@ pager.regCallbacks(K.div.pagerMain)
 #========================================================================
 # Page initialization - initialize user options
 #========================================================================
-@callback(
+@cbk(
     out(K.inp.selectUsrId, "options"),
     [
         inp(ks.sto.cnt, "data"),
@@ -177,7 +177,7 @@ def vw_Init(dta_cnt, dta_now):
 #========================================================================
 # Handle filter changes - reset to page 1
 #========================================================================
-@callback(
+@cbk(
     out(pager.id.store(K.div.pagerMain), "data", allow_duplicate=True),
     [
         inp(K.inp.selectUsrId, "value"),
@@ -216,7 +216,7 @@ def vw_OnFilterChange(
 #========================================================================
 # Handle photo grid loading when pager changes
 #========================================================================
-@callback(
+@cbk(
     out(K.div.grid, "children"),
     [
         inp(pager.id.store(K.div.pagerMain), "data"),

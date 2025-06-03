@@ -1,4 +1,4 @@
-from dsh import htm, dcc, dbc, inp, out, ste, callback
+from dsh import htm, dcc, dbc, inp, out, ste, cbk
 from mod import models
 from conf import ks, envs
 from db import psql
@@ -30,7 +30,7 @@ def layout():
     )
 
 
-@callback(
+@cbk(
     [
         out(k.cardEnv, "children"),
         out(k.cardCnt, "children"),

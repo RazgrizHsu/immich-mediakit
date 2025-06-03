@@ -1,4 +1,4 @@
-from dsh import htm, dbc, inp, out, ste, callback, noUpd, getTriggerId
+from dsh import htm, dbc, inp, out, ste, cbk, noUpd, getTrgId
 from util import log
 from mod import models
 from conf import ks
@@ -23,7 +23,7 @@ def render():
 
 
 #========================================================================
-@callback(
+@cbk(
     [
         out(k.modal, "is_open", allow_duplicate=True),
         out(k.body, "children"),
@@ -40,7 +40,7 @@ def mdl_Status(dta_mdl):
 
     isOpen = mdl.id is not None
 
-    trigId = getTriggerId()
+    trigId = getTrgId()
 
     # lg.info(f"[modal] Trigger[{trigId}] mdl: id[{mdl.id}]")
 
@@ -50,7 +50,7 @@ def mdl_Status(dta_mdl):
 #------------------------------------------------------------------------
 # onclick
 #------------------------------------------------------------------------
-@callback(
+@cbk(
     [
         out(k.modal, "is_open", allow_duplicate=True),
         out(ks.sto.mdl, "data", allow_duplicate=True),
@@ -64,11 +64,11 @@ def mdl_Status(dta_mdl):
     prevent_initial_call=True
 )
 def mdl_OnClick(nclk_ok, nclk_no, dta_mdl):
-    if not nclk_ok and not nclk_no: return noUpd, noUpd, noUpd
+    if not nclk_ok and not nclk_no: return noUpd.by(3)
     mdl = models.Mdl.fromDict(dta_mdl)
     tsk = models.Tsk()
 
-    trigId = getTriggerId()
+    trigId = getTrgId()
 
     # lg.info( f"[modal] Trigger[{trigId}] mdl: id[{mdl.id}]" )
 

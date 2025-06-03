@@ -140,7 +140,7 @@ If you prefer to run without Docker:
    ```
 4. Run the application:
    ```bash
-   python src/app.py
+   python -m src.app
    ```
 
 

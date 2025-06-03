@@ -1,34 +1,43 @@
-document.addEventListener( 'keydown', function ( event ){
+document.addEventListener( 'keydown', function ( ev ){
 	const modal = document.querySelector( '#img-modal' )
 
-	// console.info( `[keydown] event.key[ ${event.key} ]` )
 	if ( modal && modal.parentElement.classList.contains('show') )
 	{
-		if ( event.key === 'ArrowLeft' )
+		if ( ev.key == 'ArrowLeft' || ev.key == 'h' )
 		{
-			event.preventDefault();
+			ev.preventDefault();
 			const btn = document.querySelector( '#btn-img-prev' );
-			if ( btn && btn.style.opacity != '0.3' )
-			{
-				console.info( `[img-pop] click prev` )
-				btn.click();
-			}
-			else {
-				console.info( `[img-pop] no: ${btn}` )
-			}
+			if ( btn && btn.style.opacity != '0.3' ) btn.click();
 		}
-		else if ( event.key === 'ArrowRight' )
+		else if ( ev.key == 'ArrowRight' || ev.key == 'l' )
 		{
-			event.preventDefault();
+			ev.preventDefault();
 			const btn = document.querySelector( '#btn-img-next' );
-			if ( btn && btn.style.opacity != '0.3' )
-			{
-				console.info( `[img-pop] click next` )
-				btn.click();
-			}
-			else {
-				console.info( `[img-pop] no: ${btn}` )
-			}
+			if ( btn && btn.style.opacity != '0.3' ) btn.click();
+		}
+		else if ( ev.key == ' ' )
+		{
+			ev.preventDefault();
+			const btn = document.querySelector( '#btn-img-select' );
+			if ( btn && btn.style.display !== 'none' ) btn.click();
+		}
+		else if ( ev.key == 'Escape' || ev.key == 'q' )
+		{
+			ev.preventDefault();
+			const btn = modal.querySelector( '.btn-close' );
+			if ( btn ) btn.click();
+		}
+		else if ( ev.key == 'm' )
+		{
+			ev.preventDefault();
+			const btn = modal.querySelector( '#btn-img-mode' );
+			if ( btn ) btn.click();
+		}
+		else if ( ev.key == '?' )
+		{
+			ev.preventDefault();
+			const btn = modal.querySelector( '#btn-img-help' );
+			if ( btn ) btn.click();
 		}
 	}
 } );
