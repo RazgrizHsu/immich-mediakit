@@ -407,7 +407,7 @@ def getAssetsByGID(gid: int) -> list[models.Asset]:
         return []
 
 
-def getSimGroup(assId: str) -> Optional[List[models.Asset]]:
+def getSimGroup(assId: str, incRelGrp = False) -> Optional[List[models.Asset]]:
     try:
         with mkConn() as conn:
             c = conn.cursor()
@@ -421,6 +421,10 @@ def getSimGroup(assId: str) -> Optional[List[models.Asset]]:
             rst = [rootAsset]
 
             if not rootAsset.simInfos or len(rootAsset.simInfos) <= 1: return rst
+
+            # todo:
+            #  如果選擇帶入incRelGrp，應該找出所有simInfos中該id(assetId)同simGID的資料
+            #  但這樣要一併調整ui，因為現在ui是基於當前主圖來顯示score
 
             simIds = [info.id for info in rootAsset.simInfos]
             if not simIds: return [rootAsset]

@@ -42,14 +42,14 @@ def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=
         }
         styItem = {}
 
-    rows = [htm.Div(mkImgCardSim(a, rootSI, isMain=(a.id == rootId)), style=styItem) for a in assets]
+    rows = [htm.Div(mkCardSim(a, rootSI, isMain=(a.id == rootId)), style=styItem) for a in assets]
 
     lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
 
     return htm.Div(rows, style=styGrid)
 
 
-def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
+def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.id}" if ass.id else None
@@ -90,7 +90,6 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
                                 htm.Span("score: "),
                                 htm.Span(f"{si.score:.4f}", className="tag lg ms-1")
                             ]
-
                             , className="d-flex justify-content-end")
                 ])
             ], id={"type": "card-select", "id": assId}),
@@ -104,7 +103,7 @@ def mkImgCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
             ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
             ,
             htm.Div([
-                htm.Span(f"#{ass.autoId}", className="tag"),
+                htm.Span(f"#{ass.autoId} @{ass.simGID}", className="tag"),
             ]),
             htm.Div([
                 htm.Span(f"{imgW}", className="tag lg"),
@@ -288,16 +287,16 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
         }
         styItem = {}
 
-    rows = [htm.Div(mkImgCardPending(a), style=styItem) for a in assets]
+    rows = [htm.Div(mkCardPnd(a), style=styItem) for a in assets]
 
-    lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
+    lg.info(f"[sim:gvPnd] assets[{len(assets)}] rows[{len(rows)}]")
 
     return htm.Div(rows, style=styGrid)
 
 
 
 
-def mkImgCardPending(ass: models.Asset, showRelated=True):
+def mkCardPnd(ass: models.Asset, showRelated=True):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"

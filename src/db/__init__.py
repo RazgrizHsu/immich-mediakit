@@ -93,6 +93,7 @@ class DtoSets:
 
     autoNext:bool = AutoDbField('autoNext', bool, True)
     showGridInfo:bool = AutoDbField('showGridInfo', bool, True)
+    simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False)
 
     @classmethod
     def get(cls, key, default=None):
