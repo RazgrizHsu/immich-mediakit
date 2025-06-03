@@ -191,7 +191,7 @@ def layout(autoId=None, **kwargs):
                         children=[
                             htm.Div([
                                 # top pager
-                                *pager.createPager(pgId=k.pagerPnd, idx=0, className="mb-3"),
+                                *pager.createPager(pgId=k.pagerPnd, idx=0, btnSize=9, className="mb-3"),
 
                                 # Grid view
                                 # dbc.Spinner(
@@ -200,10 +200,10 @@ def layout(autoId=None, **kwargs):
                                 # ),
 
                                 # bottom pager
-                                *pager.createPager(pgId=k.pagerPnd, idx=1, className="mt-3"),
+                                *pager.createPager(pgId=k.pagerPnd, idx=1, btnSize=9, className="mt-3"),
 
                                 # Main pager (store only)
-                                *pager.createStore(pgId=k.pagerPnd, page=1, size=20, total=0),
+                                *pager.createStore(pgId=k.pagerPnd),
                             ], className="text-center")
                         ]
                     )
@@ -428,6 +428,8 @@ def sim_Load(dta_now, dta_nfy):
     #                     # 將群組資訊存儲在第一個元素（主圖）中
     #                     ra.groupAssets = groupAssets
     #                     relatedGroups.append(ra)
+
+    assRoot = next( a for a in now.sim.assCur if a.id == now.sim.assId )
 
     gvSim = gvs.mkGrid(now.sim.assCur, now.sim.assId, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),

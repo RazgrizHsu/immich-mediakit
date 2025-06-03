@@ -8,7 +8,7 @@ lg = log.get(__name__)
 
 from ui import gvExif
 
-def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=None):
+def mkGrid(assets: list[models.Asset], root: str, minW=230, maxW=300, onEmpty=None):
     if not assets or len(assets) == 0:
         if onEmpty:
             if isinstance(onEmpty, str):
@@ -17,12 +17,12 @@ def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=
                 return onEmpty
         return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
 
-    if not rootId:
+    if not root:
         return htm.Div(dbc.Alert(f"non-rootId, assets:{assets}", color="warning"), className="text-center")
 
-    rootSI = next((a.simInfos for a in assets if a.id == rootId), None)
+    rootSI = next((a.simInfos for a in assets if a.id == root), None)
     if not rootSI:
-        msg = f"[mkGrid] no rootSI for rootId[ {rootId[:8]} ], ids: {[a.id[:8] for a in assets]}"
+        msg = f"[mkGrid] no rootSI for rootId[ {root[:8]} ], ids: {[a.id[:8] for a in assets]}"
         lg.info(msg)
         return htm.Div(f"-- {msg} --")
 
@@ -44,7 +44,7 @@ def mkGrid(assets: list[models.Asset], rootId: str, minW=230, maxW=300, onEmpty=
         }
         styItem = {}
 
-    rows = [htm.Div(mkCardSim(a, rootSI, isMain=(a.id == rootId)), style=styItem) for a in assets]
+    rows = [htm.Div(mkCardSim(a, rootSI, isMain=(a.id == root)), style=styItem) for a in assets]
 
     lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
 
@@ -75,8 +75,7 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
     imgH = exi.exifImageHeight
 
     cssClass = f"h-100 sim {cssIds}"
-    if isMain:
-        cssClass += " main"
+    if isMain: cssClass += " main"
 
     return dbc.Card([
         dbc.CardHeader(
@@ -91,8 +90,14 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
                         ]
                         if isMain else
                         [
+                            htm.Span(f"{si.score:.5f}", className="tag lg ms-1"),
+                            htm.Span(">>", className="tag sm second no-border"),
+                            htm.Span(f"{si.score:.5f}", className="tag lg ms-1")
+                        ]
+                        if db.dto.simIncRelGrp else
+                        [
                             htm.Span("score: ", className="tag sm second no-border"),
-                            htm.Span(f"{si.score:.4f}", className="tag lg ms-1")
+                            htm.Span(f"{si.score:.5f}", className="tag lg ms-1")
                         ]
                     )
                 ])
@@ -143,7 +148,7 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
             #     )
             # ], className="d-flex justify-content-between align-items-center"),
 
-        ], className="p-2"),
+        ], className="p-0"),
     ], className=cssClass)
 
 

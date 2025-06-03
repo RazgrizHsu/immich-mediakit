@@ -16,7 +16,7 @@ body {
 }
 
 .hide {
-	display: none;
+	display:none;
 }
 
 
@@ -472,7 +472,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	padding:0 4px 0 4px;
 	margin:1px 3px;
 	border-radius:5px;
-	font-size:12px!important;
+	font-size:12px !important;
 	vertical-align:middle;
 	@include bg-gradient(#2D4A69);
 
@@ -842,6 +842,13 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			opacity:0.5;
 			cursor:not-allowed;
 		}
+
+		&:not(.disabled) .lnk:hover {
+			background-color:#62C0FF;
+			border-color:#667EEA;
+			color:#FFFFFF;
+			text-shadow:0 0 3px #260564, 0 0 3px #2D3748;
+		}
 	}
 
 	.lnk {
@@ -855,12 +862,14 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		color:#E2E8F0;
 		cursor:pointer;
 
-		&:hover {
-			background-color:#62C0FF;
-			border-color:#667EEA;
-			color:#FFFFFF;
-			text-shadow:0 0 3px #260564, 0 0 3px #2D3748;
-		}
+		//&:hover {
+		//	background-color:#62C0FF;
+		//	border-color:#667EEA;
+		//	color:#FFFFFF;
+		//	text-shadow:0 0 3px #260564, 0 0 3px #2D3748;
+		//}
+
+
 
 		&:focus {
 			box-shadow:0 0 0 0.2rem rgba(102, 126, 234, 0.25);
@@ -994,7 +1003,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	}
 
 
-	border:transparent solid 3px;
+	border:#555555 solid 3px;
 
 	&.has-related {
 		border:2px solid var(--warn-bs) !important;
