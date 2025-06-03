@@ -62,10 +62,11 @@ def renderCard():
     inp(k.id(k.ths), "value"),
     inp(k.id(k.autoNxt), "value"),
     inp(k.id(k.shGdInfo), "value"),
+    inp(k.id(k.simIncRelGrp), "value"),
     ste(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def settings_ChgThs(ths, auNxt, shGdInfo, dta_now):
+def settings_ChgThs(ths, auNxt, shGdInfo, incRelGrp, dta_now):
     retNow = noUpd
 
     now = models.Now.fromDict(dta_now)
@@ -78,7 +79,11 @@ def settings_ChgThs(ths, auNxt, shGdInfo, dta_now):
 
     if db.dto.showGridInfo != shGdInfo:
         db.dto.showGridInfo = shGdInfo
-        retNow = now.toDict()
+        if retNow == noUpd: retNow = now.toDict()
+
+    if db.dto.simIncRelGrp != incRelGrp:
+        db.dto.simIncRelGrp = incRelGrp
+        if retNow == noUpd: retNow = now.toDict()
 
     lg.info(f"[settings] changed: {ths}, {auNxt}, {shGdInfo}")
 
