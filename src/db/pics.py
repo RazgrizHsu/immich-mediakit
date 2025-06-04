@@ -323,8 +323,6 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
         assId = asset.get('id', None)
         if not assId: return False
 
-        if not isinstance(assId, str): assId = str(assId)
-
         exifInfo = asset.get('exifInfo', {})
         jsonExif = None
         if exifInfo:

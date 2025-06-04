@@ -88,7 +88,7 @@ def deleteBy(aids: list[int]):
 
         rst = conn.delete(
             collection_name=keyColl,
-            points_selector=qmod.PointIdsList(points=[str(aid) for aid in aids])
+            points_selector=qmod.PointIdsList(points=aids)
         )
 
         lg.info(f"[vec] delete status[{rst}] aids: {aids}")
@@ -114,14 +114,14 @@ def save(aid: int, vector: np.ndarray, confirm=True):
         # Convert autoId to string for Qdrant
         conn.upsert(
             collection_name=keyColl,
-            points=[qmod.PointStruct(id=str(aid), vector=vecList, payload={"aid": aid})]
+            points=[qmod.PointStruct(id=aid, vector=vecList, payload={"aid": aid})]
         )
 
         if confirm:
             try:
                 stored = conn.retrieve(
                     collection_name=keyColl,
-                    ids=[str(aid)], with_vectors=True
+                    ids=[aid], with_vectors=True
                 )
                 if not stored: raise RuntimeError(f"[vecs] Failed save vector aid[{aid}]")
                 if not hasattr(stored[0], 'vector') or stored[0].vector is None: raise RuntimeError(f"[vecs] Stored vector is null aid[{aid}]")
@@ -140,7 +140,7 @@ def getBy(aid: int):
 
         dst = conn.retrieve(
             collection_name=keyColl,
-            ids=[str(aid)],
+            ids=[aid],
             with_payload=True, with_vectors=True
         )
 

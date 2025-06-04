@@ -221,7 +221,7 @@ def vec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, dta_t
             mdl.cmd = ks.cmd.vec.toVec
             mdl.msg = f"Begin processing photos[{cnt.ass - cnt.vec}] with quality[{photoQ}] ?"
 
-            db.dto.photoQ = now.photoQ = photoQ
+            db.dto.photoQ = photoQ
 
     elif trgId == K.btnClear:
         if cnt.vec <= 0:
@@ -247,7 +247,7 @@ def vec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
     msg = "[vec] Processing successful"
 
     try:
-        photoQ = now.photoQ if now.photoQ else ks.db.thumbnail
+        photoQ = db.dto.photoQ
 
         doReport(1, f"Initializing with photoQ[{photoQ}]")
 
