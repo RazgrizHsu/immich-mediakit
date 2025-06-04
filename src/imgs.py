@@ -50,21 +50,6 @@ def convert_image_to_rgb(image):
     if image.mode == 'RGBA': return image.convert('RGB')
     return image
 
-def toB64(path):
-    if isinstance(path, str):
-        with open(path, 'rb') as f:
-            image = f.read()
-        return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
-    elif isinstance(path, bytes):
-        return 'data:image/png;base64,' + base64.b64encode(path).decode('utf-8')
-    elif isinstance(path, Image.Image):
-        buffer = BytesIO()
-        path.save(buffer, format="PNG")
-        buffer.seek(0)
-        image_bytes = buffer.getvalue()
-        return 'data:image/png;base64,' + base64.b64encode(image_bytes).decode('utf-8')
-
-    return None
 
 transform = Compose([
     convert_image_to_rgb,
@@ -98,6 +83,23 @@ def extractFeatures(image) -> np.ndarray:
 
     return vec
 
+
+
+def toB64(path):
+    if isinstance(path, str):
+        with open(path, 'rb') as f:
+            image = f.read()
+        return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
+    elif isinstance(path, bytes):
+        return 'data:image/png;base64,' + base64.b64encode(path).decode('utf-8')
+    elif isinstance(path, Image.Image):
+        buffer = BytesIO()
+        path.save(buffer, format="PNG")
+        buffer.seek(0)
+        image_bytes = buffer.getvalue()
+        return 'data:image/png;base64,' + base64.b64encode(image_bytes).decode('utf-8')
+
+    return None
 
 def fixPath(path: Optional[str]):
     if path and not path.startswith(envs.immichPath):

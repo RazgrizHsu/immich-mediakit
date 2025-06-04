@@ -80,7 +80,7 @@ def init():
 
         return True
     except Exception as e:
-        raise mkErr("Failed to initialize duplicate photo database", e)
+        raise mkErr("Failed to initialize pics database", e)
 
 def clearAll():
     try:
@@ -91,7 +91,7 @@ def clearAll():
             conn.commit()
         return init()
     except Exception as e:
-        raise mkErr("Failed to clear database", e)
+        raise mkErr("Failed to clear pics database", e)
 
 
 def clearBy(usrId):
@@ -106,7 +106,7 @@ def clearBy(usrId):
             lg.info(f"[pics] delete userId[ {usrId} ] assets[ {cnt} ]")
             return cnt
     except Exception as e:
-        raise mkErr(f"Failed to del assets by userId[{usrId}]", e)
+        raise mkErr(f"Failed to delete assets by userId[{usrId}]", e)
 
 
 def count(usrId=None):
@@ -122,7 +122,7 @@ def count(usrId=None):
             cnt = c.fetchone()[0]
             return cnt
     except Exception as e:
-        raise mkErr("Failed to get asset count", e)
+        raise mkErr("Failed to get assets count", e)
 
 
 #========================================================================
@@ -138,7 +138,7 @@ def getByAutoId(autoId) -> Optional[models.Asset]:
             asset = models.Asset.fromDB(c, row)
             return asset
     except Exception as e:
-        raise mkErr("Failed to get asset information", e)
+        raise mkErr("Failed to get asset by autoId", e)
 
 def getById(assId) -> Optional[models.Asset]:
     try:
@@ -150,7 +150,7 @@ def getById(assId) -> Optional[models.Asset]:
             asset = models.Asset.fromDB(c, row)
             return asset
     except Exception as e:
-        raise mkErr("Failed to get asset information", e)
+        raise mkErr("Failed to get asset by id", e)
 
 def getAllByUsrId(usrId: str) -> List[models.Asset]:
     try:
@@ -162,7 +162,7 @@ def getAllByUsrId(usrId: str) -> List[models.Asset]:
             assets = [models.Asset.fromDB(c, row) for row in rows]
             return assets
     except Exception as e:
-        raise mkErr(f"Failed to get asset by userId[{usrId}]", e)
+        raise mkErr(f"Failed to get assets by userId[{usrId}]", e)
 
 def getAllByIds(ids: List[str]) -> List[models.Asset]:
     try:
@@ -176,7 +176,7 @@ def getAllByIds(ids: List[str]) -> List[models.Asset]:
             assets = [models.Asset.fromDB(c, row) for row in rows]
             return assets
     except Exception as e:
-        raise mkErr(f"Failed to get asset by ids[{ids}]", e)
+        raise mkErr(f"Failed to get assets by ids[{ids}]", e)
 
 
 def getAll(count=0) -> list[models.Asset]:
@@ -194,7 +194,7 @@ def getAll(count=0) -> list[models.Asset]:
             assets = [models.Asset.fromDB(c, row) for row in rows]
             return assets
     except Exception as e:
-        raise mkErr("Failed to get all asset information", e)
+        raise mkErr("Failed to get all assets", e)
 
 
 def getAllNonVector() -> list[models.Asset]:
@@ -208,7 +208,7 @@ def getAllNonVector() -> list[models.Asset]:
             assets = [models.Asset.fromDB(c, row) for row in rows]
             return assets
     except Exception as e:
-        raise mkErr("Failed to get all asset information", e)
+        raise mkErr("Failed to get non-vector assets", e)
 
 #------------------------------------------------------------------------
 # paged
@@ -308,7 +308,7 @@ def setVectoredBy(asset: models.Asset, done=1, cur: Cursor = None):
                 c.execute("UPDATE assets SET isVectored=? WHERE id = ?", (done, asset.id))
                 conn.commit()
     except Exception as e:
-        raise mkErr(f"Failed to updateVecBy: {asset}", e)
+        raise mkErr(f"Failed to update vector status for asset[{asset.id}]", e)
 
 def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
     try:
@@ -357,7 +357,7 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
 
         return False  # ignore duplicates
     except Exception as e:
-        raise mkErr("Failed to save asset information", e)
+        raise mkErr("Failed to save asset", e)
 
 
 #========================================================================
@@ -368,13 +368,13 @@ def getAnyNonSim() -> Optional[models.Asset]:
     try:
         with mkConn() as conn:
             c = conn.cursor()
-            c.execute("Select * From assets Where isVectored = 1 AND simOk!=1 AND json_array_length(simINfos) == 0")
+            c.execute("Select * From assets Where isVectored = 1 AND simOk!=1 AND json_array_length(simINfos) = 0")
             row = c.fetchone()
             if row is None: return None
             asset = models.Asset.fromDB(c, row)
             return asset
     except Exception as e:
-        raise mkErr("Failed to get asset information", e)
+        raise mkErr("Failed to get non-sim asset", e)
 
 def countSimOk(isOk=0):
     try:
@@ -388,70 +388,7 @@ def countSimOk(isOk=0):
         raise mkErr(f"Failed to count assets with simOk[{isOk}]", e)
 
 
-def getAssetsByGID(gid: int) -> list[models.Asset]:
-    try:
-        with mkConn() as conn:
-            c = conn.cursor()
-            c.execute("""
-                SELECT * FROM assets 
-                WHERE simGID = ? AND json_array_length(simInfos) > 1
-                ORDER BY json_array_length(simInfos) DESC, autoId
-            """, (gid,))
-            assets = []
-            for row in c.fetchall():
-                asset = models.Asset.fromDB(c, row)
-                assets.append(asset)
-            return assets
-    except Exception as e:
-        lg.error(f"Error fetching assets by GID: {str(e)}")
-        return []
-
-
-def getSimGroup(assId: str, incRelGrp = False) -> Optional[List[models.Asset]]:
-    try:
-        with mkConn() as conn:
-            c = conn.cursor()
-            c.execute("SELECT * FROM assets WHERE id = ?", (assId,))
-            row = c.fetchone()
-            if row is None:
-                lg.warn(f"[pics] SimGroup Root asset {assId} not found")
-                return None
-
-            rootAsset = models.Asset.fromDB(c, row)
-            rst = [rootAsset]
-
-            if not rootAsset.simInfos or len(rootAsset.simInfos) <= 1: return rst
-
-            # todo:
-            #  如果選擇帶入incRelGrp，應該找出所有simInfos中該id(assetId)同simGID的資料
-            #  但這樣要一併調整ui，因為現在ui是基於當前主圖來顯示score
-
-            simIds = [info.id for info in rootAsset.simInfos]
-            if not simIds: return [rootAsset]
-
-            qargs = ','.join(['?' for _ in simIds])
-            c.execute(f"SELECT * FROM assets WHERE id IN ({qargs})", simIds)
-
-            rows = c.fetchall()
-
-            assets = [models.Asset.fromDB(c, row) for row in rows]
-
-            assetMap = {asset.id: asset for asset in assets}
-
-            # rootAsset.simInfos score, desc
-            sortAss = []
-            for simInfo in sorted(rootAsset.simInfos, key=lambda x: x.score or 0, reverse=True):
-                if simInfo.id in assetMap:
-                    sortAss.append(assetMap[simInfo.id])
-
-            rst.extend(sortAss)
-
-            return sortAss
-    except Exception as e:
-        raise mkErr(f"Failed to get similar group for root {assId}", e)
-
-
-def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
+def setSimIds(assId: str, infos: List[models.SimInfo], isOk = 0, GID:Optional[int] = 0):
     if not infos or len(infos) <= 0:
         raise RuntimeError(f"Can't setSimIds id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
 
@@ -459,76 +396,18 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk: int = 0):
         with mkConn() as conn:
             c = conn.cursor()
 
-            conn.execute("BEGIN TRANSACTION")
-
             try:
-                c.execute("SELECT id, simGID FROM assets WHERE id = ?", (assId,))
-                curRow = c.fetchone()
-                if not curRow: raise RuntimeError(f"Asset {assId} not found")
+                dictSimInfos = [sim.toDict() for sim in infos] if infos else []
+                sqlGID = GID if GID else 0
+                c.execute("UPDATE assets SET simOk = ?, simInfos = ?, simGID = ? WHERE id = ?", (isOk, json.dumps(dictSimInfos), sqlGID, assId))
 
-                curGID = curRow[1]
-
-                simDicts = [sim.toDict() for sim in infos] if infos else []
-                c.execute("UPDATE assets SET simInfos = ?, simOk = ? WHERE id = ?", (json.dumps(simDicts), isOk, assId))
-
-                highSimIds = [sim.id for sim in infos if sim.score and sim.score > 0.9 and sim.id != assId]
-                if not highSimIds:
-                    conn.commit()
-                    lg.info(f"[sim] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}]")
-                    return True
-
-                highSimIds.append(assId)
-
-                qargs = ','.join(['?' for _ in highSimIds])
-                c.execute(f"SELECT id, simGID, simInfos FROM assets WHERE id IN ({qargs})", highSimIds)
-
-                grpAssets = {}
-                existGIDs = set()
-                for row in c.fetchall():
-                    aId, gid, simJson = row
-                    grpAssets[aId] = {
-                        'gid': gid,
-                        'simInfos': json.loads(simJson) if simJson else []
-                    }
-                    if gid: existGIDs.add(gid)
-
-                if len(existGIDs) > 1:
-                    minGID = min(existGIDs)
-                    otherGIDs = existGIDs - {minGID}
-                    qargs = ','.join(['?' for _ in otherGIDs])
-                    c.execute(f"UPDATE assets SET simGID = ? WHERE simGID IN ({qargs})", [minGID] + list(otherGIDs))
-
-                    for aId in grpAssets:
-                        if grpAssets[aId]['gid'] in otherGIDs:
-                            grpAssets[aId]['gid'] = minGID
-
-                connCounts = {}
-                for aId in highSimIds:
-                    cnt = 0
-                    if aId in grpAssets:
-                        for sim in grpAssets[aId]['simInfos']:
-                            if sim.get('score', 0) > 0.9 and sim.get('id') in highSimIds:
-                                cnt += 1
-                    connCounts[aId] = cnt
-
-                repId = max(highSimIds, key=lambda x: (connCounts.get(x, 0), x))
-
-                newGID = None
-                if existGIDs:
-                    newGID = min(existGIDs) if existGIDs else None
-                else:
-                    c.execute("SELECT MAX(simGID) FROM assets")
-                    maxGID = c.fetchone()[0]
-                    newGID = (maxGID or 0) + 1
-
-                qargs = ','.join(['?' for _ in highSimIds])
-                c.execute(f"UPDATE assets SET simGID = ? WHERE id IN ({qargs})", [newGID] + highSimIds)
+                if not c.rowcount:
+                    raise RuntimeError(f"No asset found with id: {assId}")
 
                 conn.commit()
-                lg.info(f"[pics] Updated simInfo[{len(infos)}] simOk[{isOk}] to assId[{assId}], group[{newGID}] with {len(highSimIds)} members")
-                return True
+                lg.info(f"[pics] Updated assId[{assId}] simOK[{isOk}] simInfo[{len(infos)}] GID[{GID}]")
+
             except Exception as e:
-                conn.rollback()
                 raise e
     except Exception as e:
         raise mkErr("Failed to set similar IDs", e)
@@ -549,10 +428,10 @@ def deleteBy(assets: List[models.Asset]):
             count = c.rowcount
 
             if count != cntAll:
-                raise mkErr(f"Failed to delete assets( {cntAll} ) with effected[{count}], ")
+                raise mkErr(f"Failed to delete assets({cntAll}) with affected[{count}]")
 
             # reset same gid
-            c.execute(f"UPDATE assets SET simGID = 0 and simInfos= '[]' WHERE simOk = 0 AND simGID IN ({qargs})", gids)
+            c.execute(f"UPDATE assets SET simGID = 0, simInfos= '[]' WHERE simOk = 0 AND simGID IN ({qargs})", gids)
 
 
             lg.info(f"[pics] delete by assIds[{cntAll}] rst[{count}]")
@@ -566,7 +445,7 @@ def deleteBy(assets: List[models.Asset]):
 
             return count
     except Exception as e:
-        raise mkErr("Failed to clear similarity results:", e)
+        raise mkErr("Failed to delete assets", e)
 
 def setResloveBy(assets: List[models.Asset]):
     try:
@@ -582,7 +461,7 @@ def setResloveBy(assets: List[models.Asset]):
             lg.info(f"[pics] set simOk by autoIds[{len(autoIds)}] rst[{count}]")
             return count
     except Exception as e:
-        raise mkErr("Failed to clear similarity results:", e)
+        raise mkErr("Failed to resolve sim assets", e)
 
 def clearAllSimIds():
     try:
@@ -594,7 +473,7 @@ def clearAllSimIds():
             lg.info(f"Cleared similarity results for {count} assets")
             return count
     except Exception as e:
-        raise mkErr("Failed to clear similarity results:", e)
+        raise mkErr("Failed to clear all sim results", e)
 
 
 def countHasSimIds(isOk=0):
@@ -611,7 +490,7 @@ def countHasSimIds(isOk=0):
             lg.info(f"[pics] count have simInfos and type[{isOk}] cnt[{count}]")
             return count
     except Exception as e:
-        raise mkErr(f"Failed to count assets have simInfos with simOk[{isOk}]", e)
+        raise mkErr(f"Failed to count assets with simInfos and simOk[{isOk}]", e)
 
 
 # simOk mean that already resolve by user
@@ -677,7 +556,113 @@ def setSimAutoMark():
             """)
             cnn.commit()
     except Exception as e:
-        raise mkErr(f"Failed to count assets pending", e)
+        raise mkErr(f"Failed execute SimAutoMark", e)
+
+
+
+
+def getAssetsByGID(gid: int) -> list[models.Asset]:
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("""
+                SELECT * FROM assets 
+                WHERE simGID = ? AND json_array_length(simInfos) > 1
+                ORDER BY json_array_length(simInfos) DESC, autoId
+            """, (gid,))
+            assets = []
+            for row in c.fetchall():
+                asset = models.Asset.fromDB(c, row)
+                assets.append(asset)
+            return assets
+    except Exception as e:
+        lg.error(f"Error fetching assets by GID: {str(e)}")
+        return []
+
+
+# 如果incGroup, 就帶入simGID相同的, 否則只帶入simInfos的
+def getSimAssets(assId: str, incGroup = False) -> Optional[List[models.Asset]]:
+    import numpy as np
+    from db import vecs
+
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM assets WHERE id = ?", (assId,))
+            row = c.fetchone()
+            if row is None:
+                lg.warn(f"[pics] SimGroup Root asset {assId} not found")
+                return None
+
+            root = models.Asset.fromDB(c, row)
+            rst = [root]
+
+            if not incGroup:
+                if not root.simInfos or len(root.simInfos) <= 1: return rst
+
+                simIds = [info.id for info in root.simInfos]
+                if not simIds: return [root]
+
+                qargs = ','.join(['?' for _ in simIds])
+                c.execute(f"SELECT * FROM assets WHERE id IN ({qargs})", simIds)
+
+                rows = c.fetchall()
+
+                assets = [models.Asset.fromDB(c, row) for row in rows]
+
+                for asset in assets:
+                    asset.view.score = next( (info.score for info in root.simInfos if info.id == asset.id), 0 ) #理論上不應該空值
+
+                assetMap = {asset.id: asset for asset in assets}
+
+                sortAss = []
+                for simInfo in sorted(root.simInfos, key=lambda x: x.score or 0, reverse=True):
+                    if simInfo.id in assetMap:
+                        sortAss.append(assetMap[simInfo.id])
+
+                rst.extend(sortAss)
+            else:
+                if not root.simGID: return rst
+
+                c.execute("SELECT * FROM assets WHERE simGID = ? AND id != ?", (root.simGID, assId))
+                rows = c.fetchall()
+
+                if not rows: return rst
+
+                assets = [models.Asset.fromDB(c, row) for row in rows]
+
+                try:
+                    rootVec = vecs.getBy(assId)
+                    rootVecNp = np.array(rootVec)
+
+                    assScores = []
+                    for ass in assets:
+                        try:
+                            assVec = vecs.getBy(ass.id)
+                            assVecNp = np.array(assVec)
+                            score = np.dot(rootVecNp, assVecNp)
+
+                            ass.view.score = score
+
+                            assScores.append((ass, score))
+                        except Exception as e:
+                            lg.warn(f"[pics] Failed to get vector for asset {ass.id}: {str(e)}")
+                            continue
+
+                    assScores.sort(key=lambda x: x[1], reverse=True)
+                    rst.extend([ass for ass, _ in assScores])
+
+                except Exception as e:
+                    lg.error(f"[pics] Error processing vectors: {str(e)}")
+                    rst.extend(assets)
+
+            return rst
+    except Exception as e:
+        raise mkErr(f"Failed to get similar group for root {assId}", e)
+
+
+
+
 
 # select have simInfos and simInfos not only isSelf
 def countSimPending():
@@ -688,7 +673,7 @@ def countSimPending():
                 WITH grpReps AS (
                     SELECT simGID, MIN(autoId) as repAutoId
                     FROM assets
-                    WHERE simOk = 0 AND json_array_length(simInfos) > 1 AND simGID IS NOT NULL
+                    WHERE simOk = 0 AND json_array_length(simInfos) > 1 AND simGID != 0
                     GROUP BY simGID
                 )
                 SELECT COUNT(*) FROM (
@@ -696,8 +681,8 @@ def countSimPending():
                     LEFT JOIN grpReps g ON a.simGID = g.simGID
                     WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
                     AND (
-                        (a.simGID IS NULL) OR 
-                        (a.simGID IS NOT NULL AND a.autoId = g.repAutoId)
+                        (a.simGID = 0) OR 
+                        (a.simGID != 0 AND a.autoId = g.repAutoId)
                     )
                 )
             '''
@@ -708,21 +693,21 @@ def countSimPending():
         raise mkErr(f"Failed to count assets pending", e)
 
 
-def getPendingPaged(page=1, size=20) -> list[models.Asset]:
+def getPagedPending(page=1, size=20) -> list[models.Asset]:
     try:
         sql = '''
             WITH grpReps AS (
                 SELECT simGID, MIN(autoId) as repAutoId
                 FROM assets
-                WHERE simOk = 0 AND json_array_length(simInfos) > 1 AND simGID IS NOT NULL
+                WHERE simOk = 0 AND json_array_length(simInfos) > 1 AND simGID != 0
                 GROUP BY simGID
             )
             SELECT a.* FROM assets a
             LEFT JOIN grpReps g ON a.simGID = g.simGID
             WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
             AND (
-                (a.simGID IS NULL) OR 
-                (a.simGID IS NOT NULL AND a.autoId = g.repAutoId)
+                (a.simGID = 0) OR 
+                (a.simGID != 0 AND a.autoId = g.repAutoId)
             )
             ORDER BY json_array_length(a.simInfos) DESC, a.autoId
             LIMIT ? OFFSET ?
