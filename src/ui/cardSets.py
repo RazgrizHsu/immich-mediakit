@@ -19,6 +19,13 @@ class k:
         return {"type": "sets", "id": f"{name}"}
 
 
+optMaxDepths = [
+    {"label": "1", "value":1 },
+    {"label": "2", "value":2 },
+    {"label": "3", "value":3 },
+]
+
+
 def renderCard():
     return dbc.Card([
         dbc.CardHeader("Similar Settings"),
@@ -34,9 +41,9 @@ def renderCard():
                             "style": {"padding": "1px 3px 1px 3px", "fontSize": "13px"},
                         },
                     ),
-                ], className="mt-2 mb-1"),
+                ], className=""),
                 htm.Ul([
-                    htm.Li("Thresholds set min/max similarity for image matching", className="text-muted")
+                    htm.Li("Thresholds set min/max similarity for image matching")
                 ])
             ], className="irow"),
 
@@ -45,10 +52,24 @@ def renderCard():
                 htm.Div([
                     dbc.Checkbox(id=k.id(k.autoNxt), label="Auto Find Next", value=db.dto.autoNext),
                     dbc.Checkbox(id=k.id(k.shGdInfo), label="Show Grid Info", value=db.dto.showGridInfo),
-                    dbc.Checkbox(id=k.id(k.simIncRelGrp), label="Include Related", value=db.dto.simIncRelGrp),
-                ], className="icbxs mt-2 mb-2"),
+                ], className="icbxs"),
                 htm.Ul([
-                    htm.Li([htm.B("Inlcude Related: "), "Include nearby related groups (may load many photos)"], className="text-muted")
+                    # htm.Li([htm.B(" "), ""])
+                ])
+            ], className="irow"),
+            htm.Div([
+                htm.Label("Related Settings", className="txt-sm"),
+                htm.Div([
+                    dbc.Checkbox(id=k.id(k.simIncRelGrp), label="Include Related", value=db.dto.simIncRelGrp),
+
+                    htm.Div( [
+                        htm.Label( "Max Depths: " ),
+                        dbc.Select( options=optMaxDepths, value=db.dto.simMaxDepths, className="")
+                    ]),
+                ], className="icbxs"),
+                htm.Ul([
+                    htm.Li([htm.B("Inlcude Related: "), "在current中將顯示關聯群組, 請注意, 這些圖片將一起受到您的keep/delete命令影響"]),
+                    htm.Li([htm.B("Max Depths: "), "當進行Find Similar的時候，會將多少階層的關聯圖片標記為同一個群組"])
                 ])
             ], className="irow"),
         ])

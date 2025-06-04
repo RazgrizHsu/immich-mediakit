@@ -8,7 +8,7 @@ lg = log.get(__name__)
 
 from ui import gvExif
 
-def mkGrid(assets: list[models.Asset], root: str, minW=230, maxW=300, onEmpty=None):
+def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
     if not assets or len(assets) == 0:
         if onEmpty:
             if isinstance(onEmpty, str):
@@ -17,14 +17,6 @@ def mkGrid(assets: list[models.Asset], root: str, minW=230, maxW=300, onEmpty=No
                 return onEmpty
         return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
 
-    if not root:
-        return htm.Div(dbc.Alert(f"non-rootId, assets:{assets}", color="warning"), className="text-center")
-
-    rootSI = next((a.simInfos for a in assets if a.id == root), None)
-    if not rootSI:
-        msg = f"[mkGrid] no rootSI for rootId[ {root[:8]} ], ids: {[a.id[:8] for a in assets]}"
-        lg.info(msg)
-        return htm.Div(f"-- {msg} --")
 
     cntAss = len(assets)
 
@@ -44,14 +36,14 @@ def mkGrid(assets: list[models.Asset], root: str, minW=230, maxW=300, onEmpty=No
         }
         styItem = {}
 
-    rows = [htm.Div(mkCardSim(a, rootSI, isMain=(a.id == root)), style=styItem) for a in assets]
+    rows = [htm.Div(mkCardSim(a, isMain=(idx==0)), style=styItem) for idx, a in enumerate(assets)]
 
     lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
 
     return htm.Div(rows, style=styGrid)
 
 
-def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
+def mkCardSim(ass: models.Asset, isMain=False):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.id}" if ass.id else None
@@ -63,11 +55,6 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
     checked = ass.selected
     cssIds = "checked" if checked else ""
 
-    si = next((i for i in srcSIs if i.id == ass.id), None) if srcSIs else None
-
-    if not si:
-        lg.error(f"[mkImgCardSim] asset:{ass}")
-        return dbc.Alert(f"Not Found SimInfo #{ass.autoId} assetId[{assId}] in {srcSIs}", color="danger")
 
     exi = ass.jsonExif
 
@@ -90,14 +77,14 @@ def mkCardSim(ass: models.Asset, srcSIs: list[models.SimInfo], isMain=False):
                         ]
                         if isMain else
                         [
-                            htm.Span(f"{si.score:.5f}", className="tag lg ms-1"),
+                            htm.Span(f"{ass.view.score:.5f}", className="tag lg ms-1"),
                             htm.Span(">>", className="tag sm second no-border"),
-                            htm.Span(f"{si.score:.5f}", className="tag lg ms-1")
+                            htm.Span(f"{ass.view.score:.5f}", className="tag lg ms-1")
                         ]
                         if db.dto.simIncRelGrp else
                         [
                             htm.Span("score: ", className="tag sm second no-border"),
-                            htm.Span(f"{si.score:.5f}", className="tag lg ms-1")
+                            htm.Span(f"{ass.view.score:.5f}", className="tag lg ms-1")
                         ]
                     )
                 ])

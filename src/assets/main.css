@@ -12,6 +12,8 @@ html, body { margin: 0; padding: 0; }
 
 body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-color: #505050; color: #EFEFEF; min-height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
 
+h3 { font-size: 1.68rem; }
+
 .hide { display: none; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -275,17 +277,25 @@ body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background-
 
 .card-body { color: #E0E0E0; }
 
-.card .irow { margin: 0; }
+.card .irow { font-size: 14px; margin: 0; }
 
-.card .irow:not(:last-child) { border-bottom: 1px solid #888888AA; padding-bottom: 8px; }
+.card .irow:not(:last-child) { border-bottom: 1px solid #888888AA; padding-bottom: 5px; }
 
-.card .irow:nth-child(n+2) { margin-top: 10px; }
+.card .irow:nth-child(n+2) { margin-top: 3px; }
 
-.card .irow li { font-size: 12px; }
+.card .irow ul { margin-top: 3px; }
 
-.card .irow li b { font-size: 15px; }
+.card .irow li { font-size: 12px; color: #AAAAAA; }
 
-.card .icbxs > div { margin-right: 10px; }
+.card .irow li b { font-size: 12px; }
+
+.card .icbxs { margin-top: 3px; }
+
+.card .icbxs > div { margin-right: 10px; display: inline-block; }
+
+.card .icbxs label { margin-left: 10px; margin-right: 5px; }
+
+.card .icbxs select { padding: 0; display: inline-block; width: 50px; text-align: center; }
 
 .img-card { transition: transform 0.2s; margin-bottom: 10px; border-radius: 10px; background-color: #3A3A3A; }
 

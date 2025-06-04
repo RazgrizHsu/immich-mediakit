@@ -253,6 +253,13 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
             ste = data.get('status')
             msg = data.get('message')
 
+            if isinstance(msg, list):
+                htms = []
+                for idx, line in enumerate(msg):
+                    if idx > 0: htms.append(htm.Br())
+                    htms.append(line)
+                msg = htms
+
             if ste == 'failed':
                 return 100, "Failed", msg if msg else "task failed"
 

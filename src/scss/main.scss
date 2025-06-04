@@ -14,6 +14,9 @@ body {
 	flex-direction:column;
 	box-sizing:border-box;
 }
+h3 {
+	font-size: 1.68rem;
+}
 
 .hide {
 	display:none;
@@ -910,29 +913,53 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	}
 
 	.irow {
+		font-size: 14px;
 		margin:0;
+		> label:first-child {  } //title
 
 		&:not(:last-child) {
 			border-bottom:1px solid #888888AA;
-			padding-bottom:8px; // 加這行
+			padding-bottom:5px;
 		}
 
 		&:nth-child(n+2) {
-			margin-top:10px;
+			margin-top:3px;
+		}
+
+		ul {
+			margin-top:3px;
 		}
 
 
 		li {
-			b { font-size:15px; }
+			b { font-size:12px; }
 
 			font-size:12px;
+			color: #AAAAAA;
 		}
 
 	}
 
 	.icbxs {
+		margin-top:3px;
+
 		> div {
 			margin-right:10px;
+			display: inline-block;
+		}
+
+		label {
+			margin-left:10px;
+			margin-right:5px;
+		}
+
+		select {
+			//border: red 1px solid!important;
+			padding: 0;
+
+			display: inline-block;
+			width: 50px;
+			text-align:center;
 		}
 	}
 }

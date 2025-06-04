@@ -200,6 +200,14 @@ class AssetExif(BaseDictModel):
     def toAvDict(self):
         return {k: v for k, v in self.toDict().items() if v is not None}
 
+
+@dataclass
+class AssetViewOnly(BaseDictModel):
+    selected: bool = False
+
+    srcAutoId: int = 0
+    score: float = 0.0
+
 @dataclass
 class Asset(BaseDictModel):
     autoId: Optional[int] = None
@@ -221,11 +229,13 @@ class Asset(BaseDictModel):
     isVectored: Optional[int] = 0
     simOk: Optional[int] = 0
     simInfos: List[SimInfo] = field(default_factory=list)
-    simGID: Optional[int] = None
+    simGID: Optional[int] = 0
 
     # view only
     selected: Optional[bool] = False
     relats: int = 0
+
+    view: AssetViewOnly = field(default_factory=AssetViewOnly)
 
     def getImagePath(self, photoQ=None):
         if photoQ == ks.db.fullsize:

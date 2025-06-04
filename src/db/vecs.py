@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import qdrant_client.http.models
@@ -10,11 +10,13 @@ from util import log
 from mod import models
 from util.err import mkErr
 
+
 lg = log.get(__name__)
 
 keyColl = "mediakit"
 
 conn: Optional[QdrantClient] = None
+
 
 def init():
     global conn
@@ -35,6 +37,7 @@ def close():
     except Exception as e:
         raise mkErr(f"Failed to close database connection", e)
 
+
 def create():
     try:
         if not conn.collection_exists(keyColl):
@@ -51,6 +54,7 @@ def create():
     except Exception as e:
         raise mkErr(f"Failed to initialize Qdrant", e)
 
+
 def cleanAll():
     try:
         if conn is None: raise RuntimeError("[qdrant] not connectioned")
@@ -66,6 +70,7 @@ def cleanAll():
 
     except Exception as e:
         raise mkErr(f"[qdrant] Failed to clear vector database", e)
+
 
 def count():
     try:
@@ -186,20 +191,20 @@ def search(vec, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[qdra
     except Exception as e:
         raise mkErr(f"[vecs] Error searching {vec}", e)
 
+
 #------------------------------------------------------------------------
 # only return different id
 #------------------------------------------------------------------------
-def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[models.SimInfo]:
+def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> Tuple[list[float], list[models.SimInfo]]:
     try:
         if conn is None: raise RuntimeError("Qdrant connection not initialized")
 
         lg.info(f"[vecs] Finding similar assets for {assId}, threshold[{thMin}-{thMax}]")
         vector = getBy(assId)
 
-        count = conn.count(collection_name=keyColl)
-        lg.info(f"[vecs] Total vectors in database: {count.count}")
+        rst = conn.count(collection_name=keyColl)
 
-        lg.info(f"[vecs] Searching for similar assets, threshold: {thMin}, limit: {limit}...")
+        lg.info(f"[vecs] Searching for similar assets, limit[{limit}] total{rst.count}")
 
         # distance = qmod.Distance.COSINE if method == ks.use.mth.cosine else qmod.Distance.EUCLID
 
@@ -209,13 +214,12 @@ def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> l
 
         lg.info(f"[vecs] search results( {len(rst)} ):")
         for i, hit in enumerate(rst):
-            #lg.info(f"    no.{i + 1}: ID[{hit.id}], score[{hit.score:.6f}] self[{hit.id == assId}]")
+            lg.info(f"    no.{i + 1}: ID[{hit.id}], score[{hit.score:.6f}] self[{hit.id == assId}]")
 
             if hit.score <= thMax or hit.id == assId:  #always add self
                 isSelf = hit.id == assId
                 infos.append(models.SimInfo(hit.id, hit.score, isSelf))
 
-
-        return infos
+        return vector, infos
     except Exception as e:
         raise mkErr(f"Error finding similar assets for {assId}", e)
