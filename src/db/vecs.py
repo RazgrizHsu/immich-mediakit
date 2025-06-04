@@ -82,25 +82,25 @@ def count():
         raise mkErr(f"Error checking database population", e)
 
 
-def deleteBy(assIds: list[str]):
+def deleteBy(aids: list[int]):
     try:
         if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
 
         rst = conn.delete(
             collection_name=keyColl,
-            points_selector=qmod.PointIdsList(points=assIds)
+            points_selector=qmod.PointIdsList(points=[str(aid) for aid in aids])
         )
 
-        lg.info(f"[vec] delete status[{rst}] ids: {assIds}")
+        lg.info(f"[vec] delete status[{rst}] aids: {aids}")
         if rst.status != qmod.UpdateStatus.COMPLETED:
             raise RuntimeError(f"Delete operation failed with status: {rst.status}")
 
 
     except Exception as e:
-        raise mkErr(f"Error deleting vector for asset {assIds}", e)
+        raise mkErr(f"Error deleting vector for asset {aids}", e)
 
 
-def save(assId: str, vector: np.ndarray, confirm=True):
+def save(aid: int, vector: np.ndarray, confirm=True):
     try:
         if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
 
@@ -111,43 +111,43 @@ def save(assId: str, vector: np.ndarray, confirm=True):
         if not vecList or len(vecList) != 2048:
             raise ValueError(f"[vecs] Vector length is incorrect, expected 2048, actual {len(vecList) if vecList else 0}")
 
-        # override exists
+        # Convert autoId to string for Qdrant
         conn.upsert(
             collection_name=keyColl,
-            points=[qmod.PointStruct(id=assId, vector=vecList, payload={"id": assId})]
+            points=[qmod.PointStruct(id=str(aid), vector=vecList, payload={"aid": aid})]
         )
 
         if confirm:
             try:
                 stored = conn.retrieve(
                     collection_name=keyColl,
-                    ids=[assId], with_vectors=True
+                    ids=[str(aid)], with_vectors=True
                 )
-                if not stored: raise RuntimeError(f"[vecs] Failed save vector assId[{assId}]")
-                if not hasattr(stored[0], 'vector') or stored[0].vector is None: raise RuntimeError(f"[vecs] Stored vector is null assId[{assId}]")
+                if not stored: raise RuntimeError(f"[vecs] Failed save vector aid[{aid}]")
+                if not hasattr(stored[0], 'vector') or stored[0].vector is None: raise RuntimeError(f"[vecs] Stored vector is null aid[{aid}]")
 
             except Exception as ve:
                 lg.error(f"Error validating vector storage: {str(ve)}")
                 raise
 
     except Exception as e:
-        raise mkErr(f"Error saving vector for asset {assId}", e)
+        raise mkErr(f"Error saving vector for asset {aid}", e)
 
 
-def getBy(assId):
+def getBy(aid: int):
     try:
         if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
 
         dst = conn.retrieve(
             collection_name=keyColl,
-            ids=[assId],
+            ids=[str(aid)],
             with_payload=True, with_vectors=True
         )
 
-        if not dst: raise RuntimeError(f"[vecs] Vector for asset {assId} does not exist")
+        if not dst: raise RuntimeError(f"[vecs] Vector for asset aid[{aid}] does not exist")
 
         if not hasattr(dst[0], 'vector') or dst[0].vector is None:
-            raise RuntimeError(f"[vecs] Vector for asset {assId} is empty")
+            raise RuntimeError(f"[vecs] Vector for asset aid[{aid}] is empty")
 
         vector = dst[0].vector
 
@@ -159,7 +159,7 @@ def getBy(assId):
             raise RuntimeError(f"[vecs] Vector has tolist method, attempting conversion")
 
         if not hasattr(vector, '__len__') or len(vector) == 0:
-            raise RuntimeError(f"[vecs] Vector format for asset assId[{assId}] is incorrect: {type(vector)}")
+            raise RuntimeError(f"[vecs] Vector format for asset aid[{aid}] is incorrect: {type(vector)}")
 
         if not isinstance(vector, list):
             raise RuntimeError(f"[vecs] Vector not a list: {type(vector)}")
@@ -172,7 +172,7 @@ def getBy(assId):
         return vector
 
     except Exception as e:
-        raise mkErr(f"[vecs] Error get asset vector assId[{assId}]", e)
+        raise mkErr(f"[vecs] Error get asset vector aid[{aid}]", e)
 
 
 def search(vec, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[qdrant_client.http.models.ScoredPoint]:
@@ -195,12 +195,12 @@ def search(vec, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[qdra
 #------------------------------------------------------------------------
 # only return different id
 #------------------------------------------------------------------------
-def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> Tuple[list[float], list[models.SimInfo]]:
+def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> Tuple[list[float], list[models.SimInfo]]:
     try:
         if conn is None: raise RuntimeError("Qdrant connection not initialized")
 
-        lg.info(f"[vecs] Finding similar assets for {assId}, threshold[{thMin}-{thMax}]")
-        vector = getBy(assId)
+        lg.info(f"[vecs] Finding similar assets for aid[{aid}], threshold[{thMin}-{thMax}]")
+        vector = getBy(aid)
 
         rst = conn.count(collection_name=keyColl)
 
@@ -214,12 +214,13 @@ def findSimiliar(assId, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> T
 
         lg.info(f"[vecs] search results( {len(rst)} ):")
         for i, hit in enumerate(rst):
-            lg.info(f"    no.{i + 1}: ID[{hit.id}], score[{hit.score:.6f}] self[{hit.id == assId}]")
+            hit_aid = int(hit.id)
+            lg.info(f"    no.{i + 1}: AID[{hit_aid}], score[{hit.score:.6f}] self[{int(hit.id) == aid}]")
 
-            if hit.score <= thMax or hit.id == assId:  #always add self
-                isSelf = hit.id == assId
-                infos.append(models.SimInfo(hit.id, hit.score, isSelf))
+            if hit.score <= thMax or hit_aid == aid:  #always add self
+                isSelf = hit_aid == aid
+                infos.append(models.SimInfo(hit_aid, hit.score, isSelf))
 
         return vector, infos
     except Exception as e:
-        raise mkErr(f"Error finding similar assets for {assId}", e)
+        raise mkErr(f"Error finding similar assets for aid[{aid}]", e)
