@@ -135,7 +135,7 @@ def saveVectorBy(asset: models.Asset, photoQ) -> Tuple[models.Asset, Optional[st
         img = getImg(path)
 
         vec = extractFeatures(img)
-        db.vecs.save(asset.id, vec)
+        db.vecs.save(asset.autoId, vec)
 
         return asset, None
 

@@ -944,7 +944,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
             # will contain at least itself
             cntFnd += 1
-            bseVec, bseInfos = db.vecs.findSimiliar(asset.id, thMin, thMax)
+            bseVec, bseInfos = db.vecs.findSimiliar(asset.autoId, thMin, thMax)
 
             #------------------------------------
             if not bseInfos:
@@ -982,12 +982,12 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             #------------------------------------
             # found simInfos
             #------------------------------------
-            simIds = [i.id for i in bseInfos if not i.isSelf]
+            simAids = [i.aid for i in bseInfos if not i.isSelf]
 
             #------------------------------------
             # only contains self
             #------------------------------------
-            if not simIds:
+            if not simAids:
                 lg.info(f"[sim:find] NoFound #{asset.autoId}")
                 db.pics.setSimInfos(asset.id, bseInfos, isOk=1)
 
@@ -1030,43 +1030,41 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         rootAuid = asset.autoId
         db.pics.setSimInfos(asset.id, bseInfos, GID=rootAuid)
 
-        doneIds = {asset.id}
+        doneIds = {asset.autoId}
 
         # Get max depth setting (default 1 if not set)
         maxDepth = getattr(db.dto, 'simMaxDepths', 1)
         lg.info(f"[sim:find] Max depth for similar search: {maxDepth}")
 
         # Initialize queue with depth tracking (assId, depth)
-        simQueue = [(sid, 0) for sid in simIds]
+        simQueue = [(said, 0) for said in simAids]
 
         # looping find all childs
         while simQueue:
-            assId, curDepth = simQueue.pop(0)
-            if assId in doneIds: continue
+            assAid, curDepth = simQueue.pop(0)
+            if assAid in doneIds: continue
 
-            doneIds.add(assId)
-            autoReport(f"Processing children similar photo #{assId} depth({curDepth}) count({len(doneIds)})")
+            doneIds.add(assAid)
+            autoReport(f"Processing children similar photo #{assAid} depth({curDepth}) count({len(doneIds)})")
 
             try:
-                lg.info(f"[sim:find] search child id[{assId}] at depth[{curDepth}]")
-                cVec, cInfos = db.vecs.findSimiliar(assId, thMin, thMax)
+                lg.info(f"[sim:find] search child aid[{assAid}] at depth[{curDepth}]")
+                cVec, cInfos = db.vecs.findSimiliar(assAid, thMin, thMax)
 
-                db.pics.setSimInfos(assId, cInfos, GID=rootAuid)
-
-                ass = db.pics.getById(assId)
+                ass = db.pics.getByAutoId(assAid)
+                db.pics.setSimInfos(ass.id, cInfos, GID=rootAuid)
 
                 # Only add children if we haven't reached max depth
                 if curDepth < maxDepth:
                     for inf in cInfos:
-                        if not inf.isSelf and inf.id not in doneIds:
-                            simQueue.append((inf.id, curDepth + 1))
-                            # Set GID immediately for found children
-                            db.pics.setSimGIDs(inf.id, rootAuid)
-                            lg.info(f"[sim:find] Added child {inf.id} at depth {curDepth + 1}")
+                        if not inf.isSelf and inf.aid not in doneIds:
+                            simQueue.append((inf.aid, curDepth + 1))
+                            db.pics.setSimGIDs(inf.aid, rootAuid)
+                            lg.info(f"[sim:find] Added child aid[{inf.aid}] at depth {curDepth + 1}")
 
 
             except Exception as ce:
-                raise RuntimeError(f"Error processing similar image {assId}: {ce}")
+                raise RuntimeError(f"Error processing similar image {assAid}: {ce}")
 
         # auto mark
         db.pics.setSimAutoMark()

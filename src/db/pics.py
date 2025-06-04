@@ -461,9 +461,10 @@ def deleteBy(assets: List[models.Asset]):
 
             if count != cntAll: raise mkErr(f"Failed to delete assets({cntAll}) with affected[{count}]")
 
-            # 1.2 Delete from vector database
+            # 1.2 Delete from vector database using autoIds
             import db.vecs as vecs
-            vecs.deleteBy(assIds)
+            aids = [ass.autoId for ass in assets]
+            vecs.deleteBy(aids)
 
             # 2. Handle other assets containing these mainGIDs
             if mainGIDs:
@@ -519,27 +520,28 @@ def setResloveBy(assets: List[models.Asset]):
         raise mkErr("Failed to resolve sim assets", e)
 
 
-def setSimGIDs(assId: str, GID: int):
+def setSimGIDs(autoId: int, GID: int):
     try:
         with mkConn() as conn:
             c = conn.cursor()
 
-            c.execute("SELECT simGIDs FROM assets WHERE id = ?", (assId,))
+            c.execute("SELECT simGIDs FROM assets WHERE autoId = ?", (autoId,))
             row = c.fetchone()
             if row:
                 gids = json.loads(row[0]) if row[0] else []
                 if GID not in gids:
                     gids.append(GID)
                     c.execute(
-                        "UPDATE assets SET simGIDs = ? WHERE id = ?",
-                        (json.dumps(gids), assId)
+                        "UPDATE assets SET simGIDs = ? WHERE autoId = ?",
+                        (json.dumps(gids), autoId)
                     )
                     conn.commit()
-                    lg.info(f"[pics] Updated assId[{assId}] added GID[{GID}] to simGIDs[{gids}]")
+                    lg.info(f"[pics] Updated assId[{autoId}] added GID[{GID}] to simGIDs[{gids}]")
                     return True
             return False
     except Exception as e:
-        raise mkErr(f"Failed to set simGIDs for asset[{assId}]", e)
+        raise mkErr(f"Failed to set simGIDs for asset[{autoId}]", e)
+
 
 
 # noinspection SqlWithoutWhere
@@ -691,10 +693,10 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
             if not incGroup:
                 if not root.simInfos or len(root.simInfos) <= 1: return rst
 
-                simIds = [info.id for info in root.simInfos]
-                if not simIds: return [root]
+                simAids = [info.aid for info in root.simInfos]
+                if not simAids: return [root]
 
-                qargs = ','.join(['?' for _ in simIds])
+                qargs = ','.join(['?' for _ in simAids])
                 c.execute(f"""
                     SELECT 
                         a.*,
@@ -703,8 +705,8 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                             CROSS JOIN json_each(a2.simGIDs) gid
                             WHERE gid.value = a.autoId AND a2.autoId != a.autoId
                         ) THEN 1 ELSE 0 END as isMain
-                    FROM assets a WHERE a.id IN ({qargs})
-                """, simIds)
+                    FROM assets a WHERE a.autoId IN ({qargs})
+                """, simAids)
 
                 rows = c.fetchall()
 
@@ -712,15 +714,15 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                 for row in rows:
                     asset = models.Asset.fromDB(c, row)
                     asset.view.isMain = bool(row['isMain'])
-                    asset.view.score = next((info.score for info in root.simInfos if info.id == asset.id), 0)
+                    asset.view.score = next((info.score for info in root.simInfos if info.aid == asset.autoId), 0)
                     assets.append(asset)
 
-                assetMap = {asset.id: asset for asset in assets}
+                assetMap = {asset.autoId: asset for asset in assets}
 
                 sortAss = []
                 for simInfo in sorted(root.simInfos, key=lambda x: x.score or 0, reverse=True):
-                    if simInfo.id in assetMap:
-                        sortAss.append(assetMap[simInfo.id])
+                    if simInfo.aid in assetMap:
+                        sortAss.append(assetMap[simInfo.aid])
 
                 rst.extend(sortAss)
             else:
@@ -761,13 +763,13 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                     assets.append(asset)
 
                 try:
-                    rootVec = vecs.getBy(assId)
+                    rootVec = vecs.getBy(root.autoId)
                     rootVecNp = np.array(rootVec)
 
                     assScores = []
                     for ass in assets:
                         try:
-                            assVec = vecs.getBy(ass.id)
+                            assVec = vecs.getBy(ass.autoId)
                             assVecNp = np.array(assVec)
                             score = np.dot(rootVecNp, assVecNp)
 
@@ -775,7 +777,7 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
 
                             assScores.append((ass, score))
                         except Exception as e:
-                            lg.warn(f"[pics] Failed to get vector for asset {ass.id}: {str(e)}")
+                            lg.warn(f"[pics] Failed to get vector for asset {ass.autoId}: {str(e)}")
                             continue
 
                     assScores.sort(key=lambda x: x[1], reverse=True)

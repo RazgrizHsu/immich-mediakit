@@ -151,7 +151,7 @@ class ProcessInfo(BaseDictModel):
 
 @dataclass
 class SimInfo(BaseDictModel):
-    id: Optional[str] = None
+    aid: Optional[int] = None
     score: Optional[float] = None
     isSelf: Optional[bool] = False
 
