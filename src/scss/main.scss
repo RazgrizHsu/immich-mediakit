@@ -694,8 +694,12 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		margin:0;
 		width:50vw;
 		z-index:1050;
-		box-shadow:0 4px 20px rgba(0, 0, 0, 0.5);
+		box-shadow:0 0 10px 5px #1F5C9299;
 		animation:slideIn 0.3s ease-out;
+	}
+
+	button:not(:last-child) {
+		margin-right: auto;
 	}
 }
 

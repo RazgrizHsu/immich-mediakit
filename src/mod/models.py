@@ -13,6 +13,7 @@ lg = log.get(__name__)
 # types
 #------------------------------------------------------------------------
 IFnProg = Callable[[int, str], None]
+IFnCancel = Callable[[], bool]
 IFnRst = Tuple['ITaskStore', Optional[str | List[str]]]
 IFnCall = Callable[[IFnProg, 'ITaskStore'], IFnRst]
 
@@ -143,9 +144,9 @@ class Pager(BaseDictModel):
 
 @dataclass
 class ProcessInfo(BaseDictModel):
-    total: int = 0
+    all: int = 0
     skip: int = 0
-    error: int = 0
+    erro: int = 0
     done: int = 0
 
 
@@ -322,6 +323,7 @@ class TskStatus(Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 @dataclass
@@ -339,3 +341,12 @@ class ITaskStore:
     now: Now = None
     cnt: Cnt = None
     tsk: Tsk = None
+
+    _canceller: Optional[IFnCancel] = None
+
+    def isCancelled(self) -> bool:
+        if self._canceller: return self._canceller()
+        return False
+
+    def setCancelChecker(self, checker: IFnCancel):
+        self._canceller = checker

@@ -181,6 +181,39 @@ class TskMgr:
         self.tsks[sn] = task
         return sn
 
+    def cancel(self, tsn: str) -> bool:
+        if tsn not in self.infos: return False
+
+        ti = self.infos[tsn]
+        if ti.status in [TskStatus.COMPLETED, TskStatus.FAILED, TskStatus.CANCELLED]: return False
+
+        ti.status = TskStatus.CANCELLED
+        ti.dte = time.time()
+
+        lg.info(f"[tskMgr] Task {tsn} cancelled, sending complete message")
+
+        # Send cancel complete message to update UI
+        import asyncio
+        if self.wsLoop:
+            def sendCancelMessage():
+                asyncio.run_coroutine_threadsafe(
+                    self.broadcast({
+                        'type': 'complete',
+                        'tsn': tsn,
+                        'message': ti.msg,
+                        'status': ti.status.value,
+                        'error': None
+                    }),
+                    self.wsLoop
+                )
+            sendCancelMessage()
+
+        return True
+
+    def isCancelled(self, tsn: str) -> bool:
+        if tsn not in self.infos: return False
+        return self.infos[tsn].status == TskStatus.CANCELLED
+
     #------------------------------------------------
     # run on Thread
     #------------------------------------------------
@@ -208,6 +241,8 @@ class TskMgr:
         dtu = 0
 
         def fnReport(pct: int, msg: str):
+            if ti.status == TskStatus.CANCELLED: return  # Stop reporting if cancelled
+
             ti.prog = pct
             ti.msg = msg
 
@@ -233,27 +268,38 @@ class TskMgr:
                 'name': ti.name
             })
 
-            sto, retMsg = tk.run(fnReport)
+            if ti.status != TskStatus.CANCELLED:
+                sto, retMsg = tk.run(fnReport)
 
-            ti.status = TskStatus.COMPLETED
-            ti.result = sto
-            ti.prog = 100
-            ti.msg = retMsg
+                if ti.status == TskStatus.CANCELLED:
+                    ti.msg = "Task was cancelled"
+                    ti.prog = 0
+                else:
+                    ti.status = TskStatus.COMPLETED
+                    ti.result = sto
+                    ti.prog = 100
+                    ti.msg = retMsg
 
         except Exception as e:
-            ti.status = TskStatus.FAILED
-            ti.err = str(e)
-            ti.msg = f"Error: {str(e)}"
+            if ti.status == TskStatus.CANCELLED:
+                ti.msg = "Task was cancelled"
+            else:
+                ti.status = TskStatus.FAILED
+                ti.err = str(e)
+                ti.msg = f"Error: {str(e)}"
 
         finally:
             ti.dte = time.time()
-            doSend( {
-                'type': 'complete',
-                'tsn': tsn,
-                'message': ti.msg,
-                'status': ti.status.value,
-                'error': ti.err
-            })
+
+            # Only send complete message if not already sent by cancel()
+            if ti.status != TskStatus.CANCELLED:
+                doSend( {
+                    'type': 'complete',
+                    'tsn': tsn,
+                    'message': ti.msg,
+                    'status': ti.status.value,
+                    'error': ti.err
+                })
 
             if tsn in self.threads: del self.threads[tsn]
 
