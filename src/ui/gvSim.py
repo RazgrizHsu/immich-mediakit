@@ -36,23 +36,25 @@ def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
         }
         styItem = {}
 
-    rows = [htm.Div(mkCardSim(a, isMain=(idx==0)), style=styItem) for idx, a in enumerate(assets)]
+    rows = [htm.Div(mkCardSim(a), style=styItem) for idx, a in enumerate(assets)]
 
     lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
 
     return htm.Div(rows, style=styGrid)
 
 
-def mkCardSim(ass: models.Asset, isMain=False):
+def mkCardSim(ass: models.Asset):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.id}" if ass.id else None
+
+    isMain = ass.view.isMain
 
     assId = ass.id
     fnm = ass.originalFileName
     dtc = ass.fileCreatedAt
 
-    checked = ass.selected
+    checked = ass.view.selected
     cssIds = "checked" if checked else ""
 
 
@@ -99,7 +101,7 @@ def mkCardSim(ass: models.Asset, isMain=False):
             ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
             ,
             htm.Div([
-                htm.Span(f"#{ass.autoId} @{ass.simGID}", className="tag"),
+                htm.Span(f"#{ass.autoId}", className="tag"),
             ]),
             htm.Div([
 
@@ -299,7 +301,7 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
     fnm = ass.originalFileName
     dtc = ass.fileCreatedAt
 
-    checked = ass.selected
+    checked = ass.view.selected
     cssIds = "checked" if checked else ""
 
     exi = ass.jsonExif
@@ -317,14 +319,14 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
     #         ]))
 
     htmRelated = None
-    if hasattr(ass, 'relats') and ass.relats and showRelated:
+    if ass.view.cntRelats and showRelated:
         rids = []
 
         htmRelated = [
             htm.Hr(className="my-2"),
             htm.Div([
                 htm.Span("Related groups: ", className="text-muted"),
-                htm.Span(f"{ass.relats}", className="badge bg-warning")
+                htm.Span(f"{ass.view.cntRelats}", className="badge bg-warning")
             ]),
             htm.Div(rids)
         ]

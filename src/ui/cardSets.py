@@ -12,7 +12,8 @@ class k:
     ths = "thresholds"
     autoNxt = "autoNext"
     shGdInfo = "showGridInfo"
-    simIncRelGrp = "incRelGrp"
+    simIncRelGrp = "simIncRelGrp"
+    simMaxDepths = "simMaxDepths"
 
     @staticmethod
     def id(name):
@@ -20,6 +21,7 @@ class k:
 
 
 optMaxDepths = [
+    {"label": "0", "value":0 },
     {"label": "1", "value":1 },
     {"label": "2", "value":2 },
     {"label": "3", "value":3 },
@@ -64,7 +66,7 @@ def renderCard():
 
                     htm.Div( [
                         htm.Label( "Max Depths: " ),
-                        dbc.Select( options=optMaxDepths, value=db.dto.simMaxDepths, className="")
+                        dbc.Select(id=k.id(k.simMaxDepths), options=optMaxDepths, value=db.dto.simMaxDepths, className="")
                     ]),
                 ], className="icbxs"),
                 htm.Ul([
@@ -84,11 +86,14 @@ def renderCard():
     inp(k.id(k.autoNxt), "value"),
     inp(k.id(k.shGdInfo), "value"),
     inp(k.id(k.simIncRelGrp), "value"),
+    inp(k.id(k.simMaxDepths), "value"),
     ste(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def settings_ChgThs(ths, auNxt, shGdInfo, incRelGrp, dta_now):
+def settings_ChgThs(ths, auNxt, shGdInfo, incRelGrp, maxDepths, dta_now):
     retNow = noUpd
+
+    lg.info( f"maxDepths: {maxDepths}" )
 
     now = models.Now.fromDict(dta_now)
     mi, mx = ths

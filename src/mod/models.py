@@ -203,7 +203,11 @@ class AssetExif(BaseDictModel):
 
 @dataclass
 class AssetViewOnly(BaseDictModel):
+
+    isMain:bool = False
     selected: bool = False
+
+    cntRelats: int = 0
 
     srcAutoId: int = 0
     score: float = 0.0
@@ -232,9 +236,6 @@ class Asset(BaseDictModel):
     simGIDs: List[int] = field(default_factory=list)
 
     # view only
-    selected: Optional[bool] = False
-    relats: int = 0
-
     view: AssetViewOnly = field(default_factory=AssetViewOnly)
 
     def getImagePath(self, photoQ=None):
@@ -291,12 +292,12 @@ class PgSim(BaseDictModel):
 
     def clearNow(self):
         self.assId = self.assFromUrl = None
-        self.assCur = []
-        self.assSelect = []
+        self.assCur.clear()
+        self.assSelect.clear()
 
     def clearAll(self):
         self.clearNow()
-        self.assPend = []
+        self.assPend.clear()
 
 @dataclass
 class Sets(BaseDictModel):
