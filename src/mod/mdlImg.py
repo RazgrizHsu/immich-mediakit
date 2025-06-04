@@ -1,3 +1,4 @@
+from typing import Optional
 from dsh import htm, dcc, dbc, inp, out, ste, cbk, ctx, noUpd, getTrgId, ALL
 
 from conf import ks
@@ -35,7 +36,7 @@ class k:
 #------------------------------------------------------------------------
 # Helper functions
 #------------------------------------------------------------------------
-def _getAssetBy(now, assId):
+def _getAssetBy(now, assId) -> Optional[models.Asset]:
     if now.sim.assCur and assId:
         return next((a for a in now.sim.assCur if a.id == assId), None)
     return None
@@ -78,7 +79,7 @@ def _buildImageContent(mdl, now):
         if fullAss:
             htms.append(htm.Div(
                 htm.Span(
-                    f"#{fullAss.autoId} @{fullAss.simGID}",
+                    f"#{fullAss.autoId} @{','.join(map(str,fullAss.simGIDs))}",
                     className="tag xl"
                 )
                 , className="acts B")
@@ -322,7 +323,7 @@ def mdlImg_IsOpen(dta_mdl, is_open, dta_now):
         fullAss = now.sim.assCur[mdl.curIdx]
 
         btnSelectStyle = {"display": "block"}
-        isSelected = fullAss.selected if fullAss else False
+        isSelected = fullAss.view.selected if fullAss else False
         btnSelectText, btnSelectColor = _getSelectBtnState(isSelected)
 
     helpCss, helpTxt = _getHelpState(mdl)
@@ -337,7 +338,7 @@ def mdlImg_IsOpen(dta_mdl, is_open, dta_now):
                     htm.Td("autoId"),
                     htm.Td([
                         htm.Span(f"#{ass.autoId}", className="tag"),
-                        htm.Span(f"@{ass.simGID}", className="tag")
+                        htm.Span(f"@{','.join(map(str,ass.simGIDs))}", className="tag")
                     ])
                 ]),
                 htm.Tr([
@@ -415,7 +416,7 @@ def mdlImg_OnNavClicked(clk_prev, clk_next, dta_mdl, dta_now):
 
     # Get select button state
     ass = _getAssetBy(now, assId)
-    isSelected = ass.selected if ass else False
+    isSelected = ass.view.selected if ass else False
     btnSelectText, btnSelectColor = _getSelectBtnState(isSelected)
 
     lg.info(f"[mdlImg] nav to idx[{mdl.curIdx}] assId[{assId}] autoId[{curAss.autoId} selected[{isSelected}]")
@@ -454,16 +455,16 @@ def mdlImg_OnSelectClicked(clks, dta_now, dta_mdl):
 
     for ass in now.sim.assCur:
         if ass.id == assId:
-            ass.selected = not ass.selected
-            lg.info(f'[mdlImg:select] toggled: {ass.autoId}, selected: {ass.selected}')
+            ass.view.selected = not ass.view.selected
+            lg.info(f'[mdlImg:select] toggled: {ass.autoId}, selected: {ass.view.selected}')
             break
 
-    selected = [ass for ass in now.sim.assCur if ass.selected]
+    selected = [ass for ass in now.sim.assCur if ass.view.selected]
     now.sim.assSelect = selected
 
     # Get the updated selected state
     ass = _getAssetBy(now, assId)
-    isSelected = ass.selected if ass else False
+    isSelected = ass.view.selected if ass else False
     btnText, btnColor = _getSelectBtnState(isSelected)
 
     return now.toDict(), mdl.toDict(), btnText, btnColor

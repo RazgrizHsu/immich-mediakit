@@ -415,28 +415,6 @@ def sim_Load(dta_now, dta_nfy):
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    # todo: 動態獲取關聯群組
-    # relatedGroups = []
-    # if now.sim.assId:
-    #     asset = db.pics.getById(now.sim.assId)
-    #     if asset and hasattr(asset, 'simGIDs') and asset.simGIDs:
-    #         # 找出所有相同群組的其他代表
-    #         relatedAssets = []
-    #         for gid in asset.simGIDs:
-    #             relatedAssets.extend(db.pics.getAssetsByGID(gid))
-    #
-    #         # 對每個關聯群組獲取其完整的相似照片群組
-    #         for ra in relatedAssets:
-    #             if ra.id != now.sim.assId:
-    #                 # 獲取這個群組的所有相似照片
-    #                 groupAssets = db.pics.getSimGroup(ra.id)
-    #                 if groupAssets:
-    #                     # 將群組資訊存儲在第一個元素（主圖）中
-    #                     ra.groupAssets = groupAssets
-    #                     relatedGroups.append(ra)
-
-    assRoot = next((a for a in now.sim.assCur if a.id == now.sim.assId), None)
-
     gvSim = gvs.mkGrid(now.sim.assCur, onEmpty=[
         dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
     ])
@@ -536,9 +514,9 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
         targetAss = None
         for ass in now.sim.assCur:
             if ass.id == tid:
-                ass.selected = not ass.selected
+                ass.view.selected = not ass.view.selected
                 targetAss = ass
-                lg.info(f'[header-click] toggled: {ass.autoId}, selected: {ass.selected}')
+                lg.info(f'[header-click] toggled: {ass.autoId}, selected: {ass.view.selected}')
                 break
 
         if targetAss:
@@ -546,7 +524,7 @@ def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
             if not now.sim.assSelect:
                 now.sim.assSelect = []
 
-            if targetAss.selected:
+            if targetAss.view.selected:
                 # 新增到選擇清單
                 if not any(a.id == targetAss.id for a in now.sim.assSelect):
                     now.sim.assSelect.append(targetAss)
@@ -1011,7 +989,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             #------------------------------------
             if not simIds:
                 lg.info(f"[sim:find] NoFound #{asset.autoId}")
-                db.pics.setSimIds(asset.id, bseInfos, isOk=1)
+                db.pics.setSimInfos(asset.id, bseInfos, isOk=1)
 
                 #------------------------------------
                 # from url, stop
@@ -1049,15 +1027,15 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         #------------------------------------------------
 
         #set main asset
-        simGID = asset.autoId
-        db.pics.setSimIds(asset.id, bseInfos, GID=simGID)
+        rootAuid = asset.autoId
+        db.pics.setSimInfos(asset.id, bseInfos, GID=rootAuid)
 
         doneIds = {asset.id}
-        
+
         # Get max depth setting (default 1 if not set)
         maxDepth = getattr(db.dto, 'simMaxDepths', 1)
         lg.info(f"[sim:find] Max depth for similar search: {maxDepth}")
-        
+
         # Initialize queue with depth tracking (assId, depth)
         simQueue = [(sid, 0) for sid in simIds]
 
@@ -1073,8 +1051,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 lg.info(f"[sim:find] search child id[{assId}] at depth[{curDepth}]")
                 cVec, cInfos = db.vecs.findSimiliar(assId, thMin, thMax)
 
-                # Use simGIDs (list) instead of simGID (single value)
-                db.pics.setSimIds(assId, cInfos, GID=simGID)
+                db.pics.setSimInfos(assId, cInfos, GID=rootAuid)
 
                 ass = db.pics.getById(assId)
 
@@ -1083,11 +1060,10 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                     for inf in cInfos:
                         if not inf.isSelf and inf.id not in doneIds:
                             simQueue.append((inf.id, curDepth + 1))
+                            # Set GID immediately for found children
+                            db.pics.setSimGIDs(inf.id, rootAuid)
                             lg.info(f"[sim:find] Added child {inf.id} at depth {curDepth + 1}")
 
-                vsBseScore = np.dot(bseVec, cVec)
-
-                if vsBseScore < thMin: break #ignore
 
             except Exception as ce:
                 raise RuntimeError(f"Error processing similar image {assId}: {ce}")
@@ -1181,16 +1157,16 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         lg.info(f"[sim:selOk] reslove assets[{cntSelect}] delete[ {cntOthers} ]")
 
-        # Resolve selected assets
-        db.pics.setResloveBy(assSels)
-
-        # Delete other assets
+        # Delete other assets first to maintain reference integrity
         if assOthers:
             for a in assOthers:
                 lg.info(f"[sim:selOk] delete asset #[{a.autoId}] Id[ {a.id} ]")
 
             immich.trashByAssets(assOthers)
             db.pics.deleteBy(assOthers)
+
+        # Then resolve selected assets
+        db.pics.setResloveBy(assSels)
 
         now.sim.clearAll()
 

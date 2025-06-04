@@ -321,6 +321,8 @@ h3 { font-size: 1.68rem; }
 
 .card.sim.main .card-header { background: linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent); }
 
+.card.sim .card-header .row > div:first-child { white-space: nowrap; overflow: hidden; }
+
 .card.sim .card-header .row > div:last-child { text-align: right; }
 
 .card.sim.checked { border: 3px solid var(--info-bs); }

@@ -28,7 +28,7 @@ enabling advanced management capabilities through AI-powered similarity detectio
 
 ### processing
 <p align="center">
-<img src="docs/process.gif" alt="preview" />
+<img src="docs/intro.gif" alt="preview" />
 </p>
 
 

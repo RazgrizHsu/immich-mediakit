@@ -1,13 +1,13 @@
 import json
 import sqlite3
-from sqlite3 import Cursor
-from typing import Optional, List, Callable
 from contextlib import contextmanager
+from sqlite3 import Cursor
+from typing import Optional, List
 
 from conf import envs
-from util import log
 from mod import models
 from mod.bse.baseModel import BaseDictModel
+from util import log
 from util.err import mkErr, tracebk
 
 
@@ -397,9 +397,9 @@ def countSimOk(isOk=0):
         raise mkErr(f"Failed to count assets with simOk[{isOk}]", e)
 
 
-def setSimIds(assId: str, infos: List[models.SimInfo], isOk=0, GID: Optional[int] = 0):
+def setSimInfos(assId: str, infos: List[models.SimInfo], isOk=0, GID: Optional[int] = 0):
     if not infos or len(infos) <= 0:
-        raise RuntimeError(f"Can't setSimIds id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
+        raise RuntimeError(f"Can't setSimInfos id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
 
     try:
         with mkConn() as conn:
@@ -446,29 +446,56 @@ def deleteBy(assets: List[models.Asset]):
         cntAll = len(assets)
         with mkConn() as conn:
             c = conn.cursor()
+
+            # Get mainGIDs from assets to be deleted
+            mainGIDs = [a.autoId for a in assets if a.view.isMain]
+
+            # 1. Delete incoming assets first
             assIds = [ass.id for ass in assets]
-            gids = [ass.simGID for ass in assets]
+            if not assIds: raise RuntimeError(f"No asset IDs found")
 
-            if not assIds or not gids: raise RuntimeError(f"No asset IDs found")
-
+            # 1.1 Delete from database
             qargs = ','.join(['?' for _ in assIds])
             c.execute(f"DELETE FROM assets WHERE id IN ({qargs})", assIds)
             count = c.rowcount
 
-            if count != cntAll:
-                raise mkErr(f"Failed to delete assets({cntAll}) with affected[{count}]")
+            if count != cntAll: raise mkErr(f"Failed to delete assets({cntAll}) with affected[{count}]")
 
-            # reset same gid
-            c.execute(f"UPDATE assets SET simGID = 0, simInfos= '[]' WHERE simOk = 0 AND simGID IN ({qargs})", gids)
+            # 1.2 Delete from vector database
+            import db.vecs as vecs
+            vecs.deleteBy(assIds)
 
-            lg.info(f"[pics] delete by assIds[{cntAll}] rst[{count}]")
+            # 2. Handle other assets containing these mainGIDs
+            if mainGIDs:
+                # Find assets with any of these mainGIDs in simGIDs (where simOk=0)
+                for mainGID in mainGIDs:
+                    c.execute("""
+                        SELECT id, simGIDs FROM assets 
+                        WHERE EXISTS (
+                            SELECT 1 FROM json_each(simGIDs) 
+                            WHERE value = ?
+                        ) AND simOk = 0
+                    """, (mainGID,))
 
-            # Delete vectors from Qdrant
-            if assIds:
-                import db.vecs as vecs
-                vecs.deleteBy(assIds)
+                    needUpdAssets = c.fetchall()
+
+                    for assId, jsonGIDs in needUpdAssets:
+                        if jsonGIDs:
+                            gids = json.loads(jsonGIDs)
+                            gids.remove(mainGID)
+                            if gids:
+                                c.execute(
+                                    "UPDATE assets SET simGIDs = ? WHERE id = ?",
+                                    (json.dumps(gids), assId)
+                                )
+                            else:  # If no GIDs left, clear the state
+                                c.execute(
+                                    "UPDATE assets SET simInfos = '[]', simGIDs = '[]' WHERE id = ?",
+                                    (assId,)
+                                )
 
             conn.commit()
+            lg.info(f"[pics] delete by assIds[{cntAll}] rst[{count}] mainGIDs[{mainGIDs}]")
 
             return count
     except Exception as e:
@@ -492,6 +519,30 @@ def setResloveBy(assets: List[models.Asset]):
         raise mkErr("Failed to resolve sim assets", e)
 
 
+def setSimGIDs(assId: str, GID: int):
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+
+            c.execute("SELECT simGIDs FROM assets WHERE id = ?", (assId,))
+            row = c.fetchone()
+            if row:
+                gids = json.loads(row[0]) if row[0] else []
+                if GID not in gids:
+                    gids.append(GID)
+                    c.execute(
+                        "UPDATE assets SET simGIDs = ? WHERE id = ?",
+                        (json.dumps(gids), assId)
+                    )
+                    conn.commit()
+                    lg.info(f"[pics] Updated assId[{assId}] added GID[{GID}] to simGIDs[{gids}]")
+                    return True
+            return False
+    except Exception as e:
+        raise mkErr(f"Failed to set simGIDs for asset[{assId}]", e)
+
+
+# noinspection SqlWithoutWhere
 def clearAllSimIds():
     try:
         with mkConn() as conn:
@@ -557,14 +608,12 @@ def getAllSimOks(isOk=0) -> List[models.Asset]:
         raise mkErr("Failed to get all simOk assets", e)
 
 
+# noinspection SqlWithoutWhere
 def clearAllVectored():
     try:
         with mkConn() as cnn:
             c = cnn.cursor()
-            c.execute("""
-                UPDATE assets 
-                SET isVectored=0
-            """)
+            c.execute("UPDATE assets SET isVectored=0")
             cnn.commit()
     except Exception as e:
         raise mkErr(f"Failed to set isVectored to 0", e)
@@ -597,20 +646,22 @@ def getAssetsByGID(gid: int) -> list[models.Asset]:
             c = conn.cursor()
             c.execute("""
                 SELECT * FROM assets 
-                WHERE simGID = ? AND json_array_length(simInfos) > 1
+                WHERE EXISTS (
+                    SELECT 1 FROM json_each(simGIDs) 
+                    WHERE value = ?
+                ) AND json_array_length(simInfos) > 1
                 ORDER BY json_array_length(simInfos) DESC, autoId
             """, (gid,))
-            assets = []
-            for row in c.fetchall():
-                asset = models.Asset.fromDB(c, row)
-                assets.append(asset)
+            rows = c.fetchall()
+            if not rows: return []
+            assets = [models.Asset.fromDB(c, row) for row in rows]
             return assets
     except Exception as e:
         lg.error(f"Error fetching assets by GID: {str(e)}")
         return []
 
 
-# 如果incGroup, 就帶入simGID相同的, 否則只帶入simInfos的
+# If incGroup, include assets with same simGIDs, else only simInfos
 def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
     import numpy as np
     from db import vecs
@@ -618,13 +669,23 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
     try:
         with mkConn() as conn:
             c = conn.cursor()
-            c.execute("SELECT * FROM assets WHERE id = ?", (assId,))
+            c.execute("""
+                SELECT 
+                    a.*,
+                    CASE WHEN EXISTS (
+                        SELECT 1 FROM assets a2 
+                        CROSS JOIN json_each(a2.simGIDs) gid
+                        WHERE gid.value = a.autoId AND a2.autoId != a.autoId
+                    ) THEN 1 ELSE 0 END as isMain
+                FROM assets a WHERE a.id = ?
+            """, (assId,))
             row = c.fetchone()
             if row is None:
                 lg.warn(f"[pics] SimGroup Root asset {assId} not found")
                 return None
 
             root = models.Asset.fromDB(c, row)
+            root.view.isMain = bool(row['isMain'])
             rst = [root]
 
             if not incGroup:
@@ -634,14 +695,25 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                 if not simIds: return [root]
 
                 qargs = ','.join(['?' for _ in simIds])
-                c.execute(f"SELECT * FROM assets WHERE id IN ({qargs})", simIds)
+                c.execute(f"""
+                    SELECT 
+                        a.*,
+                        CASE WHEN EXISTS (
+                            SELECT 1 FROM assets a2 
+                            CROSS JOIN json_each(a2.simGIDs) gid
+                            WHERE gid.value = a.autoId AND a2.autoId != a.autoId
+                        ) THEN 1 ELSE 0 END as isMain
+                    FROM assets a WHERE a.id IN ({qargs})
+                """, simIds)
 
                 rows = c.fetchall()
 
-                assets = [models.Asset.fromDB(c, row) for row in rows]
-
-                for asset in assets:
-                    asset.view.score = next((info.score for info in root.simInfos if info.id == asset.id), 0)  #理論上不應該空值
+                assets = []
+                for row in rows:
+                    asset = models.Asset.fromDB(c, row)
+                    asset.view.isMain = bool(row['isMain'])
+                    asset.view.score = next((info.score for info in root.simInfos if info.id == asset.id), 0)
+                    assets.append(asset)
 
                 assetMap = {asset.id: asset for asset in assets}
 
@@ -652,14 +724,41 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
 
                 rst.extend(sortAss)
             else:
-                if not root.simGID: return rst
+                if not root.simGIDs: return rst
 
-                c.execute("SELECT * FROM assets WHERE simGID = ? AND id != ?", (root.simGID, assId))
+                # Find all assets in the group (bidirectional query)
+                # 1. Assets sharing any GID with root
+                # 2. Assets with root.autoId in their simGIDs
+                gid_placeholders = ','.join(['?' for _ in root.simGIDs])
+                c.execute(f"""
+                    SELECT 
+                        a.*,
+                        CASE WHEN EXISTS (
+                            SELECT 1 FROM assets a2 
+                            CROSS JOIN json_each(a2.simGIDs) gid
+                            WHERE gid.value = a.autoId AND a2.autoId != a.autoId
+                        ) THEN 1 ELSE 0 END as isMain
+                    FROM assets a
+                    WHERE a.id != ? AND (
+                        EXISTS (
+                            SELECT 1 FROM json_each(a.simGIDs) 
+                            WHERE value IN ({gid_placeholders})
+                        )
+                        OR EXISTS (
+                            SELECT 1 FROM json_each(a.simGIDs) 
+                            WHERE value = ?
+                        )
+                    )
+                """, [assId] + root.simGIDs + [root.autoId])
                 rows = c.fetchall()
 
                 if not rows: return rst
 
-                assets = [models.Asset.fromDB(c, row) for row in rows]
+                assets = []
+                for row in rows:
+                    asset = models.Asset.fromDB(c, row)
+                    asset.view.isMain = bool(row['isMain'])
+                    assets.append(asset)
 
                 try:
                     rootVec = vecs.getBy(assId)
@@ -691,29 +790,22 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
         raise mkErr(f"Failed to get similar group for root {assId}", e)
 
 
-# select have simInfos and simInfos not only isSelf
 def countSimPending():
     try:
         with mkConn() as conn:
             c = conn.cursor()
-            sql = '''
-                WITH grpReps AS (
-                    SELECT simGID, MIN(autoId) as repAutoId
-                    FROM assets
-                    WHERE simOk = 0 AND json_array_length(simInfos) > 1 AND simGID != 0
-                    GROUP BY simGID
-                )
-                SELECT COUNT(*) FROM (
-                    SELECT a.autoId FROM assets a
-                    LEFT JOIN grpReps g ON a.simGID = g.simGID
+            # Count all leader assets referenced in simGIDs
+            c.execute("""
+                WITH allGIDs AS (
+                    SELECT DISTINCT gid.value as gid
+                    FROM assets a
+                    CROSS JOIN json_each(a.simGIDs) gid
                     WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
-                    AND (
-                        (a.simGID = 0) OR 
-                        (a.simGID != 0 AND a.autoId = g.repAutoId)
-                    )
                 )
-            '''
-            c.execute(sql)
+                SELECT COUNT(*) FROM assets a
+                INNER JOIN allGIDs g ON a.autoId = g.gid
+                WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
+            """)
             cnt = c.fetchone()[0]
             return cnt
     except Exception as e:
@@ -722,42 +814,44 @@ def countSimPending():
 
 def getPagedPending(page=1, size=20) -> list[models.Asset]:
     try:
-        sql = '''
-            WITH grpReps AS (
-                SELECT simGID, MIN(autoId) as repAutoId
-                FROM assets
-                WHERE simOk = 0 AND json_array_length(simInfos) > 1 AND simGID != 0
-                GROUP BY simGID
-            )
-            SELECT a.* FROM assets a
-            LEFT JOIN grpReps g ON a.simGID = g.simGID
-            WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
-            AND (
-                (a.simGID = 0) OR 
-                (a.simGID != 0 AND a.autoId = g.repAutoId)
-            )
-            ORDER BY json_array_length(a.simInfos) DESC, a.autoId
-            LIMIT ? OFFSET ?
-        '''
-
         with mkConn() as conn:
             cursor = conn.cursor()
             offset = (page - 1) * size
-            cursor.execute(sql, (size, offset))
+
+            # Get all leader assets referenced in simGIDs
+            cursor.execute("""
+                WITH allGIDs AS (
+                    SELECT DISTINCT gid.value as gid
+                    FROM assets a
+                    CROSS JOIN json_each(a.simGIDs) gid
+                    WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
+                ),
+                gidCounts AS (
+                    SELECT 
+                        gid.value as gid,
+                        COUNT(*) as cntRelats
+                    FROM assets a
+                    CROSS JOIN json_each(a.simGIDs) gid
+                    WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
+                      AND a.autoId != gid.value
+                    GROUP BY gid.value
+                )
+                SELECT 
+                    a.*,
+                    COALESCE(gc.cntRelats, 0) as cntRelats
+                FROM assets a
+                INNER JOIN allGIDs g ON a.autoId = g.gid
+                LEFT JOIN gidCounts gc ON a.autoId = gc.gid
+                WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
+                ORDER BY json_array_length(a.simInfos) DESC, a.autoId
+                LIMIT ? OFFSET ?
+            """, (size, offset))
 
             leaders = []
             for row in cursor.fetchall():
                 asset = models.Asset.fromDB(cursor, row)
+                asset.view.cntRelats = row['cntRelats']
                 leaders.append(asset)
-
-            if not leaders: return []
-
-            allRelIds = set()
-            for leader in leaders:
-                for sim in leader.simInfos:
-                    if sim.id and not sim.isSelf: allRelIds.add(sim.id)
-
-            leader.relats = len(allRelIds)
 
             return leaders
     except Exception as e:

@@ -14,8 +14,9 @@ body {
 	flex-direction:column;
 	box-sizing:border-box;
 }
+
 h3 {
-	font-size: 1.68rem;
+	font-size:1.68rem;
 }
 
 .hide {
@@ -873,7 +874,6 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		//}
 
 
-
 		&:focus {
 			box-shadow:0 0 0 0.2rem rgba(102, 126, 234, 0.25);
 		}
@@ -913,9 +913,12 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	}
 
 	.irow {
-		font-size: 14px;
+		font-size:14px;
 		margin:0;
-		> label:first-child {  } //title
+
+		> label:first-child { }
+
+		//title
 
 		&:not(:last-child) {
 			border-bottom:1px solid #888888AA;
@@ -935,7 +938,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			b { font-size:12px; }
 
 			font-size:12px;
-			color: #AAAAAA;
+			color:#AAAAAA;
 		}
 
 	}
@@ -945,7 +948,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 		> div {
 			margin-right:10px;
-			display: inline-block;
+			display:inline-block;
 		}
 
 		label {
@@ -955,10 +958,10 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 		select {
 			//border: red 1px solid!important;
-			padding: 0;
+			padding:0;
 
-			display: inline-block;
-			width: 50px;
+			display:inline-block;
+			width:50px;
 			text-align:center;
 		}
 	}
@@ -1055,6 +1058,8 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		.row {
 
 			> div:first-child {
+				white-space:nowrap;
+				overflow:hidden;
 			}
 
 			> div:last-child {
