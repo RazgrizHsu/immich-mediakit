@@ -419,9 +419,11 @@ def sim_Load(dta_now, dta_nfy):
     # relatedGroups = []
     # if now.sim.assId:
     #     asset = db.pics.getById(now.sim.assId)
-    #     if asset and hasattr(asset, 'simGID') and asset.simGID:
+    #     if asset and hasattr(asset, 'simGIDs') and asset.simGIDs:
     #         # 找出所有相同群組的其他代表
-    #         relatedAssets = db.pics.getAssetsByGID(asset.simGID)
+    #         relatedAssets = []
+    #         for gid in asset.simGIDs:
+    #             relatedAssets.extend(db.pics.getAssetsByGID(gid))
     #
     #         # 對每個關聯群組獲取其完整的相似照片群組
     #         for ra in relatedAssets:
