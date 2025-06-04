@@ -215,7 +215,9 @@ h3 { font-size: 1.68rem; }
 
 .tskPanel .progress { border: #999999 1px solid; }
 
-.tskPanel.fly { position: fixed; top: 66px; right: 20px; margin: 0; width: 50vw; z-index: 1050; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); animation: slideIn 0.3s ease-out; }
+.tskPanel.fly { position: fixed; top: 66px; right: 20px; margin: 0; width: 50vw; z-index: 1050; box-shadow: 0 0 10px 5px #1F5C9299; animation: slideIn 0.3s ease-out; }
+
+.tskPanel button:not(:last-child) { margin-right: auto; }
 
 @keyframes slideIn { from { transform: translateX(100%);
     opacity: 0; }

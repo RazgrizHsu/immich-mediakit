@@ -95,7 +95,7 @@ def layout():
 
 
 #========================================================================
-# Page initialization
+# Page Status Management - Unified callback for button states
 #========================================================================
 @cbk(
     [
@@ -104,76 +104,59 @@ def layout():
         out(K.btnClear, "disabled"),
         out(K.selectQ, "disabled"),
     ],
-    inp(ks.sto.cnt, "data"),
+    [
+        inp(ks.sto.cnt, "data"),
+        inp(ks.sto.tsk, "data"),
+    ],
     prevent_initial_call=False
 )
-def vec_OnInit(dta_cnt):
-    cnt = models.Cnt.fromDict(dta_cnt)
+def vec_UpdateStatus(dta_cnt, dta_tsk):
+    cnt = models.Cnt.fromDict(dta_cnt) if dta_cnt else models.Cnt()
+    tsk = models.Tsk.fromDict(dta_tsk) if dta_tsk else models.Tsk()
 
     hasPics = cnt.ass > 0
     hasVecs = cnt.vec > 0
+    cntNeedVec = cnt.ass - cnt.vec
+    isTskRunning = tsk.id is not None
 
+    # Default values
     btnTxt = "Execute - Process Assets"
     disBtnRun = True
     disBtnClr = True
     disSelect = False
 
-    if hasVecs:
+    lg.info(f"[vec] ass[{cnt.ass}] vec[{cnt.vec}] needVec[{cntNeedVec}] tskRunning[{isTskRunning}]")
+
+    if isTskRunning:
+        # Task is running
+        btnTxt = "Task in progress.."
+        disBtnRun = True
+        disBtnClr = True
+        disSelect = True
+    elif hasVecs and cntNeedVec <= 0:
+        # All assets vectorized
         btnTxt = "Vectors Complete"
         disBtnRun = True
         disBtnClr = False
         disSelect = True
     elif hasPics:
-        btnTxt = "Execute - Process Assets"
-        disBtnRun = False
-        disBtnClr = True
+        # Has assets, some need vectorization
+        if cntNeedVec > 0:
+            btnTxt = f"Process Assets( {cntNeedVec} )"
+            disBtnRun = False
+        else:
+            btnTxt = "Vectors Complete"
+            disBtnRun = True
+        disBtnClr = False if hasVecs else True
+        disSelect = cntNeedVec <= 0
     else:
+        # No assets
         btnTxt = "Please Get Assets First"
         disBtnRun = True
         disBtnClr = True
+        disSelect = False
 
     return btnTxt, disBtnRun, disBtnClr, disSelect
-
-
-#------------------------------------------------------------------------
-#------------------------------------------------------------------------
-@cbk(
-    [
-        out(K.btnDoVec, "children", allow_duplicate=True),
-        out(K.btnDoVec, "disabled", allow_duplicate=True),
-        out(K.btnClear, "disabled", allow_duplicate=True),
-        out(K.selectQ, "disabled", allow_duplicate=True),
-    ],
-    [
-        inp(ks.sto.tsk, "data"),
-    ],
-    [
-        ste(ks.sto.cnt, "data"),
-    ],
-    prevent_initial_call=True
-)
-def vec_Status(dta_tsk, dta_cnt):
-    # trgId = getTrgId()
-    # if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd.rep(5)
-
-    tsk = models.Tsk.fromDict(dta_tsk)
-    cnt = models.Cnt.fromDict(dta_cnt)
-
-    isTskin = tsk.name is not None
-
-    cntNeedVec = cnt.ass - cnt.vec
-
-    disBtnRun = isTskin or cntNeedVec <= 0
-    disBtnClr = isTskin or cnt.vec <= 0
-    disPhotoQ = isTskin or cnt.vec >= 1
-    txtBtn = f"Process Assets( {cntNeedVec} )" if cntNeedVec else "No Asset Need it"
-
-    lg.info(f"[vec] vec[{cnt.vec}] select[{disPhotoQ}]")
-
-    if tsk.id:
-        txtBtn = "Task in progress.."
-
-    return txtBtn, disBtnRun, disBtnClr, disPhotoQ
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
@@ -251,32 +234,56 @@ def vec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         doReport(1, f"Initializing with photoQ[{photoQ}]")
 
+        # Check for cancellation early
+        if sto.isCancelled():
+            msg = "Task was cancelled before processing"
+            nfy.info(msg)
+            return sto, msg
+
         assets = db.pics.getAllNonVector()
         doReport(5, f"Getting asset data count[{len(assets)}]")
 
         if not assets or len(assets) == 0:
             msg = "No assets to process"
             nfy.error(msg)
-            return nfy, now, msg
+            return sto, msg
+
+        # Check for cancellation after getting assets
+        if sto.isCancelled():
+            msg = "Task was cancelled during initialization"
+            nfy.info(msg)
+            return sto, msg
 
         cntAll = len(assets)
         doReport(8, f"Found [ {cntAll} ] starting processing")
 
-        rst = imgs.processVectors(assets, photoQ, onUpdate=doReport)
+        # Pass the cancel checker to processVectors
+        rst = imgs.processVectors(assets, photoQ, onUpdate=doReport, isCancelled=sto.isCancelled)
+
+        # Check for cancellation after processing
+        if sto.isCancelled():
+            msg = f"Processing cancelled: completed[ {rst.done} ] error[ {rst.erro} ]"
+            nfy.info(msg)
+            return sto, msg
 
         cnt.vec = db.vecs.count()
 
-        msg = f"Completed: total[ {rst.total} ] done[ {rst.done} ] Skip[ {rst.skip} ]"
-        if rst.error: msg += f" Error[ {rst.error}]"
+        msg = f"Completed: total[ {rst.all} ] done[ {rst.done} ] Skip[ {rst.skip} ]"
+        if rst.erro: msg += f" Error[ {rst.erro}]"
 
         nfy.success(msg)
 
         return sto, msg
 
     except Exception as e:
-        msg = f"Asset processing failed: {str(e)}"
-        nfy.error(msg)
-        raise RuntimeError(msg)
+        if sto.isCancelled():
+            msg = "Task was cancelled"
+            nfy.info(msg)
+            return sto, msg
+        else:
+            msg = f"Asset processing failed: {str(e)}"
+            nfy.error(msg)
+            raise RuntimeError(msg)
 
 
 def vec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):

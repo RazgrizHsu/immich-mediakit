@@ -143,9 +143,9 @@ def saveVectorBy(asset: models.Asset, photoQ) -> Tuple[models.Asset, Optional[st
         return asset, f"save vector failed: {asset.id} - {str(e)}"
 
 
-def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = None) -> models.ProcessInfo:
+def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = None, isCancelled: models.IFnCancel = None) -> models.ProcessInfo:
     tS = time.time()
-    pi = models.ProcessInfo(total=len(assets), done=0, skip=0, error=0)
+    pi = models.ProcessInfo(all=len(assets), done=0, skip=0, erro=0)
     inPct = 15
 
     numWorkers = min(multiprocessing.cpu_count(), 8)
@@ -158,12 +158,19 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg 
 
     try:
         if onUpdate:
-            onUpdate(inPct, f"Preparing to process count[{pi.total}], quality: {photoQ}, workers: {numWorkers}")
+            onUpdate(inPct, f"Preparing to process count[{pi.all}], quality: {photoQ}, workers: {numWorkers}")
 
-        with ThreadPoolExecutor(max_workers=numWorkers) as executor:
+        with (ThreadPoolExecutor(max_workers=numWorkers) as executor):
             futures = {executor.submit(saveVectorBy, asset, photoQ): asset for asset in assets}
 
             for future in as_completed(futures):
+                # Check for cancellation
+                if isCancelled and isCancelled():
+                    lg.info("[imgs] Processing cancelled by user")
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    pi.erro = len(assets) - cntDone  # Mark remaining as errors
+                    break
+
                 asset = futures[future]
                 try:
                     asset, error = future.result()
@@ -171,7 +178,7 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg 
                     with lock:
                         if error:
                             lg.error(error)
-                            pi.error += 1
+                            pi.erro += 1
                         else:
                             pi.done += 1
                             updAssets.append(asset)
@@ -190,15 +197,20 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg 
                         currentTime = time.time()
                         tElapsed = currentTime - tS
 
-                        needUpdate = (cntDone % 10 == 0 or cntDone == pi.total or
+                        needUpdate = (cntDone % 10 == 0 or cntDone == pi.all or
                                       cntDone < 10 or (currentTime - lastUpdateTime) > 1)
 
                         if onUpdate and needUpdate:
+                            # Check for cancellation before reporting
+                            if isCancelled and isCancelled():
+                                lg.info("[imgs] Processing cancelled during update")
+                                break
+
                             lastUpdateTime = currentTime
 
                             if cntDone >= 5:
                                 avgTimePerItem = tElapsed / cntDone
-                                remainCnt = pi.total - cntDone
+                                remainCnt = pi.all - cntDone
                                 remainTimeSec = avgTimePerItem * remainCnt * 1.1
 
                                 if remainTimeSec < 60:
@@ -213,18 +225,20 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg 
                             else:
                                 remainStr = "Calculating..."
 
-                            percent = inPct + int(cntDone / pi.total * (100 - inPct))
+                            percent = inPct + int(cntDone / pi.all * (100 - inPct))
                             itemsPerSec = cntDone / tElapsed if tElapsed > 0 else 0
-                            speedStr = f" ({itemsPerSec:.1f} items/sec)" if itemsPerSec > 0 else ""
+                            speedStr = f" {itemsPerSec:.1f} items/sec" if itemsPerSec > 0 else ""
 
-                            msg = f"Processing {cntDone}/{pi.total}, done[{pi.done}] skip[{pi.skip}] error[{pi.error}]"
-                            msg += f" ( Estimated remaining: {remainStr}{speedStr} )"
+                            msg = f"Process: {cntDone}/{pi.all} ok[{pi.done}]"
+                            if pi.skip: msg += f" skip[{pi.skip}]"
+                            if pi.erro: msg += f" error[{pi.erro}]"
+                            msg += f" ( remaining: {remainStr}{speedStr} )"
                             onUpdate(percent, msg)
 
                 except Exception as e:
                     with lock:
                         lg.error(f"Future execution failed for {asset.id}: {str(e)}")
-                        pi.error += 1
+                        pi.erro += 1
                         cntDone += 1
 
         if updAssets:
@@ -234,8 +248,14 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg 
                     db.pics.setVectoredBy(asset, cur=cur)
                 conn.commit()
 
+        # Check if cancelled at the end
+        if isCancelled and isCancelled():
+            if onUpdate:
+                onUpdate(0, f"Processing cancelled! Completed: {pi.done}, Errors: {pi.erro}")
+            return pi
+
         if onUpdate:
-            onUpdate(100, f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.error}")
+            onUpdate(100, f"Processing completed! Completed: {pi.done}, Skipped: {pi.skip}, Errors: {pi.erro}")
 
         return pi
 

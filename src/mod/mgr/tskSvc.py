@@ -83,6 +83,9 @@ def mkTask(tsk: Tsk, fn: Callable, sto: ITaskStore) -> str:
     if not mgr: raise RuntimeError("TskMgr not initialized")
 
     tskSn = mgr.regBy(DashTask.mk(tsk, fn, sto))
+    
+    # Inject cancel checker into store
+    sto.setCancelChecker(lambda: mgr.isCancelled(tskSn))
 
     return tskSn
 
@@ -90,6 +93,10 @@ def runBy(tskId: str) -> bool:
     if not mgr: raise RuntimeError("TskMgr not initialized")
 
     return mgr.run(tskId)
+
+def cancelBy(tskId: str) -> bool:
+    if not mgr: return False
+    return mgr.cancel(tskId)
 
 
 def getResultBy(tskId: str) -> Optional[ITaskStore]:
