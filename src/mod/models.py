@@ -229,7 +229,7 @@ class Asset(BaseDictModel):
     isVectored: Optional[int] = 0
     simOk: Optional[int] = 0
     simInfos: List[SimInfo] = field(default_factory=list)
-    simGID: Optional[int] = 0
+    simGIDs: List[int] = field(default_factory=list)
 
     # view only
     selected: Optional[bool] = False

@@ -10,9 +10,11 @@ from mod import models
 from mod.bse.baseModel import BaseDictModel
 from util.err import mkErr, tracebk
 
+
 lg = log.get(__name__)
 
 pathDb = envs.mkitData + 'pics.db'
+
 
 @contextmanager
 def mkConn():
@@ -28,6 +30,7 @@ def mkConn():
     finally:
         if conn:
             conn.close()
+
 
 def close():
     # Deprecated - connections are now managed by context manager
@@ -57,11 +60,10 @@ def init():
                     preview_path     TEXT,
                     fullsize_path    TEXT,
                     jsonExif         TEXT Default '{}',
-                    size             INTEGER Default 0,
                     isVectored       INTEGER Default 0,
                     simOk            INTEGER Default 0,
                     simInfos         TEXT Default '[]',
-                    simGID           INTEGER Default 0
+                    simGIDs          TEXT Default '[]'
                 )
                 ''')
 
@@ -81,6 +83,7 @@ def init():
         return True
     except Exception as e:
         raise mkErr("Failed to initialize pics database", e)
+
 
 def clearAll():
     try:
@@ -140,6 +143,7 @@ def getByAutoId(autoId) -> Optional[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get asset by autoId", e)
 
+
 def getById(assId) -> Optional[models.Asset]:
     try:
         with mkConn() as conn:
@@ -152,6 +156,7 @@ def getById(assId) -> Optional[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get asset by id", e)
 
+
 def getAllByUsrId(usrId: str) -> List[models.Asset]:
     try:
         with mkConn() as conn:
@@ -163,6 +168,7 @@ def getAllByUsrId(usrId: str) -> List[models.Asset]:
             return assets
     except Exception as e:
         raise mkErr(f"Failed to get assets by userId[{usrId}]", e)
+
 
 def getAllByIds(ids: List[str]) -> List[models.Asset]:
     try:
@@ -209,6 +215,7 @@ def getAllNonVector() -> list[models.Asset]:
             return assets
     except Exception as e:
         raise mkErr("Failed to get non-vector assets", e)
+
 
 #------------------------------------------------------------------------
 # paged
@@ -310,6 +317,7 @@ def setVectoredBy(asset: models.Asset, done=1, cur: Cursor = None):
     except Exception as e:
         raise mkErr(f"Failed to update vector status for asset[{asset.id}]", e)
 
+
 def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
     try:
         assId = asset.get('id', None)
@@ -376,6 +384,7 @@ def getAnyNonSim() -> Optional[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get non-sim asset", e)
 
+
 def countSimOk(isOk=0):
     try:
         with mkConn() as conn:
@@ -388,7 +397,7 @@ def countSimOk(isOk=0):
         raise mkErr(f"Failed to count assets with simOk[{isOk}]", e)
 
 
-def setSimIds(assId: str, infos: List[models.SimInfo], isOk = 0, GID:Optional[int] = 0):
+def setSimIds(assId: str, infos: List[models.SimInfo], isOk=0, GID: Optional[int] = 0):
     if not infos or len(infos) <= 0:
         raise RuntimeError(f"Can't setSimIds id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
 
@@ -398,8 +407,27 @@ def setSimIds(assId: str, infos: List[models.SimInfo], isOk = 0, GID:Optional[in
 
             try:
                 dictSimInfos = [sim.toDict() for sim in infos] if infos else []
-                sqlGID = GID if GID else 0
-                c.execute("UPDATE assets SET simOk = ?, simInfos = ?, simGID = ? WHERE id = ?", (isOk, json.dumps(dictSimInfos), sqlGID, assId))
+
+                # Get current simGIDs and append new GID if provided
+                if GID:
+                    c.execute("SELECT simGIDs FROM assets WHERE id = ?", (assId,))
+                    row = c.fetchone()
+                    if row:
+                        gids = json.loads(row[0]) if row[0] else []
+                        if GID not in gids: gids.append(GID)
+                        gids_json = json.dumps(gids)
+                    else:
+                        gids_json = json.dumps([GID])
+
+                    c.execute(
+                        "UPDATE assets SET simOk = ?, simInfos = ?, simGIDs = ? WHERE id = ?",
+                        (isOk, json.dumps(dictSimInfos), gids_json, assId)
+                    )
+                else:
+                    c.execute(
+                        "UPDATE assets SET simOk = ?, simInfos = ? WHERE id = ?",
+                        (isOk, json.dumps(dictSimInfos), assId)
+                    )
 
                 if not c.rowcount:
                     raise RuntimeError(f"No asset found with id: {assId}")
@@ -433,7 +461,6 @@ def deleteBy(assets: List[models.Asset]):
             # reset same gid
             c.execute(f"UPDATE assets SET simGID = 0, simInfos= '[]' WHERE simOk = 0 AND simGID IN ({qargs})", gids)
 
-
             lg.info(f"[pics] delete by assIds[{cntAll}] rst[{count}]")
 
             # Delete vectors from Qdrant
@@ -447,6 +474,7 @@ def deleteBy(assets: List[models.Asset]):
     except Exception as e:
         raise mkErr("Failed to delete assets", e)
 
+
 def setResloveBy(assets: List[models.Asset]):
     try:
         with mkConn() as conn:
@@ -455,7 +483,7 @@ def setResloveBy(assets: List[models.Asset]):
             if not autoIds: return 0
 
             qargs = ','.join(['?' for _ in autoIds])
-            c.execute(f"UPDATE assets SET simOk = 1, simGID = 0, simInfos = '[]' WHERE autoId IN ({qargs})", autoIds)
+            c.execute(f"UPDATE assets SET simOk = 1, simGIDs = '[]', simInfos = '[]' WHERE autoId IN ({qargs})", autoIds)
             conn.commit()
             count = c.rowcount
             lg.info(f"[pics] set simOk by autoIds[{len(autoIds)}] rst[{count}]")
@@ -463,11 +491,12 @@ def setResloveBy(assets: List[models.Asset]):
     except Exception as e:
         raise mkErr("Failed to resolve sim assets", e)
 
+
 def clearAllSimIds():
     try:
         with mkConn() as conn:
             c = conn.cursor()
-            c.execute("UPDATE assets SET simOk = 0, simInfos = '[]'")
+            c.execute("UPDATE assets SET simOk = 0, simInfos = '[]', simGIDs = '[]'")
             conn.commit()
             count = c.rowcount
             lg.info(f"Cleared similarity results for {count} assets")
@@ -509,6 +538,7 @@ def getAnySimPending() -> Optional[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get pending assets", e)
 
+
 def getAllSimOks(isOk=0) -> List[models.Asset]:
     try:
         with mkConn() as conn:
@@ -526,6 +556,7 @@ def getAllSimOks(isOk=0) -> List[models.Asset]:
     except Exception as e:
         raise mkErr("Failed to get all simOk assets", e)
 
+
 def clearAllVectored():
     try:
         with mkConn() as cnn:
@@ -537,6 +568,7 @@ def clearAllVectored():
             cnn.commit()
     except Exception as e:
         raise mkErr(f"Failed to set isVectored to 0", e)
+
 
 # auto mark simOk=1 if simInfos only includes self
 def setSimAutoMark():
@@ -559,8 +591,6 @@ def setSimAutoMark():
         raise mkErr(f"Failed execute SimAutoMark", e)
 
 
-
-
 def getAssetsByGID(gid: int) -> list[models.Asset]:
     try:
         with mkConn() as conn:
@@ -581,7 +611,7 @@ def getAssetsByGID(gid: int) -> list[models.Asset]:
 
 
 # 如果incGroup, 就帶入simGID相同的, 否則只帶入simInfos的
-def getSimAssets(assId: str, incGroup = False) -> Optional[List[models.Asset]]:
+def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
     import numpy as np
     from db import vecs
 
@@ -611,7 +641,7 @@ def getSimAssets(assId: str, incGroup = False) -> Optional[List[models.Asset]]:
                 assets = [models.Asset.fromDB(c, row) for row in rows]
 
                 for asset in assets:
-                    asset.view.score = next( (info.score for info in root.simInfos if info.id == asset.id), 0 ) #理論上不應該空值
+                    asset.view.score = next((info.score for info in root.simInfos if info.id == asset.id), 0)  #理論上不應該空值
 
                 assetMap = {asset.id: asset for asset in assets}
 
@@ -659,9 +689,6 @@ def getSimAssets(assId: str, incGroup = False) -> Optional[List[models.Asset]]:
             return rst
     except Exception as e:
         raise mkErr(f"Failed to get similar group for root {assId}", e)
-
-
-
 
 
 # select have simInfos and simInfos not only isSelf
