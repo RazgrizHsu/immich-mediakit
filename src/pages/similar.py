@@ -450,6 +450,8 @@ def sim_Load(dta_now, dta_nfy):
         elif oldPn != cntPn:
             needReload = True
             lg.info(f"[sim:load] Pending count changed from {oldPn} to {cntPn}, reloading data")
+    else:
+        needReload = True
 
     if needReload:
         paged = db.pics.getPagedPending(page=pgr.idx, size=pgr.size)
@@ -493,17 +495,15 @@ def sim_Load(dta_now, dta_nfy):
         inp({"type": "card-select", "id": ALL}, "n_clicks"),
     ],
     ste(ks.sto.now, "data"),
-    ste(ks.sto.nfy, "data"),
     prevent_initial_call=True
 )
-def sim_OnSelectAsset(clks_crd, dta_now, dta_nfy):
+def sim_OnSelectAsset(clks_crd, dta_now):
     hasClk = any(clks_crd)
     if not hasClk: return noUpd
 
     # lg.info(f"[sim:select] any[{hasClk}] {clks_crd}")
 
     now = Now.fromDict(dta_now)
-    nfy = Nfy.fromDict(dta_nfy)
 
     if ctx.triggered and now.sim.assCur:
         trgId = ctx.triggered_id
@@ -558,8 +558,8 @@ def sim_OnNowChangeSelects(dta_now):
 
     # if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
 
-    btnTextRm = f"❌ Delete( {cntSel} ) and ✅ Keep others"
-    btnTextRS = f"✅ Keep( {cntSel} ) and ❌ delete others"
+    btnTextRm = f"❌ Delete( {cntSel} ) and ✅ Keep others( {cntDiff} )"
+    btnTextRS = f"✅ Keep( {cntSel} ) and ❌ delete others( {cntDiff} )"
     btnDisabled = cntSel == 0
 
     return btnTextRm, btnDisabled, btnTextRS, btnDisabled
@@ -1060,12 +1060,16 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             doReport(50, f"Processing children similar photo #{aid} depth({depth}) count({len(doneIds)})")
 
             try:
+                ass = db.pics.getByAutoId(aid)
+
+                if ass.simOk: continue #ignore already resolved
+
                 lg.info(f"[sim:fnd] search child #{aid} depth[{depth}] mx({maxDepth}) items({len(doneIds)}/{maxItems})")
                 cVec, cInfos = db.vecs.findSimiliar(aid, thMin, thMax)
 
-                ass = db.pics.getByAutoId(aid)
-                db.pics.setSimInfos(ass.autoId, cInfos)
+
                 db.pics.setSimGIDs(aid, rootGID)
+                db.pics.setSimInfos(aid, cInfos)
 
                 # haven't reached max
                 if depth < maxDepth and len(doneIds) < maxItems:
@@ -1134,9 +1138,6 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         if not assSels or cntSelect == 0: raise RuntimeError("Selected not found")
 
-        for a in assSels:
-            lg.info(f"[sim:delSelects] delete asset #[{a.autoId}] Id[ {a.id} ]")
-
         immich.trashByAssets(assSels)
         db.pics.deleteBy(assSels)
 
@@ -1178,9 +1179,6 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         # Delete other assets first to maintain reference integrity
         if assOthers:
-            for a in assOthers:
-                lg.info(f"[sim:selOk] delete asset #[{a.autoId}] Id[ {a.id} ]")
-
             immich.trashByAssets(assOthers)
             db.pics.deleteBy(assOthers)
 
