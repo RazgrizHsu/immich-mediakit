@@ -1,3 +1,107 @@
+window.dash_clientside = window.dash_clientside || {}
+
+
+//------------------------------------------------------------------------
+// similar
+//------------------------------------------------------------------------
+window.dash_clientside.similar = {
+
+	//------------------------------------
+	onCardSelectClicked( n_clicks ){
+		if ( dash_clientside.callback_context.triggered.length > 0 ){
+			let triggered = dash_clientside.callback_context.triggered[ 0 ]
+			if ( triggered.prop_id && triggered.value > 0 ){
+				let triggeredId = JSON.parse( triggered.prop_id.split( '.' )[ 0 ] )
+				window.Ste.toggle( triggeredId.id )
+
+				let selectedIds = Array.from( window.Ste.selectedIds )
+				let totalCount = window.Ste.cntTotal
+
+				let steData = {
+					selectedIds: selectedIds,
+					cntTotal: totalCount
+				}
+
+				console.log( '[Selection] Syncing to ste store on selection:', steData )
+				return steData
+			}
+		}
+		return dash_clientside.no_update
+	},
+
+	onNowSyncToDummyInit( now_data ){
+		if ( now_data && now_data.sim && now_data.sim.assCur ){
+			let assets = now_data.sim.assCur
+			if ( window.Ste ){
+				window.Ste.init( assets.length )
+
+			}
+		}
+		return dash_clientside.no_update
+	}
+}
+
+//------------------------------------------------------------------------
+// mdlImg
+//------------------------------------------------------------------------
+window.dash_clientside.mdlImg = {
+	onStoreToDummy( mdl_data, now_data ){
+		if ( mdl_data && mdl_data.isMulti && now_data && now_data.sim && now_data.sim.assCur ){
+			let curIdx = mdl_data.curIdx
+			let assets = now_data.sim.assCur
+
+			if ( curIdx >= 0 && curIdx < assets.length ){
+				let curAsset = assets[ curIdx ]
+				window.currentMdlImgAutoId = curAsset.autoId
+				console.log( '[mdlImg] Set current autoId for hotkeys:', window.currentMdlImgAutoId )
+			}
+		}
+		else{
+			window.currentMdlImgAutoId = null
+		}
+		return dash_clientside.no_update
+	},
+	onBtnSelectToSte( n_clicks ){
+		if ( dash_clientside.callback_context.triggered.length > 0 ){
+			let triggered = dash_clientside.callback_context.triggered[ 0 ]
+			if ( triggered.prop_id && triggered.value > 0 ){
+				let mdlData = arguments[ arguments.length - 1 ] // mdlImg store data
+				let nowData = arguments[ arguments.length - 2 ] // now store data
+
+				if ( mdlData && mdlData.isMulti && nowData && nowData.sim && nowData.sim.assCur ){
+					let curIdx = mdlData.curIdx
+					let assets = nowData.sim.assCur
+
+					if ( curIdx >= 0 && curIdx < assets.length ){
+						let curAsset = assets[ curIdx ]
+						let autoId = curAsset.autoId
+
+						if ( window.Ste ){
+							window.Ste.toggle( autoId )
+
+							let selectedIds = Array.from( window.Ste.selectedIds )
+							let totalCount = window.Ste.cntTotal
+
+							let steData = {
+								selectedIds: selectedIds,
+								cntTotal: totalCount
+							}
+
+							console.log( '[mdlImg Selection] Toggled autoId:', autoId, 'steData:', steData )
+							return steData
+						}
+					}
+				}
+			}
+		}
+		return dash_clientside.no_update
+	}
+
+}
+
+//------------------------------------------------------------------------
+// global
+//------------------------------------------------------------------------
 document.addEventListener( 'keydown', function ( ev ){
 	const modal = document.querySelector( '#img-modal' )
 
@@ -18,8 +122,29 @@ document.addEventListener( 'keydown', function ( ev ){
 		else if ( ev.key == ' ' )
 		{
 			ev.preventDefault()
-			const btn = document.querySelector( '#btn-img-select' )
-			if ( btn && btn.style.display !== 'none' ) btn.click()
+
+			// 直接使用客戶端選擇邏輯，不觸發按鈕點擊
+			if ( window.Ste && window.currentMdlImgAutoId )
+			{
+				window.Ste.toggle( window.currentMdlImgAutoId )
+
+				// 同步到 ste store
+				let selectedIds = Array.from( window.Ste.selectedIds )
+				let totalCount = window.Ste.cntTotal
+
+				let steData = {
+					selectedIds: selectedIds,
+					cntTotal: totalCount
+				}
+
+				console.log( '[mdlImg Hotkey] Space toggled autoId:', window.currentMdlImgAutoId, 'steData:', steData )
+
+				// 手動觸發 ste store 更新
+				if ( window.dash_clientside && window.dash_clientside.set_props )
+				{
+					window.dash_clientside.set_props( 'store-state', {data: steData} )
+				}
+			}
 		}
 		else if ( ev.key == 'Escape' || ev.key == 'q' )
 		{

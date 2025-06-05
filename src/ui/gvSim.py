@@ -62,7 +62,7 @@ def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
 def mkCardSim(ass: models.Asset):
     if not ass: return htm.Div("Photo not found")
 
-    imgSrc = f"/api/img/{ass.id}" if ass.id else None
+    imgSrc = f"/api/img/{ass.autoId}" if ass.id else None
 
     assId = ass.id
     fnm = ass.originalFileName
@@ -112,7 +112,7 @@ def mkCardSim(ass: models.Asset):
         htm.Div([
             htm.Img(
                 src=imgSrc,
-                id={"type": "img-pop-multi", "id": ass.id, "autoId": ass.autoId}, n_clicks=0,
+                id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
                 className="card-img"
             ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
             ,
@@ -195,7 +195,7 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
 def mkCardPnd(ass: models.Asset, showRelated=True):
     if not ass: return htm.Div("Photo not found")
 
-    imgSrc = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
+    imgSrc = f"/api/img/{ass.autoId}" if ass.autoId else "assets/noimg.png"
 
     if not ass.id:
         return htm.Div("-Render None-")
@@ -256,7 +256,7 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
         htm.Div([
             htm.Img(
                 src=imgSrc,
-                id={"type": "img-pop", "index": assId}, n_clicks=0,
+                id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
                 className="card-img"
             ),
             htm.Div([

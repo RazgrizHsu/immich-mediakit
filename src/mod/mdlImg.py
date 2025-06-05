@@ -1,10 +1,12 @@
 from typing import Optional
 from dsh import htm, dcc, dbc, inp, out, ste, cbk, ctx, noUpd, getTrgId, ALL
+from dsh import ccbk, cbkFn
 
 from conf import ks
 from mod import models
 from ui import gvExif
 from util import log
+
 
 lg = log.get(__name__)
 
@@ -33,13 +35,20 @@ class k:
 
     cssAuto = "auto"
 
+
 #------------------------------------------------------------------------
 # Helper functions
 #------------------------------------------------------------------------
+def _isAssetSelected(ste, autoId) -> bool:
+    if not ste or not ste.selectedIds or not autoId: return False
+    return autoId in ste.selectedIds
+
+
 def _getAssetBy(now, assId) -> Optional[models.Asset]:
     if now.sim.assCur and assId:
         return next((a for a in now.sim.assCur if a.id == assId), None)
     return None
+
 
 def _getNavStyles(mdl, now):
     if mdl.isMulti and now.sim.assCur and len(now.sim.assCur) > 1:
@@ -50,22 +59,26 @@ def _getNavStyles(mdl, now):
         nextStyle = {"display": "none"}
     return prevStyle, nextStyle
 
+
 def _getSelectBtnState(isSelected):
     if isSelected:
         return "✅ Selected", "success"
     return "◻️ Select", "primary"
 
-def _getHelpState(mdl:models.MdlImg):
+
+def _getHelpState(mdl: models.MdlImg):
     css = "help collapsed" if mdl.helpCollapsed else "help"
     txt = "❔" if mdl.helpCollapsed else "❎"
     if not mdl.isMulti: css = "hide"
     return css, txt
 
-def _getInfoState(mdl:models.MdlImg):
+
+def _getInfoState(mdl: models.MdlImg):
     css = "info collapsed" if mdl.infoCollapsed else "info"
     txt = "ℹ️" if mdl.infoCollapsed else "❎"
     if not mdl.isMulti: css = "hide"
     return css, txt
+
 
 def _buildImageContent(mdl, now):
     htms = []
@@ -79,7 +92,7 @@ def _buildImageContent(mdl, now):
         if fullAss:
             htms.append(htm.Div(
                 htm.Span(
-                    f"#{fullAss.autoId} @{','.join(map(str,fullAss.simGIDs))}",
+                    f"#{fullAss.autoId} @{','.join(map(str, fullAss.simGIDs))}",
                     className="tag xl"
                 )
                 , className="acts B")
@@ -154,8 +167,12 @@ layoutInfo = htm.Div([
     ], className="desc"),
 ], id=k.info, className="info")
 
+
 def render():
     return [
+        # Dummy element for mdlImg current autoId tracking
+        htm.Div(id={"type": "dummy-output", "id": "mdlimg-current"}, style={"display": "none"}),
+
         dbc.Modal([
             dbc.ModalHeader([
                 htm.Span("Image Preview", className="me-auto"),
@@ -209,13 +226,12 @@ def render():
     ]
 
 
-
 #------------------------------------------------------------------------
 # trigger: single
 #------------------------------------------------------------------------
 @cbk(
     out(k.store, "data", allow_duplicate=True),
-    inp({"type": "img-pop", "index": ALL}, "n_clicks"),
+    inp({"type": "img-pop", "aid": ALL}, "n_clicks"),
     ste(k.store, "data"),
     prevent_initial_call=True
 )
@@ -227,26 +243,24 @@ def mdlImg_OnImgPopClicked(clks, dta_mdl):
     mdl = models.MdlImg.fromDict(dta_mdl)
 
     trigIdx = ctx.triggered_id
-    if isinstance(trigIdx, dict) and "index" in trigIdx:
-        assId = trigIdx["index"]
-        #lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
+    if isinstance(trigIdx, dict) and "aid" in trigIdx:
+        aid = trigIdx["aid"]
+        # lg.info(f"[mdlImg] clicked, assId[{assId}]")
 
-        if assId:
+        if aid:
             mdl.isMulti = False
             mdl.open = True
-            mdl.imgUrl = f"/api/img/{assId}?q=preview"
+            mdl.imgUrl = f"/api/img/{aid}?q=preview"
 
     return mdl.toDict()
+
 
 #------------------------------------------------------------------------
 # trigger: multi
 #------------------------------------------------------------------------
 @cbk(
-    [
-        out(k.store, "data", allow_duplicate=True),
-        out(ks.sto.now, "data", allow_duplicate=True),
-    ],
-    inp({"type": "img-pop-multi", "id": ALL, "autoId": ALL}, "n_clicks"),
+    out(k.store, "data", allow_duplicate=True),
+    inp({"type": "img-pop-multi", "aid": ALL}, "n_clicks"),
     [
         ste(k.store, "data"),
         ste(ks.sto.now, "data"),
@@ -254,25 +268,28 @@ def mdlImg_OnImgPopClicked(clks, dta_mdl):
     prevent_initial_call=True
 )
 def mdlImg_OnImgPopMultiClicked(clks, dta_mdl, dta_now):
-    if not clks or not any(clks): return noUpd.by(2)
+    if not clks or not any(clks): return noUpd
 
-    if not ctx.triggered: return noUpd.by(2)
+    if not ctx.triggered: return noUpd
 
     mdl = models.MdlImg.fromDict(dta_mdl)
     now = models.Now.fromDict(dta_now)
 
     trigIdx = ctx.triggered_id
-    if isinstance(trigIdx, dict) and "id" in trigIdx:
-        assId = trigIdx["id"]
-        # lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
 
-        if assId and now.sim.assCur:
+    if isinstance(trigIdx, dict) and "aid" in trigIdx:
+        aid = trigIdx["aid"]
+        lens = len(now.sim.assCur)
+        lg.info(f"[mdlImg] clicked, aid[{aid}] lens[{lens}]")
+
+        if aid and now.sim.assCur:
             mdl.open = True
-            mdl.imgUrl = f"/api/img/{assId}?q=preview"
+            mdl.imgUrl = f"/api/img/{aid}?q=preview"
             mdl.isMulti = True
-            mdl.curIdx = next((i for i, ass in enumerate(now.sim.assCur) if ass.id == assId), 0)
+            mdl.curIdx = next((i for i, ass in enumerate(now.sim.assCur) if ass.autoId == aid), 0)
 
-    return mdl.toDict(), now.toDict()
+    return mdl.toDict()
+
 
 #------------------------------------------------------------------------
 # callbacks
@@ -296,20 +313,20 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl, dta_now):
     [
         ste(k.modal, "is_open"),
         ste(ks.sto.now, "data"),
+        ste(ks.sto.ste, "data"),
     ],
     prevent_initial_call=True
 )
-def mdlImg_IsOpen(dta_mdl, is_open, dta_now):
+def mdlImg_IsOpen(dta_mdl, is_open, dta_now, dta_ste):
     if not ctx.triggered: return noUpd.by(12)
 
     trgId = getTrgId()
-
-    # lg.info(f"[mdlImg] dta_mdl: {dta_mdl}")
 
     if trgId != k.store: return noUpd.by(12)
 
     mdl = models.MdlImg.fromDict(dta_mdl)
     now = models.Now.fromDict(dta_now)
+    ste = models.Ste.fromDict(dta_ste)
 
     htms = _buildImageContent(mdl, now)
     prevStyle, nextStyle = _getNavStyles(mdl, now)
@@ -323,7 +340,7 @@ def mdlImg_IsOpen(dta_mdl, is_open, dta_now):
         fullAss = now.sim.assCur[mdl.curIdx]
 
         btnSelectStyle = {"display": "block"}
-        isSelected = False
+        isSelected = _isAssetSelected(ste, fullAss.autoId)
         btnSelectText, btnSelectColor = _getSelectBtnState(isSelected)
 
     helpCss, helpTxt = _getHelpState(mdl)
@@ -338,7 +355,7 @@ def mdlImg_IsOpen(dta_mdl, is_open, dta_now):
                     htm.Td("autoId"),
                     htm.Td([
                         htm.Span(f"#{ass.autoId}", className="tag"),
-                        htm.Span(f"@{','.join(map(str,ass.simGIDs))}", className="tag")
+                        htm.Span(f"@{','.join(map(str, ass.simGIDs))}", className="tag")
                     ])
                 ]),
                 htm.Tr([
@@ -380,16 +397,18 @@ def mdlImg_IsOpen(dta_mdl, is_open, dta_now):
     [
         ste(k.store, "data"),
         ste(ks.sto.now, "data"),
+        ste(ks.sto.ste, "data"),
     ],
     prevent_initial_call=True
 )
-def mdlImg_OnNavClicked(clk_prev, clk_next, dta_mdl, dta_now):
+def mdlImg_OnNavClicked(clk_prev, clk_next, dta_mdl, dta_now, dta_ste):
     if not clk_prev and not clk_next: return noUpd.by(6)
 
     if not ctx.triggered: return noUpd.by(6)
 
     now = models.Now.fromDict(dta_now)
     mdl = models.MdlImg.fromDict(dta_mdl)
+    ste = models.Ste.fromDict(dta_ste) if dta_ste else models.Ste()
 
     if not mdl.isMulti or not now.sim.assCur: return noUpd.by(6)
 
@@ -407,61 +426,53 @@ def mdlImg_OnNavClicked(clk_prev, clk_next, dta_mdl, dta_now):
             return noUpd.by(6)
 
     curAss = now.sim.assCur[mdl.curIdx]
-    assId = curAss.id
-    mdl.imgUrl = f"/api/img/{assId}?q=preview"
+    aid = curAss.autoId
+    mdl.imgUrl = f"/api/img/{aid}?q=preview"
 
     # Rebuild content with new image
     htms = _buildImageContent(mdl, now)
     prevStyle, nextStyle = _getNavStyles(mdl, now)
 
     # Get select button state
-    ass = _getAssetBy(now, assId)
-    isSelected = False
+    isSelected = _isAssetSelected(ste, curAss.autoId)
     btnSelectText, btnSelectColor = _getSelectBtnState(isSelected)
 
-    lg.info(f"[mdlImg] nav to idx[{mdl.curIdx}] assId[{assId}] autoId[{curAss.autoId} selected[{isSelected}]")
+    lg.info(f"[mdlImg] nav to idx[{mdl.curIdx}] autoId[{curAss.autoId} selected[{isSelected}]")
 
     return mdl.toDict(), htms, prevStyle, nextStyle, btnSelectText, btnSelectColor
 
 
 @cbk(
     [
-        out(ks.sto.now, "data", allow_duplicate=True),
-        out(k.store, "data", allow_duplicate=True),
         out(k.btnSelect, "children", allow_duplicate=True),
         out(k.btnSelect, "color", allow_duplicate=True),
     ],
-    inp(k.btnSelect, "n_clicks"),
+    inp(ks.sto.ste, "data"),
     [
         ste(ks.sto.now, "data"),
         ste(k.store, "data"),
     ],
     prevent_initial_call=True
 )
-def mdlImg_OnSelectClicked(clks, dta_now, dta_mdl):
-    if not clks: return noUpd.by(4)
+def mdlImg_OnSteChanged(dta_ste, dta_now, dta_mdl):
+    if not dta_ste or not dta_now or not dta_mdl: return noUpd.by(2)
 
     now = models.Now.fromDict(dta_now)
     mdl = models.MdlImg.fromDict(dta_mdl)
+    ste = models.Ste.fromDict(dta_ste)
 
     if not mdl.isMulti or not now.sim.assCur or mdl.curIdx >= len(now.sim.assCur):
-        return noUpd.by(4)
+        return noUpd.by(2)
 
     curAss = now.sim.assCur[mdl.curIdx]
-    assId = curAss.id
+    if not curAss: return noUpd.by(2)
 
-    if not assId or not now.sim.assCur:
-        return noUpd.by(4)
-
-    # TODO: Implement selection toggle using client-side state
-    lg.info(f'[mdlImg:select] selection will be handled by client-side state')
-
-    # Get the updated selected state
-    ass = _getAssetBy(now, assId)
-    isSelected = False
+    isSelected = _isAssetSelected(ste, curAss.autoId)
     btnText, btnColor = _getSelectBtnState(isSelected)
 
-    return now.toDict(), mdl.toDict(), btnText, btnColor
+    lg.info(f'[mdlImg:ste] Updated button state for autoId[{curAss.autoId}] selected[{isSelected}]')
+
+    return btnText, btnColor
 
 
 @cbk(
@@ -530,3 +541,27 @@ def mdlImg_ToggleInfo(clks, dta_mdl):
     infoCss, infoTxt = _getInfoState(mdl)
 
     return mdl.toDict(), infoCss, infoTxt
+
+
+#------------------------------------------------------------------------
+# Client-side callback for mdlImg selection
+#------------------------------------------------------------------------
+ccbk(
+    cbkFn("mdlImg", "onBtnSelectToSte"),
+
+    out(ks.sto.ste, "data", allow_duplicate=True),
+    [inp(k.btnSelect, "n_clicks")],
+    [ste(ks.sto.now, "data"), ste(k.store, "data")],
+    prevent_initial_call=True
+)
+
+#------------------------------------------------------------------------
+# Client-side callback to set current mdlImg autoId for hotkeys
+#------------------------------------------------------------------------
+ccbk(
+    cbkFn("mdlImg", "onStoreToDummy"),
+
+    out({"type": "dummy-output", "id": "mdlimg-current"}, "children"),
+    [inp(k.store, "data"), inp(ks.sto.now, "data")],
+    prevent_initial_call=True
+)

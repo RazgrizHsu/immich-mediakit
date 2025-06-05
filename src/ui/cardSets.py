@@ -2,11 +2,13 @@ from dsh import htm, dcc, dbc, inp, out, ste, cbk, noUpd
 
 from util import log
 
+
 lg = log.get(__name__)
 
 from conf import ks, co
 import db
 from mod import models
+
 
 class k:
     ths = "thresholds"
@@ -34,10 +36,6 @@ optMaxItems = [
 
 
 def renderCard():
-
-
-    lg.info( f"===============>> { db.dto.simMaxDepths } ({type(db.dto.simMaxDepths)})" )
-
     return dbc.Card([
         dbc.CardHeader("Similar Settings"),
         dbc.CardBody([
@@ -73,13 +71,13 @@ def renderCard():
                 htm.Div([
                     dbc.Checkbox(id=k.id(k.simIncRelGrp), label="Include Related", value=db.dto.simIncRelGrp),
 
-                    htm.Div( [
-                        htm.Label( "Max Depths: " ),
+                    htm.Div([
+                        htm.Label("Max Depths: "),
                         dbc.Select(id=k.id(k.simMaxDepths), options=optMaxDepths, value=db.dto.simMaxDepths, className="")
                     ]),
 
-                    htm.Div( [
-                        htm.Label( "Max Items: " ),
+                    htm.Div([
+                        htm.Label("Max Items: "),
                         dbc.Select(id=k.id(k.simMaxItems), options=optMaxItems, value=db.dto.simMaxItems, className="")
                     ]),
                 ], className="icbxs"),
@@ -121,7 +119,7 @@ def settings_ChgThs(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, dta_no
 
     def reloadAssets():
         nonlocal retNow, now
-        lg.info( f"[cSets] reload, incGroup[{db.dto.simIncRelGrp}]" )
+        lg.info(f"[cSets] reload, incGroup[{db.dto.simIncRelGrp}]")
         now.sim.assCur = db.pics.getSimAssets(now.sim.assAid, db.dto.simIncRelGrp)
         retNow = now
 

@@ -35,7 +35,7 @@ def createPhotoCard(ass: models.Asset):
     hasEx = ass.jsonExif is not None
     cantFind = ( ass.simOk == 1 ) or ass.simGIDs
 
-    image_src = f"/api/img/{ass.id}" if ass.id else "assets/noimg.png"
+    image_src = f"/api/img/{ass.autoId}" if ass.autoId else "assets/noimg.png"
 
     tipExif = None
     if hasEx and ass.jsonExif is not None:
@@ -55,7 +55,7 @@ def createPhotoCard(ass: models.Asset):
                 htm.Span(f"#{ass.autoId}", className="tag sm second"),
             ], className="floatL top"),
         ],
-            id={"type": "img-pop", "index": assId}, n_clicks=0,
+            id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
             className="head"
         ),
         htm.Div([

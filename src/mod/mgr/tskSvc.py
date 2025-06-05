@@ -54,23 +54,19 @@ class DashTask(BseTsk):
             raise
 
 def init(port: Optional[int] = None, forceInit=False):
-    import os
-    if forceInit or os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
-        global mgr
-        if not mgr:
-            try:
-                if port is None:
-                    from conf import envs
-                    port = int(envs.mkitPortWs)
-                mgr = TskMgr(port=port)
-                mgr.start()
-                lg.info(f"[tskSvc] Started on port {port}")
-            except Exception as e:
-                lg.error(f"[tskSvc] Init Failed: {str(e)}")
-                raise RuntimeError(f"[tskSvc] Start failed, port[{port}]: {str(e)}")
-        return mgr
-    else:
-        lg.warn("[tskSvc] Ignore init..")
+    global mgr
+    if not mgr:
+        try:
+            if port is None:
+                from conf import envs
+                port = int(envs.mkitPortWs)
+            mgr = TskMgr(port=port)
+            mgr.start()
+            lg.info(f"[tskSvc] Started on port {port}")
+        except Exception as e:
+            lg.error(f"[tskSvc] Init Failed: {str(e)}")
+            raise RuntimeError(f"[tskSvc] Start failed, port[{port}]: {str(e)}")
+    return mgr
 
 def stop():
     global mgr

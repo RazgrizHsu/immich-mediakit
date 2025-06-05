@@ -17,8 +17,6 @@ lg = log.get(__name__)
 # init
 #------------------------------------
 db.init()
-tskSvc.init( forceInit= True if conf.isDock else False )
-
 
 #------------------------------------
 app = dash.Dash(
@@ -78,20 +76,29 @@ if __name__ == "__main__":
 
         lg.info("---------------------------------------")
         if conf.envs.isDev:
-            import dsh
 
+            hotReload = bool(os.getenv( 'HotReload', False ))
+
+            if not hotReload: tskSvc.init()
+            else:
+                if os.getenv('WERKZEUG_RUN_MAIN') == 'true': tskSvc.init()
+
+            import dsh
             dsh.registerScss()
             app.run(
                 debug=True,
                 host='0.0.0.0',
                 port=int(conf.envs.mkitPort),
                 dev_tools_ui=False,
-                dev_tools_hot_reload=True,
+                dev_tools_hot_reload=hotReload,
                 dev_tools_props_check=False,
                 dev_tools_silence_routes_logging=True,
                 dev_tools_serve_dev_bundles=True,
             )
+
         else:
+
+            tskSvc.init()
             app.run(
                 debug=False,
                 host='0.0.0.0',
