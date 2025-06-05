@@ -206,7 +206,6 @@ class AssetExif(BaseDictModel):
 class AssetViewOnly(BaseDictModel):
 
     isMain:bool = False
-    selected: bool = False
 
     cntRelats: int = 0
 
@@ -280,6 +279,47 @@ class Cnt(BaseDictModel):
         return cnt
 
 
+@dataclass
+class Ste(BaseDictModel):
+    selectedIds: List[str] = field(default_factory=list)  # 選中的 asset autoIDs
+    cntTotal: int = 0  # 當前頁面總數量
+
+    def clear(self):
+        self.selectedIds.clear()
+        self.cntTotal = 0
+
+    def toggle(self, assetId: str):
+        if assetId in self.selectedIds:
+            self.selectedIds.remove(assetId)
+        else:
+            self.selectedIds.append(assetId)
+
+    def setSelected(self, assetId: str, selected: bool):
+        if selected:
+            if assetId not in self.selectedIds:
+                self.selectedIds.append(assetId)
+        else:
+            if assetId in self.selectedIds:
+                self.selectedIds.remove(assetId)
+
+    def isSelected(self, assetId: str) -> bool:
+        return assetId in self.selectedIds
+
+    def getSelectedCnt(self) -> int:
+        return len(self.selectedIds)
+
+    def getUnselectedCnt(self) -> int:
+        return self.cntTotal - len(self.selectedIds)
+
+    def getSelectedAssets(self, allAssets: List[Asset]) -> List[Asset]:
+        return [a for a in allAssets if a.autoId in self.selectedIds]
+
+    def syncFromAssets(self, assets: List[Asset]):
+        self.clear()
+        self.cntTotal = len(assets)
+        # Note: 舊版本會從 asset.view.selected 初始化，現在改用客戶端狀態管理
+
+
 
 @dataclass
 class PgSim(BaseDictModel):
@@ -288,7 +328,6 @@ class PgSim(BaseDictModel):
 
     assAid: Optional[int] = None
     assCur: List[Asset] = field(default_factory=list)
-    assSelect: List[Asset] = field(default_factory=list)
     assPend: List[Asset] = field(default_factory=list)
 
     assFromUrl: Optional[Asset] = None
@@ -296,7 +335,6 @@ class PgSim(BaseDictModel):
     def clearNow(self):
         self.assAid = self.assFromUrl = None
         self.assCur.clear()
-        self.assSelect.clear()
 
     def clearAll(self):
         self.clearNow()
@@ -343,6 +381,7 @@ class ITaskStore:
     now: Now = None
     cnt: Cnt = None
     tsk: Tsk = None
+    ste: Ste = None
 
     _canceller: Optional[IFnCancel] = None
 

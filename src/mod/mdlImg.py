@@ -323,7 +323,7 @@ def mdlImg_IsOpen(dta_mdl, is_open, dta_now):
         fullAss = now.sim.assCur[mdl.curIdx]
 
         btnSelectStyle = {"display": "block"}
-        isSelected = fullAss.view.selected if fullAss else False
+        isSelected = False
         btnSelectText, btnSelectColor = _getSelectBtnState(isSelected)
 
     helpCss, helpTxt = _getHelpState(mdl)
@@ -416,7 +416,7 @@ def mdlImg_OnNavClicked(clk_prev, clk_next, dta_mdl, dta_now):
 
     # Get select button state
     ass = _getAssetBy(now, assId)
-    isSelected = ass.view.selected if ass else False
+    isSelected = False
     btnSelectText, btnSelectColor = _getSelectBtnState(isSelected)
 
     lg.info(f"[mdlImg] nav to idx[{mdl.curIdx}] assId[{assId}] autoId[{curAss.autoId} selected[{isSelected}]")
@@ -453,18 +453,12 @@ def mdlImg_OnSelectClicked(clks, dta_now, dta_mdl):
     if not assId or not now.sim.assCur:
         return noUpd.by(4)
 
-    for ass in now.sim.assCur:
-        if ass.id == assId:
-            ass.view.selected = not ass.view.selected
-            lg.info(f'[mdlImg:select] toggled: {ass.autoId}, selected: {ass.view.selected}')
-            break
-
-    selected = [ass for ass in now.sim.assCur if ass.view.selected]
-    now.sim.assSelect = selected
+    # TODO: Implement selection toggle using client-side state
+    lg.info(f'[mdlImg:select] selection will be handled by client-side state')
 
     # Get the updated selected state
     ass = _getAssetBy(now, assId)
-    isSelected = ass.view.selected if ass else False
+    isSelected = False
     btnText, btnColor = _getSelectBtnState(isSelected)
 
     return now.toDict(), mdl.toDict(), btnText, btnColor

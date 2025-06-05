@@ -417,7 +417,7 @@ def setSimGIDs(autoId: int, GID: int):
                         (json.dumps(gids), autoId)
                     )
                     conn.commit()
-                    lg.info(f"[pics] upd #{autoId} GID[{GID}] to simGIDs[{gids}]")
+                    # lg.info(f"[pics] upd #{autoId} GID[{GID}] to simGIDs[{gids}]")
                     return True
             return False
     except Exception as e:
@@ -445,7 +445,7 @@ def setSimInfos(autoId: int, infos: List[models.SimInfo], isOk=0):
                     raise RuntimeError(f"update failed #{autoId}")
 
                 conn.commit()
-                lg.info(f"[pics] upd #{autoId} simOK[{isOk}] simInfo[{len(infos)}]")
+                # lg.info(f"[pics] upd #{autoId} simOK[{isOk}] simInfo[{len(infos)}]")
 
             except Exception as e:
                 raise e

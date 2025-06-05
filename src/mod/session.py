@@ -28,6 +28,7 @@ def render():
     tsk: models.Tsk = models.Tsk()
     mdl: models.Mdl = models.Mdl()
     cnt: models.Cnt = models.Cnt()
+    ste: models.Ste = models.Ste()
 
     cnt.refreshFromDB()
 
@@ -50,6 +51,7 @@ def render():
     mk(ks.sto.tsk, tsk.toDict())
     mk(ks.sto.mdl, mdl.toDict())
     mk(ks.sto.cnt, cnt.toDict())
+    mk(ks.sto.ste, ste.toDict())
 
 
     items.append(htm.Div(id=ks.sto.init, children='init'))
