@@ -68,7 +68,7 @@ def mkCardSim(ass: models.Asset):
     fnm = ass.originalFileName
     dtc = ass.fileCreatedAt
 
-    checked = ass.view.selected
+    checked = False
     cssIds = "checked" if checked else ""
 
     exi = ass.jsonExif
@@ -88,7 +88,7 @@ def mkCardSim(ass: models.Asset):
             htm.Div([
                 dbc.Row([
                     dbc.Col(
-                        dbc.Checkbox(label=f"#{ass.autoId}", value=checked)
+                        dbc.Checkbox(label=f"#{ass.autoId}", value=False)
                     ),
                     dbc.Col(
                         [
@@ -106,7 +106,7 @@ def mkCardSim(ass: models.Asset):
                         ]
                     )
                 ])
-            ], id={"type": "card-select", "id": assId}),
+            ], id={"type": "card-select", "id": ass.autoId}),
             className="p-2 curP"
         ),
         htm.Div([
@@ -204,7 +204,7 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
     fnm = ass.originalFileName
     dtc = ass.fileCreatedAt
 
-    checked = ass.view.selected
+    checked = False
     cssIds = "checked" if checked else ""
 
     exi = ass.jsonExif

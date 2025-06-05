@@ -55,7 +55,7 @@ class DashTask(BseTsk):
 
 def init(port: Optional[int] = None, forceInit=False):
     import os
-    if forceInit or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    if forceInit or os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         global mgr
         if not mgr:
             try:
@@ -83,7 +83,7 @@ def mkTask(tsk: Tsk, fn: Callable, sto: ITaskStore) -> str:
     if not mgr: raise RuntimeError("TskMgr not initialized")
 
     tskSn = mgr.regBy(DashTask.mk(tsk, fn, sto))
-    
+
     # Inject cancel checker into store
     sto.setCancelChecker(lambda: mgr.isCancelled(tskSn))
 

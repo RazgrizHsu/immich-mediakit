@@ -17,10 +17,7 @@ def init():
         psql.init()
         lg.info('All databases initialized successfully')
     except Exception as e:
-        lg.error(f'Database initialization failed: {str(e)}')
-        return False
-
-    return True
+        raise RuntimeError(f'Database initialization failed: {str(e)}')
 
 def close():
     try:

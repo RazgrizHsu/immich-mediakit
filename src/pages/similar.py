@@ -1,7 +1,6 @@
 import traceback
 from typing import Optional
 import time
-import numpy as np
 
 import immich
 import db
@@ -9,7 +8,7 @@ from conf import ks, co
 from dsh import dash, htm, dcc, cbk, dbc, inp, out, ste, getTrgId, noUpd, ctx, ALL
 from util import log
 from mod import mapFns, models, tskSvc
-from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk
+from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk, Ste
 from ui import pager, cardSets, gvSim as gvs
 
 
@@ -36,14 +35,14 @@ class k:
 
     btnFind = "sim-btn-find"
     btnClear = "sim-btn-clear"
-    btnCbxRm = "sim-btn-CbxRm"
-    btnCbxRS = "sim-btn-CbxRS"
-    btnCbxOk = "sim-btn-CbxOk"
-    btnCbxRA = "sim-btn-CbxRA"
-    cbxNCOk = "sim-btn-CbxNCOk"
-    cbxNCRm = "sim-btn-CbxNCRm"
-    cbxNCRS = "sim-btn-CbxNCRS"
-    cbxNCRA = "sim-btn-CbxNCRA"
+    btnRmSel = "sim-btn-RmSel"
+    btnOkSel = "sim-btn-OkSel"
+    btnOkAll = "sim-btn-OkAll"
+    btnRmAll = "sim-btn-RmAll"
+    cbxNChkOkAll = "sim-cbx-NChk-OkAll"
+    cbxNChkRmSel = "sim-btn-NChk-RmSel"
+    cbxNChkOkSel = "sim-btn-NChk-OkSel"
+    cbxNChkRmAll = "sim-btn-NChk-RmAll"
 
     tabs = 'sim-tabs'
     tabCur = "tab-current"
@@ -71,6 +70,10 @@ def layout(autoId=None, **kwargs):
     return ui.renderBody([
         #====== top start =======================================================
         dcc.Store(id=k.assFromUrl, data=guideAss),
+
+        # 客戶端選擇狀態管理的 dummy 元素
+        htm.Div(id={"type": "dummy-output", "id": "selection"}, style={"display": "none"}),
+        htm.Div(id={"type": "dummy-output", "id": "init-selection"}, style={"display": "none"}),
 
         htm.Div([
             htm.H3(f"{ks.pg.similar.name}"),
@@ -147,28 +150,28 @@ def layout(autoId=None, **kwargs):
                                 htm.Div([
 
                                     htm.Div([
-                                        dbc.Button("------", id=k.btnCbxRm, color="danger", size="sm", disabled=True),
+                                        dbc.Button("Del Select, Keep others", id=k.btnRmSel, color="danger", size="sm", disabled=True),
                                         htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNCRm, label="No-Confirm", className="sm"),
+                                        dbc.Checkbox(id=k.cbxNChkRmSel, label="No-Confirm", className="sm"),
                                     ]
                                     ),
 
                                     htm.Div([
-                                        dbc.Button("------", id=k.btnCbxRS, color="success", size="sm", disabled=True),
+                                        dbc.Button("Keep Select, Delete others", id=k.btnOkSel, color="success", size="sm", disabled=True),
                                         htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNCRS, label="No-Confirm", className="sm")
+                                        dbc.Checkbox(id=k.cbxNChkOkSel, label="No-Confirm", className="sm")
                                     ]),
 
                                     htm.Div([
-                                        dbc.Button("❌ Delete All", id=k.btnCbxRA, color="danger", size="sm", disabled=True),
+                                        dbc.Button("❌ Delete All", id=k.btnRmAll, color="danger", size="sm", disabled=True),
                                         htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNCRA, label="No-Confirm", className="sm")
+                                        dbc.Checkbox(id=k.cbxNChkRmAll, label="No-Confirm", className="sm")
                                     ]),
 
                                     htm.Div([
-                                        dbc.Button("✅ Keep All", id=k.btnCbxOk, color="success", size="sm", disabled=True),
+                                        dbc.Button("✅ Keep All", id=k.btnOkAll, color="success", size="sm", disabled=True),
                                         htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNCOk, label="No-Confirm", className="sm")
+                                        dbc.Checkbox(id=k.cbxNChkOkAll, label="No-Confirm", className="sm")
                                     ]),
 
                                 ], className="right"),
@@ -253,10 +256,12 @@ def sim_OnTabChange(active_tab, dta_now):
 
     if now.sim.activeTab == active_tab: return noUpd
 
-    now.sim.activeTab = active_tab
     lg.info(f"[sim:tab] Tab changed to: {active_tab} (from: {now.sim.activeTab})")
 
-    return now.toDict()
+    # 使用 Patch 只更新 activeTab
+    patch = dash.Patch()
+    patch['sim']['activeTab'] = active_tab
+    return patch
 
 
 #------------------------------------------------------------------------
@@ -321,14 +326,16 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
         if not now.sim.assFromUrl:
             return noUpd.by(2)
 
-        now.sim.assFromUrl = None
-        # now.sim.assAid = None # clean here will make refresh assAid failed
-        return now.toDict(), noUpd
+        # 使用 Patch 只清除 assFromUrl
+        patch = dash.Patch()
+        patch['sim']['assFromUrl'] = None
+        return patch, noUpd
 
     ass = models.Asset.fromDict(dta_ass)
 
     lg.info(f"[sim:sync] asset from url: #{ass.autoId} id[{ass.id}]")
 
+    # 只更新必要的欄位，但由於需要觸發任務，保持完整更新
     now.sim.assFromUrl = ass
     now.sim.assAid = ass.autoId
 
@@ -357,10 +364,6 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
         out(k.txtCntOk, "children"),
         out(k.txtCntRs, "children"),
         out(k.txtCntNo, "children"),
-        out(k.btnFind, "disabled"),
-        out(k.btnClear, "disabled"),
-        out(k.btnCbxOk, "disabled"),
-        out(k.btnCbxRA, "disabled"),
         out(k.gvSim, "children"),
         out(k.gvPnd, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -377,37 +380,15 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     prevent_initial_call="initial_duplicate"
 )
 def sim_Load(dta_now, dta_nfy):
-    #lg.info( f"[sim:load] now: {dta_now}" )
-
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
 
     trgId = getTrgId()
+    lg.info(f"[sim:load] load, trig: [ {trgId} ]")
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
     cntPn = db.pics.countSimPending()
-
-    # Disable Find button if task is running
-    from mod.mgr.tskSvc import mgr
-    isTaskRunning = False
-    if mgr:
-        for tskId, info in mgr.list().items():
-            if info.status.value in ['pending', 'running']:
-                lg.info(f"[sim:load] Running task found: {tskId}, status: {info.status.value}")
-                isTaskRunning = True
-                break
-
-    disFind = cntNo <= 0 or (cntPn >= cntNo) or isTaskRunning
-    disCler = cntOk <= 0 and cntPn <= 0
-
-    cntAssets = len(now.sim.assCur) if now.sim.assCur else -1
-    disOk = cntAssets <= 0
-    disDel = cntAssets <= 0
-
-    if cntAssets >= 1:
-        #lg.info(f"[sim:load] assets: {now.sim.assets[0]}")
-        pass
 
     gvSim = []
 
@@ -439,8 +420,7 @@ def sim_Load(dta_now, dta_nfy):
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:load] trig[{trgId}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assAid[{now.sim.assAid}]")
-    # lg.info(f"[sim:load] tgId[{trgId}] assAid[{now.sim.assAid}] assCur[{len(now.sim.assCur)}] assPend[{len(now.sim.assPend)}]")
+    lg.info(f"[sim:load] trig[{trgId}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) assCur[{len(now.sim.assCur)}] assAid[{now.sim.assAid}]")
 
     # Load pending data - reload if count changed or no data
     needReload = False
@@ -478,7 +458,6 @@ def sim_Load(dta_now, dta_nfy):
 
     return [
         cntOk, cntPn, cntNo,
-        disFind, disCler, disOk, disDel,
         gvSim, gvPnd,
         nfy.toDict(), nowDict,
         pagerData.toDict() if pagerData else noUpd,
@@ -487,82 +466,116 @@ def sim_Load(dta_now, dta_nfy):
 
 
 #------------------------------------------------------------------------
-# Update status counters
+# Update status counters - Using CLIENT-SIDE callbacks for performance
 #------------------------------------------------------------------------
-@cbk(
-    out(ks.sto.now, "data"),
-    [
-        inp({"type": "card-select", "id": ALL}, "n_clicks"),
-    ],
-    ste(ks.sto.now, "data"),
+from dash import clientside_callback
+
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (dash_clientside.callback_context.triggered.length > 0) {
+            var triggered = dash_clientside.callback_context.triggered[0];
+            if (triggered.prop_id && triggered.value > 0) {
+                var triggeredId = JSON.parse(triggered.prop_id.split('.')[0]);
+                window.Ste.toggle(triggeredId.id);
+
+                // 每次選擇時同步到 ste store
+                var selectedIds = Array.from(window.Ste.selectedIds);
+                var totalCount = window.Ste.cntTotal;
+
+                var steData = {
+                    selectedIds: selectedIds,
+                    cntTotal: totalCount
+                };
+
+                console.log('[Selection] Syncing to ste store on selection:', steData);
+                return steData;
+            }
+        }
+        return dash_clientside.no_update;
+    }
+    """,
+    out(ks.sto.ste, "data"),
+    [inp({"type": "card-select", "id": ALL}, "n_clicks")],
     prevent_initial_call=True
 )
-def sim_OnSelectAsset(clks_crd, dta_now):
-    hasClk = any(clks_crd)
-    if not hasClk: return noUpd
-
-    # lg.info(f"[sim:select] any[{hasClk}] {clks_crd}")
-
-    now = Now.fromDict(dta_now)
-
-    if ctx.triggered and now.sim.assCur:
-        trgId = ctx.triggered_id
-        tid = trgId['id']
-
-        # 找到被點擊的資產並切換選擇狀態
-        targetAss = None
-        for ass in now.sim.assCur:
-            if ass.id == tid:
-                ass.view.selected = not ass.view.selected
-                targetAss = ass
-                lg.info(f'[header-click] toggled: {ass.autoId}, selected: {ass.view.selected}')
-                break
-
-        if targetAss:
-            # 增量更新 assSelect
-            if not now.sim.assSelect:
-                now.sim.assSelect = []
-
-            if targetAss.view.selected:
-                # 新增到選擇清單
-                if not any(a.id == targetAss.id for a in now.sim.assSelect):
-                    now.sim.assSelect.append(targetAss)
-            else:
-                # 從選擇清單移除
-                now.sim.assSelect = [a for a in now.sim.assSelect if a.id != targetAss.id]
-
-            lg.info(f'[sim:select] Selected: {len(now.sim.assSelect)}/{len(now.sim.assCur)}')
-
-    return now.toDict()
 
 
 #------------------------------------------------------------------------
-# Update button state based on selections
+# Initialize client-side selection state when assets load
 #------------------------------------------------------------------------
-@cbk(
-    [
-        out(k.btnCbxRm, "children"),
-        out(k.btnCbxRm, "disabled"),
-        out(k.btnCbxRS, "children"),
-        out(k.btnCbxRS, "disabled"),
-    ],
+clientside_callback(
+    """
+    function(now_data) {
+        if (now_data && now_data.sim && now_data.sim.assCur) {
+            var assets = now_data.sim.assCur;
+            if (window.Ste) {
+                window.Ste.init(assets.length);
+
+            }
+        }
+        return dash_clientside.no_update;
+    }
+    """,
+    out({"type": "dummy-output", "id": "init-selection"}, "children"),
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def sim_OnNowChangeSelects(dta_now):
+
+
+#------------------------------------------------------------------------
+# Update all button states based on current data
+#------------------------------------------------------------------------
+@cbk(
+    [
+        out(k.btnFind, "disabled"),
+        out(k.btnClear, "disabled"),
+        out(k.btnOkAll, "disabled"),
+        out(k.btnRmAll, "disabled"),
+        out(k.btnRmSel, "disabled"),
+        out(k.btnOkSel, "disabled"),
+    ],
+    [
+        inp(ks.sto.now, "data"),
+        inp(ks.sto.ste, "data"),
+        inp(ks.sto.cnt, "data"),
+    ],
+    prevent_initial_call=True
+)
+def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
     now = Now.fromDict(dta_now)
+    ste = Ste.fromDict(dta_ste) if dta_ste else Ste()
+    cnt = Cnt.fromDict(dta_cnt)
 
-    cntAll = len(now.sim.assCur)
-    cntSel = len(now.sim.assSelect)
-    cntDiff = cntAll - cntSel
+    # 檢查是否有任務運行
+    from mod.mgr.tskSvc import mgr
+    isTaskRunning = False
+    if mgr:
+        for tskId, info in mgr.list().items():
+            if info.status.value in ['pending', 'running']:
+                isTaskRunning = True
+                break
 
-    # if selCnt: lg.info(f"[sim:slect] selCnt[{selCnt}]")
+    # Find 按鈕邏輯
+    cntNo = cnt.ass - cnt.simOk if cnt else 0
+    cntPn = cnt.simPend if cnt else 0
+    disFind = cntNo <= 0 or (cntPn >= cntNo) or isTaskRunning
 
-    btnTextRm = f"❌ Delete( {cntSel} ) and ✅ Keep others( {cntDiff} )"
-    btnTextRS = f"✅ Keep( {cntSel} ) and ❌ delete others( {cntDiff} )"
-    btnDisabled = cntSel == 0
+    # Clear 按鈕邏輯
+    cntOk = cnt.simOk if cnt else 0
+    disClear = cntOk <= 0 and cntPn <= 0
 
-    return btnTextRm, btnDisabled, btnTextRS, btnDisabled
+    # 當前資產相關按鈕
+    cntAssets = len(now.sim.assCur) if now.sim.assCur else 0
+    disOk = cntAssets <= 0
+    disDel = cntAssets <= 0
+
+    # 選擇相關按鈕
+    cntSel = len(ste.selectedIds) if ste.selectedIds else 0
+    disRm = cntSel == 0
+    disRS = cntSel == 0
+
+    return disFind, disClear, disOk, disDel, disRm, disRS
 
 
 #------------------------------------------------------------------------
@@ -597,7 +610,6 @@ def sim_OnSwitchViewGroup(clks, dta_now):
 
     now.sim.assAid = asset.autoId
     now.sim.assCur = db.pics.getSimAssets(asset.autoId, db.dto.simIncRelGrp)
-    now.sim.assSelect = []
 
     if DEBUG: lg.info(f"[sim:vgrp] Loaded {len(now.sim.assCur)} assets for group")
 
@@ -609,18 +621,18 @@ def sim_OnSwitchViewGroup(clks, dta_now):
 #========================================================================
 @cbk(
     [
-        out(ks.sto.mdl, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
+        out(ks.sto.mdl, "data", allow_duplicate=True),
         out(ks.sto.tsk, "data", allow_duplicate=True),
     ],
     [
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
-        inp(k.btnCbxRm, "n_clicks"),
-        inp(k.btnCbxRS, "n_clicks"),
-        inp(k.btnCbxOk, "n_clicks"),
-        inp(k.btnCbxRA, "n_clicks"),
+        inp(k.btnRmSel, "n_clicks"),
+        inp(k.btnOkSel, "n_clicks"),
+        inp(k.btnOkAll, "n_clicks"),
+        inp(k.btnRmAll, "n_clicks"),
     ],
     [
         ste(ks.sto.now, "data"),
@@ -628,15 +640,22 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         ste(ks.sto.mdl, "data"),
         ste(ks.sto.tsk, "data"),
         ste(ks.sto.nfy, "data"),
-        ste(k.cbxNCOk, "value"),
-        ste(k.cbxNCRm, "value"),
-        ste(k.cbxNCRS, "value"),
-        ste(k.cbxNCRA, "value"),
+        ste(ks.sto.ste, "data"),
+        ste(k.cbxNChkOkAll, "value"),
+        ste(k.cbxNChkRmSel, "value"),
+        ste(k.cbxNChkOkSel, "value"),
+        ste(k.cbxNChkRmAll, "value"),
     ],
     prevent_initial_call=True
 )
-def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, ncOk, ncRm, ncRS, ncRA):
-    if not clk_fnd and not clk_clr and not clk_rm and not clk_rs and not clk_ok and not clk_ra: return noUpd.by(4)
+def sim_RunModal(
+    clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra,
+    dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, dta_ste,
+    nchkOkAll, nchkRmSel, ncRS, ncRA
+):
+    if not clk_fnd and not clk_clr and not clk_rm and not clk_rs and not clk_ok and not clk_ra:
+        lg.info( f"[sim:RunModal] fnd[{clk_fnd}] clr[{clk_clr}] rm[{clk_rm}] rs[{clk_rs}] ok[{clk_ok}] ra[{clk_ra}]" )
+        return noUpd.by(4)
 
     trgId = getTrgId()
 
@@ -645,6 +664,11 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
     mdl = Mdl.fromDict(dta_mdl)
     tsk = Tsk.fromDict(dta_tsk)
     nfy = Nfy.fromDict(dta_nfy)
+    ste = Ste.fromDict(dta_ste)
+
+    retNow, retTsk = noUpd, noUpd
+
+
 
     # Check if any task is already running
     from mod.mgr.tskSvc import mgr
@@ -652,14 +676,14 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
         for tid, info in mgr.list().items():
             if info.status.value in ['pending', 'running']:
                 nfy.warn(f"Task already running, please wait for it to complete")
-                return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
+                return noUpd.by(4).updFr(0, nfy)
 
     if tsk.id:
         if mgr and mgr.getInfo(tsk.id):
             ti = mgr.getInfo(tsk.id)
             if ti.status in ['pending', 'running']:
                 nfy.warn(f"[similar] Task already running: {tsk.id}")
-                return noUpd.by(4)
+                return noUpd.by(4).updFr(0, nfy.toDict())
             # lg.info(f"[similar] Clearing completed task: {tsk.id}")
             tsk.id = None
             tsk.cmd = None
@@ -667,24 +691,26 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
     lg.info(f"[similar] trig[{trgId}] tsk[{tsk}]")
 
     #------------------------------------------------------------------------
-    if trgId == k.btnCbxOk:
-        ass = now.sim.assCur
-        cnt = len(ass)
+    if trgId == k.btnClear:
+        cntOk = db.pics.countSimOk(isOk=1)
+        cntRs = db.pics.countHasSimIds()
+        if cntOk <= 0 and cntRs <= 0:
+            nfy.warn(f"[similar] DB does not contain any similarity records")
+            return noUpd.by(4).updFr(0, nfy)
 
-        lg.info(f"[sim:reslove] {cnt} assets")
+        mdl.reset()
+        mdl.id = ks.pg.similar
+        mdl.cmd = ks.cmd.sim.clear
+        mdl.msg = [
+            f"Are you sure you want to delete all records?", htm.Br(),
+            f"include reslove({cntOk}) and resume({cntRs})", htm.Br(),
+            htm.B("This operation cannot be undone"), htm.Br(),
+            "You may need to perform all similarity searches again."
+        ]
 
-        if cnt > 0:
-            mdl.reset()
-            mdl.id = ks.pg.similar
-            mdl.cmd = ks.cmd.sim.allOk
-            mdl.msg = f"Are you sure mark resloved current images( {cnt} )?"
-
-            if ncOk:
-                tsk = mdl.mkTsk()
-                mdl.reset()
     #------------------------------------------------------------------------
-    elif trgId == k.btnCbxRm:
-        ass = now.sim.assSelect
+    elif trgId == k.btnRmSel:
+        ass = ste.getSelectedAssets(now.sim.assCur)
         cnt = len(ass)
 
         lg.info(f"[sim:delSels] {cnt} assets selected")
@@ -698,13 +724,13 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
                 htm.B("This operation cannot be undone"),
             ]
 
-            if ncRm:
+            if nchkRmSel:
                 tsk = mdl.mkTsk()
                 mdl.reset()
 
     #------------------------------------------------------------------------
-    elif trgId == k.btnCbxRS:
-        assSel = now.sim.assSelect
+    elif trgId == k.btnOkSel:
+        assSel = ste.getSelectedAssets(now.sim.assCur)
         assAll = now.sim.assCur
         cnt = len(assSel)
 
@@ -724,7 +750,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
                 mdl.reset()
 
     #------------------------------------------------------------------------
-    elif trgId == k.btnCbxRA:
+    elif trgId == k.btnRmAll:
         ass = now.sim.assCur
         cnt = len(ass)
 
@@ -744,29 +770,28 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
                 mdl.reset()
 
     #------------------------------------------------------------------------
-    elif trgId == k.btnClear:
-        cntOk = db.pics.countSimOk(isOk=1)
-        cntRs = db.pics.countHasSimIds()
-        if cntOk <= 0 and cntRs <= 0:
-            nfy.warn(f"[similar] DB does not contain any similarity records")
-            return noUpd, nfy.toDict(), noUpd.by(2)
+    elif trgId == k.btnOkAll:
+        ass = now.sim.assCur
+        cnt = len(ass)
 
-        mdl.reset()
-        mdl.id = ks.pg.similar
-        mdl.cmd = ks.cmd.sim.clear
-        mdl.msg = [
-            f"Are you sure you want to delete all records?", htm.Br(),
-            f"include reslove({cntOk}) and resume({cntRs})", htm.Br(),
-            htm.B("This operation cannot be undone"), htm.Br(),
-            "You may need to perform all similarity searches again."
-        ]
+        lg.info(f"[sim:reslove] {cnt} assets")
+
+        if cnt > 0:
+            mdl.reset()
+            mdl.id = ks.pg.similar
+            mdl.cmd = ks.cmd.sim.allOk
+            mdl.msg = f"Are you sure mark resloved current images( {cnt} )?"
+
+            if nchkOkAll:
+                tsk = mdl.mkTsk()
+                mdl.reset()
 
     #------------------------------------------------------------------------
     elif trgId == k.btnFind:
         if cnt.vec <= 0:
             nfy.error("No vector data to process")
             now.sim.clearAll()
-            return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
+            return noUpd.by(4).updFr( 0, [nfy, now] )
 
         thMin = db.dto.simMin
         thMax = db.dto.simMax
@@ -787,11 +812,11 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
                 else:
                     nfy.info(f"[sim] the asset #{ass.autoId} already resolved")
                     now.sim.assFromUrl = None
-                    return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
+                    return noUpd.by(4).updFr( 0, [nfy, now] )
             else:
                 nfy.warn(f"[sim] not found dst assetId[{now.sim.assFromUrl}]")
                 now.sim.assFromUrl = None
-                return mdl.toDict(), nfy.toDict(), now.toDict(), noUpd
+                return noUpd.by(4).updFr( 0, [nfy, now] )
 
         # find from db
         if not asset:
@@ -802,6 +827,8 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
 
         if not isFromUrl:
             now.sim.clearAll()
+            retNow = now.toDict()
+
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
         else:
@@ -812,6 +839,9 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
             mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': isFromUrl}
             tsk = mdl.mkTsk()
             mdl.reset()
+
+            # only find auto trigger tsk
+            retTsk = tsk.toDict()
             # mdl.msg = [
             #     f"Begin finding similar?", htm.Br(),
             #     f"threshold[{thMin:.2f}-{thMax:.2f}]]",
@@ -819,7 +849,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
-    return mdl.toDict(), nfy.toDict(), now.toDict(), tsk.toDict()
+    return noUpd.by( 4 ).updFr( 0, [nfy, retNow, mdl, retTsk] )
 
 
 #========================================================================
@@ -1075,7 +1105,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 if depth < maxDepth and len(doneIds) < maxItems:
                     for inf in cInfos:
                         if inf.aid not in doneIds:
-                            lg.info(f"[sim:fnd] add tree #{inf.aid} depth[{depth + 1}] mx({maxDepth})")
+                            # lg.info(f"[sim:fnd] add tree #{inf.aid} depth[{depth + 1}] mx({maxDepth})")
                             simQ.append((inf.aid, depth + 1))
 
             except Exception as ce:
@@ -1097,7 +1127,6 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         now.sim.assAid = asset.autoId
         now.sim.assCur = db.pics.getSimAssets(asset.autoId, db.dto.simIncRelGrp)
-        now.sim.assSelect = []
         now.sim.activeTab = k.tabCur
 
         lg.info(f"[sim:fnd] done, asset #{asset.autoId}")
@@ -1127,10 +1156,10 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+    nfy, now, cnt, ste = sto.nfy, sto.now, sto.cnt, sto.ste
     try:
         assAlls = now.sim.assCur
-        assSels = now.sim.assSelect
+        assSels = ste.getSelectedAssets(assAlls) if ste else []
         assLefts = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
 
         cntSelect = len(assSels)
@@ -1163,10 +1192,10 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+    nfy, now, cnt, ste = sto.nfy, sto.now, sto.cnt, sto.ste
     try:
         assAlls = now.sim.assCur
-        assSels = now.sim.assSelect
+        assSels = ste.getSelectedAssets(assAlls) if ste else []
         assOthers = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
 
         cntSelect = len(assSels)

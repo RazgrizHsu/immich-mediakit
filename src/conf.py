@@ -153,6 +153,7 @@ class ks:
         mdlImg = 'store-mdl-img'
 
         cnt = 'store-count'
+        ste = 'store-state'
 
     class defs:
         exif = {

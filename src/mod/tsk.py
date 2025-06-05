@@ -191,13 +191,15 @@ def tsk_OnWsConnected(msg):
     ste(ks.sto.nfy, "data"),
     ste(ks.sto.now, "data"),
     ste(ks.sto.cnt, "data"),
+    ste(ks.sto.ste, "data"),
     prevent_initial_call=True
 )
-def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt):
+def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt, dta_ste):
     tsk = models.Tsk.fromDict(dta_tsk)
     nfy = models.Nfy.fromDict(dta_nfy)
     now = models.Now.fromDict(dta_now)
     cnt = models.Cnt.fromDict(dta_cnt)
+    ste = models.Ste.fromDict(dta_ste)
 
     if not tsk.id or not tsk.cmd: return noUpd.by(2)
 
@@ -221,7 +223,7 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt):
         return tsk.toDict(), nfy.toDict()
 
     try:
-        sto = ITaskStore(nfy, now, cnt, tsk)
+        sto = ITaskStore(nfy, now, cnt, tsk, ste)
 
         tsn = tskSvc.mkTask(tsk, fn, sto)
         ok = tskSvc.runBy(tsn)
