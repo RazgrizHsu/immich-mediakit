@@ -898,9 +898,9 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
     thMin = co.vad.float(thMin, 0.9)
     thMax = co.vad.float(thMax, 1.0)
 
-    simMaxDepths = db.dto.simMaxDepths
-    simMaxItems = db.dto.simMaxItems
-    lg.info(f"[sim:fnd] config maxDepths[{simMaxDepths}] maxItems[{simMaxItems}]")
+    maxDepth = db.dto.simMaxDepths
+    maxItems = db.dto.simMaxItems
+    lg.info(f"[sim:fnd] config maxDepths[{maxDepth}] maxItems[{maxItems}]")
 
     # 如果是從 URL 進入，清除引導避免重複搜尋
     if isFromUrl and now.sim.assFromUrl:
@@ -1049,49 +1049,41 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         # Initialize queue with depth tracking (assId, depth)
         simQ = [(said, 0) for said in simAids]
 
-        # direct children set GID
-        for aid in simAids: db.pics.setSimGIDs(aid, rootGID)
 
         # looping find all childs
         while simQ:
             aid, depth = simQ.pop(0)
             if aid in doneIds: continue
 
-            # Check max items limit before processing
-            if len(doneIds) >= simMaxItems:
-                lg.info(f"[sim:fnd] Reached max items limit ({simMaxItems}), stopping search")
-                doReport(90, f"Reached max items limit ({simMaxItems}), processing current item...")
-                # Process current item and then break
-                doneIds.add(aid)
-                try:
-                    cVec, cInfos = db.vecs.findSimiliar(aid, thMin, thMax)
-                    ass = db.pics.getByAutoId(aid)
-                    db.pics.setSimInfos(ass.autoId, cInfos)
-                except Exception as ce:
-                    lg.error(f"Error processing final item {aid}: {ce}")
-                break
-
             doneIds.add(aid)
 
             doReport(50, f"Processing children similar photo #{aid} depth({depth}) count({len(doneIds)})")
 
             try:
-                lg.info(f"[sim:fnd] search child #{aid} depth[{depth}] mx({simMaxDepths}) items({len(doneIds)}/{simMaxItems})")
+                lg.info(f"[sim:fnd] search child #{aid} depth[{depth}] mx({maxDepth}) items({len(doneIds)}/{maxItems})")
                 cVec, cInfos = db.vecs.findSimiliar(aid, thMin, thMax)
 
                 ass = db.pics.getByAutoId(aid)
                 db.pics.setSimInfos(ass.autoId, cInfos)
+                db.pics.setSimGIDs(aid, rootGID)
 
-                # Only add children if we haven't reached max depth and max items
-                if depth < simMaxDepths and len(doneIds) < simMaxItems:
+                # haven't reached max
+                if depth < maxDepth and len(doneIds) < maxItems:
                     for inf in cInfos:
-                        if not inf.isSelf and inf.aid not in doneIds:
-                            lg.info(f"[sim:fnd] add tree #{inf.aid} depth[{depth + 1}] mx({simMaxDepths})")
+                        if inf.aid not in doneIds:
+                            lg.info(f"[sim:fnd] add tree #{inf.aid} depth[{depth + 1}] mx({maxDepth})")
                             simQ.append((inf.aid, depth + 1))
-                            db.pics.setSimGIDs(inf.aid, rootGID)
 
             except Exception as ce:
                 raise RuntimeError(f"Error processing similar image {aid}: {ce}")
+
+
+            # check limit
+            if len(doneIds) >= maxItems:
+                nfy.warn(f"[sim:fnd] Reached max items limit ({maxItems}), stopping search..")
+                doReport(90, f"Reached max items limit ({maxItems}), processing current item...")
+                break
+
 
         # auto mark
         db.pics.setSimAutoMark()
@@ -1116,7 +1108,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         cntAll = len(doneIds)
         if cntAll > cntInfos: msg.append(f"include ({cntAll - cntInfos}) asset extra tree in similar tree.")
         if cntFnd > 1: msg.append(f"Auto-processed {cntFnd} assets before finding similar photos.")
-        if cntAll >= simMaxItems: msg.append(f"Reached maximum search limit ({simMaxItems} items).")
+        if cntAll >= maxItems: msg.append(f"Reached maximum search limit ({maxItems} items).")
 
         nfy.success(msg)
 
