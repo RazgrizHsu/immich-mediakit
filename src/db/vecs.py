@@ -91,7 +91,7 @@ def deleteBy(aids: list[int]):
             points_selector=qmod.PointIdsList(points=aids)
         )
 
-        lg.info(f"[vec] delete status[{rst}] aids: {aids}")
+        lg.info(f"[vec] delete status[{rst}] count[ {len(aids)} ]")
         if rst.status != qmod.UpdateStatus.COMPLETED:
             raise RuntimeError(f"Delete operation failed with status: {rst.status}")
 
@@ -225,7 +225,7 @@ def search(vec, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[qdra
 #------------------------------------------------------------------------
 # only return different id
 #------------------------------------------------------------------------
-def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> Tuple[list[float], list[models.SimInfo]]:
+def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100, logRow = False) -> Tuple[list[float], list[models.SimInfo]]:
     try:
         if conn is None: raise RuntimeError("Qdrant connection not initialized")
 
@@ -244,7 +244,7 @@ def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100) -
         lg.info(f"[vecs:find] search results( {len(rst)} ):")
         for i, hit in enumerate(rst):
             hit_aid = int(hit.id)
-            lg.info(f"\tno.{i + 1}: AID[{hit_aid}], score[{hit.score:.6f}] self[{int(hit.id) == aid}]")
+            if logRow: lg.info(f"\tno.{i + 1}: AID[{hit_aid}], score[{hit.score:.6f}] self[{int(hit.id) == aid}]")
 
             if hit.score <= thMax or hit_aid == aid:  #always add self
                 isSelf = hit_aid == aid

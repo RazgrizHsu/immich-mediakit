@@ -98,7 +98,7 @@ class DtoSets:
 
     simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False)
     simMaxDepths:int = AutoDbField('simMaxDepths', int, 0)
-    simMaxItems:int = AutoDbField('simMaxItems', int, 100)
+    simMaxItems:int = AutoDbField('simMaxItems', int, 200)
 
     @classmethod
     def get(cls, key, default=None):
