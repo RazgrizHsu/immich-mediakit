@@ -179,10 +179,10 @@ def layout(autoId=None, **kwargs):
                             ),
 
 
-                            # dbc.Spinner(
-                            htm.Div(id=k.gvSim),
-                            #     color="success",type="border",spinner_style={"width": "3rem", "height": "3rem"},
-                            # ),
+                            dbc.Spinner(
+                                htm.Div(id=k.gvSim),
+                                color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
+                            ),
                         ]
                     ),
                     dbc.Tab(
@@ -195,11 +195,10 @@ def layout(autoId=None, **kwargs):
                                 # top pager
                                 *pager.createPager(pgId=k.pagerPnd, idx=0, btnSize=9, className="mb-3"),
 
-                                # Grid view
-                                # dbc.Spinner(
+                                dbc.Spinner(
                                 htm.Div(id=k.gvPnd),
-                                # color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
-                                # ),
+                                color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
+                                ),
 
                                 # bottom pager
                                 *pager.createPager(pgId=k.pagerPnd, idx=1, btnSize=9, className="mt-3"),
@@ -323,7 +322,7 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
             return noUpd.by(2)
 
         now.sim.assFromUrl = None
-        # now.sim.assId = None # clean here will make refresh assId failed
+        # now.sim.assAid = None # clean here will make refresh assAid failed
         return now.toDict(), noUpd
 
     ass = models.Asset.fromDict(dta_ass)
@@ -331,7 +330,7 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     lg.info(f"[sim:sync] asset from url: #{ass.autoId} id[{ass.id}]")
 
     now.sim.assFromUrl = ass
-    now.sim.assId = ass.id
+    now.sim.assAid = ass.autoId
 
     thMin = co.vad.float(db.dto.simMin, 0.7)
     thMax = co.vad.float(db.dto.simMax, 1.0)
@@ -440,8 +439,8 @@ def sim_Load(dta_now, dta_nfy):
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:load] trig[{trgId}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assId[{now.sim.assId}]")
-    # lg.info(f"[sim:load] tgId[{trgId}] assId[{now.sim.assId}] assCur[{len(now.sim.assCur)}] assPend[{len(now.sim.assPend)}]")
+    lg.info(f"[sim:load] trig[{trgId}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) now[{cntAssets}] assAid[{now.sim.assAid}]")
+    # lg.info(f"[sim:load] tgId[{trgId}] assAid[{now.sim.assAid}] assCur[{len(now.sim.assCur)}] assPend[{len(now.sim.assPend)}]")
 
     # Load pending data - reload if count changed or no data
     needReload = False
@@ -593,8 +592,11 @@ def sim_OnSwitchViewGroup(clks, dta_now):
 
     lg.info(f"[sim:vgrp] switch: id[{assId}] clks[{clks}]")
 
-    now.sim.assId = assId
-    now.sim.assCur = db.pics.getSimAssets(assId, db.dto.simIncRelGrp)
+    asset = db.pics.getById(assId)
+    if not asset: return noUpd.by(2)
+
+    now.sim.assAid = asset.autoId
+    now.sim.assCur = db.pics.getSimAssets(asset.autoId, db.dto.simIncRelGrp)
     now.sim.assSelect = []
 
     if DEBUG: lg.info(f"[sim:vgrp] Loaded {len(now.sim.assCur)} assets for group")
@@ -803,7 +805,7 @@ def sim_RunModal(clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra, dta_now, dta_
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
         else:
-            now.sim.assId = asset.id
+            now.sim.assAid = asset.autoId
 
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.fdSim
@@ -896,29 +898,40 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
     thMin = co.vad.float(thMin, 0.9)
     thMax = co.vad.float(thMax, 1.0)
 
+    simMaxDepths = db.dto.simMaxDepths
+    simMaxItems = db.dto.simMaxItems
+    lg.info(f"[sim:fnd] config maxDepths[{simMaxDepths}] maxItems[{simMaxItems}]")
+
     # 如果是從 URL 進入，清除引導避免重複搜尋
     if isFromUrl and now.sim.assFromUrl:
-        lg.info(f"[sim:find] Clearing URL guidance for asset {now.sim.assFromUrl.autoId if now.sim.assFromUrl else 'unknown'}")
+        lg.info(f"[sim:fnd] Clear guidance {now.sim.assFromUrl.autoId if now.sim.assFromUrl else 'unknown'}")
         now.sim.assFromUrl = None
 
     try:
-        assetId = now.sim.assId
+        autoId = now.sim.assAid
         simIds = []
         doneIds = []
 
-        if not assetId and tsk.args.get('assetId'):
-            lg.info(f"[sim:find] search from task args assetId[{assetId}]")
+        if not autoId and tsk.args.get('assetId'):
+            lg.info(f"[sim:fnd] search from task args assetId")
             assetId = tsk.args.get('assetId')
+            asset = db.pics.getById(assetId)
+            if asset: autoId = asset.autoId
+        else:
+            asset = db.pics.getByAutoId(autoId) if autoId else None
 
-        if not assetId: raise RuntimeError(f"[tsk] sim.assId is empty")
+        if not autoId: raise RuntimeError(f"[tsk] sim.assAid is empty")
 
         doReport(1, f"prepare..")
 
-        asset = db.pics.getById(assetId)
+        if not asset: raise RuntimeError(f"[sim:fnd] not found asset #{autoId}")
 
-        if not asset: raise RuntimeError(f"[sim:find] not found assetId[{assetId}]")
-
-        lg.info(f"[sim:find] search assetId[{assetId}] thresholds[{thMin:.2f}-{thMax:.2f}]")
+        if asset.simGIDs:
+            now.sim.assCur = []
+            return sto, [
+                f"[sim:fnd] asset #{asset.autoId} already searched",
+                " if you want find again, please clear All Records first"
+            ]
 
         cntFnd = 0
 
@@ -937,7 +950,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         #------------------------------------------------
         while True:
             if cntFnd <= 0:
-                msg = f"[sim:find] Searching #{asset.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
+                msg = f"[sim:fnd] search #{asset.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
                 doReport(10, msg)
 
             time.sleep(0.1)
@@ -948,14 +961,14 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
             #------------------------------------
             if not bseInfos:
-                lg.warn(f"[sim:find] asset #{asset.autoId} not found any similar, may not store vector")
+                lg.warn(f"[sim:fnd] asset #{asset.autoId} not found any similar, may not store vector")
                 db.pics.setVectoredBy(asset, 0)
 
                 #------------------------------------
                 # from url, stop
                 #------------------------------------
                 if isFromUrl:
-                    msg = f"[sim:find] Asset #{asset.autoId} has no vector stored"
+                    msg = f"[sim:fnd] Asset #{asset.autoId} has no vector stored"
                     doReport(100, msg)
                     nfy.info(msg)
                     return sto, msg
@@ -965,17 +978,17 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 #------------------------------------
                 nextAss = db.pics.getAnyNonSim()
                 if not nextAss:
-                    msg = f"[sim:find] 沒有圖片可以繼續搜尋"
+                    msg = f"[sim:fnd] 沒有圖片可以繼續搜尋"
                     doReport(100, msg)
                     nfy.info(msg)
                     return sto, msg
 
-                lg.info(f"[sim:find] No vector for #{asset.autoId}, next: #{nextAss.autoId}")
+                lg.info(f"[sim:fnd] No vector for #{asset.autoId}, next: #{nextAss.autoId}")
 
                 autoReport(f"No vector for #{asset.autoId}, continuing to #{nextAss.autoId}...")
 
                 asset = nextAss
-                now.sim.assId = asset.id
+                now.sim.assAid = asset.autoId
 
                 continue
 
@@ -988,14 +1001,14 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             # only contains self
             #------------------------------------
             if not simAids:
-                lg.info(f"[sim:find] NoFound #{asset.autoId}")
-                db.pics.setSimInfos(asset.id, bseInfos, isOk=1)
+                lg.info(f"[sim:fnd] NoFound #{asset.autoId}")
+                db.pics.setSimInfos(asset.autoId, bseInfos, isOk=1)
 
                 #------------------------------------
                 # from url, stop
                 #------------------------------------
                 if isFromUrl:
-                    msg = f"[sim:find] Asset #{asset.autoId} 沒有找到相似圖片"
+                    msg = f"[sim:fnd] Asset #{asset.autoId} 沒有找到相似圖片"
                     doReport(100, msg)
                     nfy.info(msg)
                     return sto, msg
@@ -1004,16 +1017,16 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 #------------------------------------
                 nextAss = db.pics.getAnyNonSim()
                 if not nextAss:
-                    msg = f"[sim:find] 沒有圖片可以繼續搜尋"
+                    msg = f"[sim:fnd] 沒有圖片可以繼續搜尋"
                     doReport(100, msg)
                     nfy.info(msg)
                     return sto, msg
 
-                lg.info(f"[sim:find] Next: #{nextAss.autoId}")
+                lg.info(f"[sim:fnd] Next: #{nextAss.autoId}")
 
                 autoReport(f"No similar found for #{asset.autoId}, continuing to #{nextAss.autoId}...")
                 asset = nextAss
-                now.sim.assId = nextAss.id
+                now.sim.assAid = nextAss.autoId
 
                 continue
 
@@ -1027,56 +1040,71 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         #------------------------------------------------
 
         #set main asset
-        rootAuid = asset.autoId
-        db.pics.setSimInfos(asset.id, bseInfos, GID=rootAuid)
+        rootGID = asset.autoId
+        db.pics.setSimGIDs(asset.autoId, rootGID)
+        db.pics.setSimInfos(asset.autoId, bseInfos)
 
         doneIds = {asset.autoId}
 
-        # Get max depth setting (default 1 if not set)
-        maxDepth = getattr(db.dto, 'simMaxDepths', 1)
-        lg.info(f"[sim:find] Max depth for similar search: {maxDepth}")
-
         # Initialize queue with depth tracking (assId, depth)
-        simQueue = [(said, 0) for said in simAids]
+        simQ = [(said, 0) for said in simAids]
+
+        # direct children set GID
+        for aid in simAids: db.pics.setSimGIDs(aid, rootGID)
 
         # looping find all childs
-        while simQueue:
-            assAid, curDepth = simQueue.pop(0)
-            if assAid in doneIds: continue
+        while simQ:
+            aid, depth = simQ.pop(0)
+            if aid in doneIds: continue
 
-            doneIds.add(assAid)
-            autoReport(f"Processing children similar photo #{assAid} depth({curDepth}) count({len(doneIds)})")
+            # Check max items limit before processing
+            if len(doneIds) >= simMaxItems:
+                lg.info(f"[sim:fnd] Reached max items limit ({simMaxItems}), stopping search")
+                doReport(90, f"Reached max items limit ({simMaxItems}), processing current item...")
+                # Process current item and then break
+                doneIds.add(aid)
+                try:
+                    cVec, cInfos = db.vecs.findSimiliar(aid, thMin, thMax)
+                    ass = db.pics.getByAutoId(aid)
+                    db.pics.setSimInfos(ass.autoId, cInfos)
+                except Exception as ce:
+                    lg.error(f"Error processing final item {aid}: {ce}")
+                break
+
+            doneIds.add(aid)
+
+            doReport(50, f"Processing children similar photo #{aid} depth({depth}) count({len(doneIds)})")
 
             try:
-                lg.info(f"[sim:find] search child aid[{assAid}] at depth[{curDepth}]")
-                cVec, cInfos = db.vecs.findSimiliar(assAid, thMin, thMax)
+                lg.info(f"[sim:fnd] search child #{aid} depth[{depth}] mx({simMaxDepths}) items({len(doneIds)}/{simMaxItems})")
+                cVec, cInfos = db.vecs.findSimiliar(aid, thMin, thMax)
 
-                ass = db.pics.getByAutoId(assAid)
-                db.pics.setSimInfos(ass.id, cInfos, GID=rootAuid)
+                ass = db.pics.getByAutoId(aid)
+                db.pics.setSimInfos(ass.autoId, cInfos)
 
-                # Only add children if we haven't reached max depth
-                if curDepth < maxDepth:
+                # Only add children if we haven't reached max depth and max items
+                if depth < simMaxDepths and len(doneIds) < simMaxItems:
                     for inf in cInfos:
                         if not inf.isSelf and inf.aid not in doneIds:
-                            simQueue.append((inf.aid, curDepth + 1))
-                            db.pics.setSimGIDs(inf.aid, rootAuid)
-                            lg.info(f"[sim:find] Added child aid[{inf.aid}] at depth {curDepth + 1}")
-
+                            lg.info(f"[sim:fnd] add tree #{inf.aid} depth[{depth + 1}] mx({simMaxDepths})")
+                            simQ.append((inf.aid, depth + 1))
+                            db.pics.setSimGIDs(inf.aid, rootGID)
 
             except Exception as ce:
-                raise RuntimeError(f"Error processing similar image {assAid}: {ce}")
+                raise RuntimeError(f"Error processing similar image {aid}: {ce}")
 
         # auto mark
         db.pics.setSimAutoMark()
 
         doReport(95, f"Finalizing similar photo relationships")
+        time.sleep(0.5)
 
-        now.sim.assId = asset.id
-        now.sim.assCur = db.pics.getSimAssets(asset.id, db.dto.simIncRelGrp)
+        now.sim.assAid = asset.autoId
+        now.sim.assCur = db.pics.getSimAssets(asset.autoId, db.dto.simIncRelGrp)
         now.sim.assSelect = []
         now.sim.activeTab = k.tabCur
 
-        lg.info(f"[sim:find] done, asset #{asset.autoId}")
+        lg.info(f"[sim:fnd] done, asset #{asset.autoId}")
 
         if not now.sim.assCur: raise RuntimeError(f"the get SimGroup not found by asset.id[{asset.id}]")
 
@@ -1088,13 +1116,14 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         cntAll = len(doneIds)
         if cntAll > cntInfos: msg.append(f"include ({cntAll - cntInfos}) asset extra tree in similar tree.")
         if cntFnd > 1: msg.append(f"Auto-processed {cntFnd} assets before finding similar photos.")
+        if cntAll >= simMaxItems: msg.append(f"Reached maximum search limit ({simMaxItems} items).")
 
         nfy.success(msg)
 
         return sto, msg
 
     except Exception as e:
-        msg = f"[sim:find] Similar search failed: {str(e)}"
+        msg = f"[sim:fnd] Similar search failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.sim.clearAll()

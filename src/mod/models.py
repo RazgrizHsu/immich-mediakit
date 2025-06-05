@@ -210,8 +210,10 @@ class AssetViewOnly(BaseDictModel):
 
     cntRelats: int = 0
 
-    srcAutoId: int = 0
     score: float = 0.0
+
+    srcAutoId: int = 0
+    isRelats: bool = False
 
 @dataclass
 class Asset(BaseDictModel):
@@ -284,7 +286,7 @@ class PgSim(BaseDictModel):
     pagerPnd: Optional[Pager] = None
     activeTab: Optional[str] = "tab-current"
 
-    assId: Optional[str] = None
+    assAid: Optional[int] = None
     assCur: List[Asset] = field(default_factory=list)
     assSelect: List[Asset] = field(default_factory=list)
     assPend: List[Asset] = field(default_factory=list)
@@ -292,7 +294,7 @@ class PgSim(BaseDictModel):
     assFromUrl: Optional[Asset] = None
 
     def clearNow(self):
-        self.assId = self.assFromUrl = None
+        self.assAid = self.assFromUrl = None
         self.assCur.clear()
         self.assSelect.clear()
 

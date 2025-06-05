@@ -7,7 +7,7 @@ from util import log
 
 from . import models
 from .models import ITaskStore, IFnCall
-
+import db
 # type define
 
 
@@ -59,7 +59,7 @@ def render():
 
     ],
         id=k.div,
-        style=style_none, className="tskPanel"
+        style=style_none, className=f"tskPanel {'fly' if db.dto.tskFloat else ''}"
     )
 
 
@@ -143,10 +143,8 @@ def tsk_onBtnCancel(_nclk, dta_tsk, dta_nfy):
     prevent_initial_call=True
 )
 def tsk_onBtnFloat(_nclk, curCls):
-    if not curCls: curCls = "tskPanel"
-    if "fly" in curCls:
-        return "tskPanel"
-    return "tskPanel fly"
+    db.dto.tskFloat = not db.dto.tskFloat
+    return "tskPanel fly" if db.dto.tskFloat else "tskPanel"
 
 
 @cbk(

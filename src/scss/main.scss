@@ -677,11 +677,11 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	margin:10px 20px 15px 20px;
 	padding:10px 30px 10px 30px;
 	border-radius:16px;
-	border:2px solid #737373;
-	//background:#3F3F3F;
-	box-shadow:0 0 6px rgba(255, 255, 255, 0.2);
+	border:2px solid #4ACDFF99;
+	box-shadow:0 0 6px rgba(255, 255, 255, 0.5);
 
-	@include bg-gradient(#33333F);
+	background: #2D4A69;
+	@include bg-gradient(#264A69);
 
 	.progress {
 		border:#999999 1px solid;
@@ -689,12 +689,12 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 	&.fly {
 		position:fixed;
-		top:66px;
-		right:20px;
+		top:33vw;
+		left:10px;
 		margin:0;
-		width:50vw;
+		width:48vw;
 		z-index:1050;
-		box-shadow:0 0 10px 5px #1F5C9299;
+		box-shadow:0 0 10px 3px #FFFFFF55;
 		animation:slideIn 0.3s ease-out;
 	}
 
@@ -775,6 +775,10 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 				margin:auto 6px auto auto;
 			}
 		}
+
+		padding-bottom: 5px;
+		border-bottom: #cccccc 1px dotted;
+
 	}
 
 	.tab-content {
@@ -1026,6 +1030,26 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	//}
 }
 
+.gv {
+	.hr {
+		grid-column: 1 / -1;
+		width: 100%;
+		padding: 0.5rem 0;
+		border-bottom: #cccccc 1px dotted;
+
+		label {
+			//color: #6DAA2B;
+			@include bg-gradient(#6DAA2B);
+			border-radius: 6px;
+			border: #6DAA2B;
+			padding: 0 12px 2px 12px;
+			text-shadow:0 0 3px #4A4A4A;
+			box-shadow: 0 0 3px #6DAA2B;
+		}
+	}
+
+}
+
 
 .card.sim {
 
@@ -1051,6 +1075,15 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	&.main {
 		background:#1F5C92;
 		@include bg-gradient(#1F5C92);
+
+		.card-header {
+			background:linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent);
+		}
+	}
+
+	&.rels {
+		background: #4A4A4A;
+		@include bg-gradient(#4A4A4A);
 
 		.card-header {
 			background:linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent);
@@ -1182,34 +1215,6 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 					width:30%;
 				}
 			}
-		}
-	}
-}
-
-
-/*======================== related group card ========================*/
-.related-group {
-	border:1px solid #4A4A4A;
-	transition:all 0.3s ease;
-
-	&:hover {
-		border-color:var(--warning);
-		box-shadow:0 0 8px rgba(254, 178, 4, 0.2);
-	}
-
-	.card-header {
-		background-color:#2A2A2A;
-		border-bottom:1px solid #4A4A4A;
-		padding:0.5rem 1rem;
-	}
-
-	.img-thumbnail {
-		border:1px solid #555555;
-		background-color:#333333;
-		padding:2px;
-
-		&:hover {
-			border-color:var(--primary);
 		}
 	}
 }
