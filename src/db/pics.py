@@ -76,6 +76,12 @@ def init():
                 )
                 ''')
 
+            # indexes
+            c.execute('''CREATE INDEX IF NOT EXISTS idx_assets_autoId_simOk ON assets(autoId, simOk)''')
+            c.execute('''CREATE INDEX IF NOT EXISTS idx_assets_isVectored ON assets(isVectored)''')
+            c.execute('''CREATE INDEX IF NOT EXISTS idx_assets_simOk ON assets(simOk)''')
+            c.execute('''CREATE INDEX IF NOT EXISTS idx_assets_id ON assets(id)''')
+
             conn.commit()
 
             lg.info(f"[pics] db connected: {pathDb}")
@@ -650,18 +656,23 @@ def getSimAssets(autoId: int, incGroup=False) -> Optional[List[models.Asset]]:
     import numpy as np
     from db import vecs
 
+    lg.info( f"[getSimAssets] loading #{autoId} inclGroup[ {incGroup} ]" )
     try:
         with mkConn() as conn:
             c = conn.cursor()
             c.execute("""
+                WITH main_check AS (
+                    SELECT DISTINCT gid.value as main_autoId
+                    FROM assets a2 
+                    CROSS JOIN json_each(a2.simGIDs) gid
+                    WHERE a2.autoId != gid.value
+                )
                 SELECT 
                     a.*,
-                    CASE WHEN EXISTS (
-                        SELECT 1 FROM assets a2 
-                        CROSS JOIN json_each(a2.simGIDs) gid
-                        WHERE gid.value = a.autoId AND a2.autoId != a.autoId
-                    ) THEN 1 ELSE 0 END as isMain
-                FROM assets a WHERE a.autoId = ?
+                    CASE WHEN mc.main_autoId IS NOT NULL THEN 1 ELSE 0 END as isMain
+                FROM assets a 
+                LEFT JOIN main_check mc ON a.autoId = mc.main_autoId
+                WHERE a.autoId = ?
             """, (autoId,))
             row = c.fetchone()
             if row is None:
@@ -680,14 +691,18 @@ def getSimAssets(autoId: int, incGroup=False) -> Optional[List[models.Asset]]:
 
                 qargs = ','.join(['?' for _ in simAids])
                 c.execute(f"""
+                    WITH main_check AS (
+                        SELECT DISTINCT gid.value as main_autoId
+                        FROM assets a2 
+                        CROSS JOIN json_each(a2.simGIDs) gid
+                        WHERE a2.autoId != gid.value
+                    )
                     SELECT 
                         a.*,
-                        CASE WHEN EXISTS (
-                            SELECT 1 FROM assets a2 
-                            CROSS JOIN json_each(a2.simGIDs) gid
-                            WHERE gid.value = a.autoId AND a2.autoId != a.autoId
-                        ) THEN 1 ELSE 0 END as isMain
-                    FROM assets a WHERE a.autoId IN ({qargs})
+                        CASE WHEN mc.main_autoId IS NOT NULL THEN 1 ELSE 0 END as isMain
+                    FROM assets a 
+                    LEFT JOIN main_check mc ON a.autoId = mc.main_autoId
+                    WHERE a.autoId IN ({qargs})
                 """, simAids)
 
                 rows = c.fetchall()
@@ -716,14 +731,17 @@ def getSimAssets(autoId: int, incGroup=False) -> Optional[List[models.Asset]]:
                 # 2. Assets with root.autoId in their simGIDs
                 gid_placeholders = ','.join(['?' for _ in root.simGIDs])
                 c.execute(f"""
+                    WITH main_check AS (
+                        SELECT DISTINCT gid.value as main_autoId
+                        FROM assets a2 
+                        CROSS JOIN json_each(a2.simGIDs) gid
+                        WHERE a2.autoId != gid.value
+                    )
                     SELECT 
                         a.*,
-                        CASE WHEN EXISTS (
-                            SELECT 1 FROM assets a2 
-                            CROSS JOIN json_each(a2.simGIDs) gid
-                            WHERE gid.value = a.autoId AND a2.autoId != a.autoId
-                        ) THEN 1 ELSE 0 END as isMain
+                        CASE WHEN mc.main_autoId IS NOT NULL THEN 1 ELSE 0 END as isMain
                     FROM assets a
+                    LEFT JOIN main_check mc ON a.autoId = mc.main_autoId
                     WHERE a.autoId != ? AND (
                         EXISTS (
                             SELECT 1 FROM json_each(a.simGIDs) 
@@ -752,21 +770,24 @@ def getSimAssets(autoId: int, incGroup=False) -> Optional[List[models.Asset]]:
                     # Get autoIds from root's simInfos
                     rootSimAids = {info.aid for info in root.simInfos}
 
+                    # Batch get all vectors at once to avoid N+1 queries
+                    assetIds = [ass.autoId for ass in assets]
+                    assVecs = vecs.getAllBy(assetIds)
+
                     assScores = []
                     for ass in assets:
-                        try:
-                            assVec = vecs.getBy(ass.autoId)
-                            assVecNp = np.array(assVec)
-                            score = np.dot(rootVecNp, assVecNp)
-
-                            # Only set isRelats for assets NOT in root's simInfos
-                            ass.view.isRelats = ass.autoId not in rootSimAids
-                            ass.view.score = score
-
-                            assScores.append((ass, score))
-                        except Exception as e:
-                            lg.warn(f"[pics] Failed to get vector for asset {ass.autoId}: {str(e)}")
+                        if ass.autoId not in assVecs:
+                            lg.warn(f"[pics] Vector not found for asset {ass.autoId}")
                             continue
+
+                        assVecNp = np.array(assVecs[ass.autoId])
+                        score = np.dot(rootVecNp, assVecNp)
+
+                        # Only set isRelats for assets NOT in root's simInfos
+                        ass.view.isRelats = ass.autoId not in rootSimAids
+                        ass.view.score = score
+
+                        assScores.append((ass, score))
 
                     assScores.sort(key=lambda x: x[1], reverse=True)
                     rst.extend([ass for ass, _ in assScores])

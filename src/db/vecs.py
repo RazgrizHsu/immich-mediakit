@@ -175,6 +175,36 @@ def getBy(aid: int):
         raise mkErr(f"[vecs] Error get asset vector aid[{aid}]", e)
 
 
+def getAllBy(aids: list[int]) -> dict[int, list]:
+    try:
+        if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
+        if not aids: return {}
+
+        lg.info(f"[vecs] getBatch: fetching {len(aids)} vectors")
+
+        dst = conn.retrieve(
+            collection_name=keyColl,
+            ids=aids,
+            with_payload=True, with_vectors=True
+        )
+
+        result = {}
+        for point in dst:
+            if hasattr(point, 'vector') and point.vector is not None:
+                if isinstance(point.vector, list) and len(point.vector) > 0:
+                    result[int(point.id)] = point.vector
+                else:
+                    lg.warn(f"[vecs] Invalid vector format for aid[{point.id}]: {type(point.vector)}")
+            else:
+                lg.warn(f"[vecs] Missing vector for aid[{point.id}]")
+
+        lg.info(f"[vecs] getBatch: successfully retrieved {len(result)}/{len(aids)} vectors")
+        return result
+
+    except Exception as e:
+        raise mkErr(f"[vecs] Error batch getting vectors for aids{aids}", e)
+
+
 def search(vec, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[qdrant_client.http.models.ScoredPoint]:
     try:
         if conn is None: raise RuntimeError("Qdrant connection not initialized")
