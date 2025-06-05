@@ -29,12 +29,12 @@ def regBy(app):
     #----------------------------------------------------------------
     # serve for Image
     #----------------------------------------------------------------
-    @app.server.route('/api/img/<assetId>')
-    def serve_image(assetId):
+    @app.server.route('/api/img/<aid>')
+    def serve_image(aid):
         try:
             photoQ = request.args.get('q', ks.db.thumbnail)
 
-            cache_key = f"{assetId}_{photoQ}"
+            cache_key = f"{aid}_{photoQ}"
             cache_hash = hashlib.md5(cache_key.encode()).hexdigest()
             cache_path = os.path.abspath(os.path.join(dirCache, f"{cache_hash}.jpg"))
 
@@ -45,7 +45,7 @@ def regBy(app):
 
             with db.pics.mkConn() as conn:
                 cursor = conn.cursor()
-                cursor.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where id = ?", [assetId])
+                cursor.execute("Select thumbnail_path, preview_path, fullsize_path From assets Where autoId = ?", [aid])
                 row = cursor.fetchone()
 
                 if row:

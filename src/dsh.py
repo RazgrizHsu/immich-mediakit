@@ -6,13 +6,16 @@ import dash_bootstrap_components as dbc
 # noinspection PyUnresolvedReferences
 from dash import html as htm, dcc
 # noinspection PyUnresolvedReferences
-from dash import callback as cbk, callback_context as ctx
+from dash import callback_context as ctx, callback as cbk, clientside_callback as ccbk
 # noinspection PyUnresolvedReferences
 from dash.dependencies import ALL, MATCH
 # noinspection PyUnresolvedReferences
 from dash.dependencies import Input as inp, Output as out, State as ste
 # noinspection PyUnresolvedReferences
 from dash.exceptions import PreventUpdate as preventUpdate
+# noinspection PyUnresolvedReferences
+from dash import ClientsideFunction as cbkFn
+
 
 from conf import pathCache, pathFromRoot
 from util import log

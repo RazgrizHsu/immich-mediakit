@@ -213,7 +213,7 @@ def pathFromRoot(path):
 # envs
 #------------------------------------------------------------------------
 class envs:
-    isDev = False if isDock else os.getenv('IsDev')
+    isDev = False if isDock else bool(os.getenv('IsDev', False))
     isDock = False if not isDock else True
     immichPath:str = os.getenv('IMMICH_PATH', '')
     qdrantUrl:str = 'http://immich-mediakit-qdrant:6333' if isDock else os.getenv('QDRANT_URL','')

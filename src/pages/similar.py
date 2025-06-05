@@ -5,7 +5,8 @@ import time
 import immich
 import db
 from conf import ks, co
-from dsh import dash, htm, dcc, cbk, dbc, inp, out, ste, getTrgId, noUpd, ctx, ALL
+from dsh import dash, htm, dcc, dbc, inp, out, ste, getTrgId, noUpd, ctx, ALL
+from dsh import cbk, ccbk, cbkFn
 from util import log
 from mod import mapFns, models, tskSvc
 from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk, Ste
@@ -258,7 +259,6 @@ def sim_OnTabChange(active_tab, dta_now):
 
     lg.info(f"[sim:tab] Tab changed to: {active_tab} (from: {now.sim.activeTab})")
 
-    # 使用 Patch 只更新 activeTab
     patch = dash.Patch()
     patch['sim']['activeTab'] = active_tab
     return patch
@@ -302,8 +302,6 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     return gvPnd, now.toDict()
 
 
-# The pager initialization is now handled by regCallbacks with secondaryIds
-
 
 #------------------------------------------------------------------------
 # assert from url
@@ -323,10 +321,8 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     now = Now.fromDict(dta_now)
 
     if not dta_ass:
-        if not now.sim.assFromUrl:
-            return noUpd.by(2)
+        if not now.sim.assFromUrl: return noUpd.by(2)
 
-        # 使用 Patch 只清除 assFromUrl
         patch = dash.Patch()
         patch['sim']['assFromUrl'] = None
         return patch, noUpd
@@ -335,7 +331,6 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
 
     lg.info(f"[sim:sync] asset from url: #{ass.autoId} id[{ass.id}]")
 
-    # 只更新必要的欄位，但由於需要觸發任務，保持完整更新
     now.sim.assFromUrl = ass
     now.sim.assAid = ass.autoId
 
@@ -413,8 +408,7 @@ def sim_Load(dta_now, dta_nfy):
         pgr.cnt = cntPn
         # Keep current page if still valid, otherwise reset to last valid page
         totalPages = (cntPn + pgr.size - 1) // pgr.size if cntPn > 0 else 1
-        if pgr.idx > totalPages:
-            pgr.idx = max(1, totalPages)
+        if pgr.idx > totalPages: pgr.idx = max(1, totalPages)
         now.sim.pagerPnd = pgr
         # Only update pager store if count actually changed
         if oldPn != cntPn: pagerData = pgr
@@ -468,33 +462,9 @@ def sim_Load(dta_now, dta_nfy):
 #------------------------------------------------------------------------
 # Update status counters - Using CLIENT-SIDE callbacks for performance
 #------------------------------------------------------------------------
-from dash import clientside_callback
 
-clientside_callback(
-    """
-    function(n_clicks) {
-        if (dash_clientside.callback_context.triggered.length > 0) {
-            var triggered = dash_clientside.callback_context.triggered[0];
-            if (triggered.prop_id && triggered.value > 0) {
-                var triggeredId = JSON.parse(triggered.prop_id.split('.')[0]);
-                window.Ste.toggle(triggeredId.id);
-
-                // 每次選擇時同步到 ste store
-                var selectedIds = Array.from(window.Ste.selectedIds);
-                var totalCount = window.Ste.cntTotal;
-
-                var steData = {
-                    selectedIds: selectedIds,
-                    cntTotal: totalCount
-                };
-
-                console.log('[Selection] Syncing to ste store on selection:', steData);
-                return steData;
-            }
-        }
-        return dash_clientside.no_update;
-    }
-    """,
+ccbk(
+    cbkFn( "similar", "onCardSelectClicked" ),
     out(ks.sto.ste, "data"),
     [inp({"type": "card-select", "id": ALL}, "n_clicks")],
     prevent_initial_call=True
@@ -504,19 +474,8 @@ clientside_callback(
 #------------------------------------------------------------------------
 # Initialize client-side selection state when assets load
 #------------------------------------------------------------------------
-clientside_callback(
-    """
-    function(now_data) {
-        if (now_data && now_data.sim && now_data.sim.assCur) {
-            var assets = now_data.sim.assCur;
-            if (window.Ste) {
-                window.Ste.init(assets.length);
-
-            }
-        }
-        return dash_clientside.no_update;
-    }
-    """,
+ccbk(
+    cbkFn( "similar", "onNowSyncToDummyInit" ),
     out({"type": "dummy-output", "id": "init-selection"}, "children"),
     inp(ks.sto.now, "data"),
     prevent_initial_call=True
@@ -710,7 +669,7 @@ def sim_RunModal(
 
     #------------------------------------------------------------------------
     elif trgId == k.btnRmSel:
-        ass = ste.getSelectedAssets(now.sim.assCur)
+        ass = ste.getSelected(now.sim.assCur)
         cnt = len(ass)
 
         lg.info(f"[sim:delSels] {cnt} assets selected")
@@ -730,7 +689,7 @@ def sim_RunModal(
 
     #------------------------------------------------------------------------
     elif trgId == k.btnOkSel:
-        assSel = ste.getSelectedAssets(now.sim.assCur)
+        assSel = ste.getSelected(now.sim.assCur)
         assAll = now.sim.assCur
         cnt = len(assSel)
 
@@ -1159,7 +1118,7 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt, ste = sto.nfy, sto.now, sto.cnt, sto.ste
     try:
         assAlls = now.sim.assCur
-        assSels = ste.getSelectedAssets(assAlls) if ste else []
+        assSels = ste.getSelected(assAlls) if ste else []
         assLefts = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
 
         cntSelect = len(assSels)
@@ -1195,7 +1154,7 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, cnt, ste = sto.nfy, sto.now, sto.cnt, sto.ste
     try:
         assAlls = now.sim.assCur
-        assSels = ste.getSelectedAssets(assAlls) if ste else []
+        assSels = ste.getSelected(assAlls) if ste else []
         assOthers = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
 
         cntSelect = len(assSels)
