@@ -14,21 +14,30 @@ class k:
     shGdInfo = "showGridInfo"
     simIncRelGrp = "simIncRelGrp"
     simMaxDepths = "simMaxDepths"
+    simMaxItems = "simMaxItems"
 
     @staticmethod
     def id(name):
         return {"type": "sets", "id": f"{name}"}
 
 
-optMaxDepths = [
-    {"label": "0", "value":0 },
-    {"label": "1", "value":1 },
-    {"label": "2", "value":2 },
-    {"label": "3", "value":3 },
+optMaxDepths = []
+for i in range(6): optMaxDepths.append({"label": f"{i}", "value": i})
+
+optMaxItems = [
+    {"label": "100", "value": 100},
+    {"label": "200", "value": 200},
+    {"label": "300", "value": 300},
+    {"label": "500", "value": 500},
+    {"label": "1000", "value": 1000},
 ]
 
 
 def renderCard():
+
+
+    lg.info( f"===============>> { db.dto.simMaxDepths } ({type(db.dto.simMaxDepths)})" )
+
     return dbc.Card([
         dbc.CardHeader("Similar Settings"),
         dbc.CardBody([
@@ -68,10 +77,16 @@ def renderCard():
                         htm.Label( "Max Depths: " ),
                         dbc.Select(id=k.id(k.simMaxDepths), options=optMaxDepths, value=db.dto.simMaxDepths, className="")
                     ]),
+
+                    htm.Div( [
+                        htm.Label( "Max Items: " ),
+                        dbc.Select(id=k.id(k.simMaxItems), options=optMaxItems, value=db.dto.simMaxItems, className="")
+                    ]),
                 ], className="icbxs"),
                 htm.Ul([
-                    htm.Li([htm.B("Inlcude Related: "), "在current中將顯示關聯群組, 請注意, 這些圖片將一起受到您的keep/delete命令影響"]),
-                    htm.Li([htm.B("Max Depths: "), "當進行Find Similar的時候，會將多少階層的關聯圖片標記為同一個群組"])
+                    htm.Li([htm.B("Include Related: "), "Display all images in the similarity group (not just direct matches). All displayed images will be affected by Keep/Delete operations"]),
+                    htm.Li([htm.B("Max Depths: "), "During Find Similar, how many levels of hierarchical relationships to include in the same group (0 = direct matches only)"]),
+                    htm.Li([htm.B("Max Items: "), "Maximum number of images to process during similarity search to prevent UI slowdown"])
                 ])
             ], className="irow"),
         ])
@@ -87,13 +102,12 @@ def renderCard():
     inp(k.id(k.shGdInfo), "value"),
     inp(k.id(k.simIncRelGrp), "value"),
     inp(k.id(k.simMaxDepths), "value"),
+    inp(k.id(k.simMaxItems), "value"),
     ste(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def settings_ChgThs(ths, auNxt, shGdInfo, incRelGrp, maxDepths, dta_now):
+def settings_ChgThs(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, dta_now):
     retNow = noUpd
-
-    lg.info( f"maxDepths: {maxDepths}" )
 
     now = models.Now.fromDict(dta_now)
     mi, mx = ths
@@ -102,14 +116,24 @@ def settings_ChgThs(ths, auNxt, shGdInfo, incRelGrp, maxDepths, dta_now):
     db.dto.simMax = co.vad.float(mx, 1.00, 0.51, 1.00)
 
     db.dto.autoNext = auNxt
+    db.dto.simMaxDepths = maxDepths
+    db.dto.simMaxItems = maxItems
+
+    def reloadAssets():
+        nonlocal retNow, now
+        lg.info( f"[cSets] reload, incGroup[{db.dto.simIncRelGrp}]" )
+        now.sim.assCur = db.pics.getSimAssets(now.sim.assAid, db.dto.simIncRelGrp)
+        retNow = now
+
+    #now.sim.assCur = db.pics.getSimAssets(assId, db.dto.simIncRelGrp)
 
     if db.dto.showGridInfo != shGdInfo:
         db.dto.showGridInfo = shGdInfo
-        if retNow == noUpd: retNow = now.toDict()
+        if retNow == noUpd: reloadAssets()
 
     if db.dto.simIncRelGrp != incRelGrp:
         db.dto.simIncRelGrp = incRelGrp
-        if retNow == noUpd: retNow = now.toDict()
+        if retNow == noUpd: reloadAssets()
 
     lg.info(f"[settings] changed: {ths}, {auNxt}, {shGdInfo}")
 

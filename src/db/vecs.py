@@ -199,12 +199,11 @@ def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100) -
     try:
         if conn is None: raise RuntimeError("Qdrant connection not initialized")
 
-        lg.info(f"[vecs] Finding similar assets for aid[{aid}], threshold[{thMin}-{thMax}]")
         vector = getBy(aid)
 
         rst = conn.count(collection_name=keyColl)
 
-        lg.info(f"[vecs] Searching for similar assets, limit[{limit}] total{rst.count}")
+        lg.info(f"[vecs:find] #{aid}, threshold[{thMin}-{thMax}] limit[{limit}] total[{rst.count}]")
 
         # distance = qmod.Distance.COSINE if method == ks.use.mth.cosine else qmod.Distance.EUCLID
 
@@ -212,10 +211,10 @@ def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100) -
         rst = rep.points
         infos: list[models.SimInfo] = []
 
-        lg.info(f"[vecs] search results( {len(rst)} ):")
+        lg.info(f"[vecs:find] search results( {len(rst)} ):")
         for i, hit in enumerate(rst):
             hit_aid = int(hit.id)
-            lg.info(f"    no.{i + 1}: AID[{hit_aid}], score[{hit.score:.6f}] self[{int(hit.id) == aid}]")
+            lg.info(f"\tno.{i + 1}: AID[{hit_aid}], score[{hit.score:.6f}] self[{int(hit.id) == aid}]")
 
             if hit.score <= thMax or hit_aid == aid:  #always add self
                 isSelf = hit_aid == aid

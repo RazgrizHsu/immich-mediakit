@@ -395,9 +395,33 @@ def countSimOk(isOk=0):
         raise mkErr(f"Failed to count assets with simOk[{isOk}]", e)
 
 
-def setSimInfos(assId: str, infos: List[models.SimInfo], isOk=0, GID: Optional[int] = 0):
+def setSimGIDs(autoId: int, GID: int):
+    try:
+        with mkConn() as conn:
+            c = conn.cursor()
+
+            c.execute("SELECT simGIDs FROM assets WHERE autoId = ?", (autoId,))
+            row = c.fetchone()
+            if row:
+                gids = json.loads(row[0]) if row[0] else []
+                if GID not in gids:
+                    gids.append(GID)
+                    c.execute(
+                        "UPDATE assets SET simGIDs = ? WHERE autoId = ?",
+                        (json.dumps(gids), autoId)
+                    )
+                    conn.commit()
+                    lg.info(f"[pics] upd #{autoId} GID[{GID}] to simGIDs[{gids}]")
+                    return True
+            return False
+    except Exception as e:
+        raise mkErr(f"Failed to set simGIDs for asset[{autoId}]", e)
+
+
+
+def setSimInfos(autoId: int, infos: List[models.SimInfo], isOk=0):
     if not infos or len(infos) <= 0:
-        raise RuntimeError(f"Can't setSimInfos id[{assId}] by [{type(infos)}], {tracebk.format_exc()}")
+        raise RuntimeError(f"Can't setSimInfos id[{autoId}] by [{type(infos)}], {tracebk.format_exc()}")
 
     try:
         with mkConn() as conn:
@@ -406,32 +430,16 @@ def setSimInfos(assId: str, infos: List[models.SimInfo], isOk=0, GID: Optional[i
             try:
                 dictSimInfos = [sim.toDict() for sim in infos] if infos else []
 
-                # Get current simGIDs and append new GID if provided
-                if GID:
-                    c.execute("SELECT simGIDs FROM assets WHERE id = ?", (assId,))
-                    row = c.fetchone()
-                    if row:
-                        gids = json.loads(row[0]) if row[0] else []
-                        if GID not in gids: gids.append(GID)
-                        gids_json = json.dumps(gids)
-                    else:
-                        gids_json = json.dumps([GID])
-
-                    c.execute(
-                        "UPDATE assets SET simOk = ?, simInfos = ?, simGIDs = ? WHERE id = ?",
-                        (isOk, json.dumps(dictSimInfos), gids_json, assId)
-                    )
-                else:
-                    c.execute(
-                        "UPDATE assets SET simOk = ?, simInfos = ? WHERE id = ?",
-                        (isOk, json.dumps(dictSimInfos), assId)
-                    )
+                c.execute(
+                    "UPDATE assets SET simOk = ?, simInfos = ? WHERE autoId = ?",
+                    (isOk, json.dumps(dictSimInfos), autoId)
+                )
 
                 if not c.rowcount:
-                    raise RuntimeError(f"No asset found with id: {assId}")
+                    raise RuntimeError(f"update failed #{autoId}")
 
                 conn.commit()
-                lg.info(f"[pics] Updated assId[{assId}] simOK[{isOk}] simInfo[{len(infos)}] GID[{GID}]")
+                lg.info(f"[pics] upd #{autoId} simOK[{isOk}] simInfo[{len(infos)}]")
 
             except Exception as e:
                 raise e
@@ -516,30 +524,6 @@ def setResloveBy(assets: List[models.Asset]):
             return count
     except Exception as e:
         raise mkErr("Failed to resolve sim assets", e)
-
-
-def setSimGIDs(autoId: int, GID: int):
-    try:
-        with mkConn() as conn:
-            c = conn.cursor()
-
-            c.execute("SELECT simGIDs FROM assets WHERE autoId = ?", (autoId,))
-            row = c.fetchone()
-            if row:
-                gids = json.loads(row[0]) if row[0] else []
-                if GID not in gids:
-                    gids.append(GID)
-                    c.execute(
-                        "UPDATE assets SET simGIDs = ? WHERE autoId = ?",
-                        (json.dumps(gids), autoId)
-                    )
-                    conn.commit()
-                    lg.info(f"[pics] Updated assId[{autoId}] added GID[{GID}] to simGIDs[{gids}]")
-                    return True
-            return False
-    except Exception as e:
-        raise mkErr(f"Failed to set simGIDs for asset[{autoId}]", e)
-
 
 
 # noinspection SqlWithoutWhere
@@ -662,7 +646,7 @@ def getAssetsByGID(gid: int) -> list[models.Asset]:
 
 
 # If incGroup, include assets with same simGIDs, else only simInfos
-def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
+def getSimAssets(autoId: int, incGroup=False) -> Optional[List[models.Asset]]:
     import numpy as np
     from db import vecs
 
@@ -677,11 +661,11 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                         CROSS JOIN json_each(a2.simGIDs) gid
                         WHERE gid.value = a.autoId AND a2.autoId != a.autoId
                     ) THEN 1 ELSE 0 END as isMain
-                FROM assets a WHERE a.id = ?
-            """, (assId,))
+                FROM assets a WHERE a.autoId = ?
+            """, (autoId,))
             row = c.fetchone()
             if row is None:
-                lg.warn(f"[pics] SimGroup Root asset {assId} not found")
+                lg.warn(f"[pics] SimGroup Root asset #{autoId} not found")
                 return None
 
             root = models.Asset.fromDB(c, row)
@@ -691,7 +675,7 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
             if not incGroup:
                 if not root.simInfos or len(root.simInfos) <= 1: return rst
 
-                simAids = [info.aid for info in root.simInfos]
+                simAids = [info.aid for info in root.simInfos if not info.isSelf]
                 if not simAids: return [root]
 
                 qargs = ','.join(['?' for _ in simAids])
@@ -708,12 +692,13 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
 
                 rows = c.fetchall()
 
+
                 assets = []
                 for row in rows:
-                    asset = models.Asset.fromDB(c, row)
-                    asset.view.isMain = bool(row['isMain'])
-                    asset.view.score = next((info.score for info in root.simInfos if info.aid == asset.autoId), 0)
-                    assets.append(asset)
+                    ass = models.Asset.fromDB(c, row)
+                    ass.view.isMain = bool(row['isMain'])
+                    ass.view.score = next((info.score for info in root.simInfos if info.aid == ass.autoId), 0)
+                    assets.append(ass)
 
                 assetMap = {asset.autoId: asset for asset in assets}
 
@@ -739,7 +724,7 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                             WHERE gid.value = a.autoId AND a2.autoId != a.autoId
                         ) THEN 1 ELSE 0 END as isMain
                     FROM assets a
-                    WHERE a.id != ? AND (
+                    WHERE a.autoId != ? AND (
                         EXISTS (
                             SELECT 1 FROM json_each(a.simGIDs) 
                             WHERE value IN ({gid_placeholders})
@@ -749,20 +734,23 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                             WHERE value = ?
                         )
                     )
-                """, [assId] + root.simGIDs + [root.autoId])
+                """, [autoId] + root.simGIDs + [root.autoId])
                 rows = c.fetchall()
 
                 if not rows: return rst
 
                 assets = []
                 for row in rows:
-                    asset = models.Asset.fromDB(c, row)
-                    asset.view.isMain = bool(row['isMain'])
-                    assets.append(asset)
+                    ass = models.Asset.fromDB(c, row)
+                    ass.view.isMain = bool(row['isMain'])
+                    assets.append(ass)
 
                 try:
                     rootVec = vecs.getBy(root.autoId)
                     rootVecNp = np.array(rootVec)
+
+                    # Get autoIds from root's simInfos
+                    rootSimAids = {info.aid for info in root.simInfos}
 
                     assScores = []
                     for ass in assets:
@@ -771,6 +759,8 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                             assVecNp = np.array(assVec)
                             score = np.dot(rootVecNp, assVecNp)
 
+                            # Only set isRelats for assets NOT in root's simInfos
+                            ass.view.isRelats = ass.autoId not in rootSimAids
                             ass.view.score = score
 
                             assScores.append((ass, score))
@@ -785,9 +775,10 @@ def getSimAssets(assId: str, incGroup=False) -> Optional[List[models.Asset]]:
                     lg.error(f"[pics] Error processing vectors: {str(e)}")
                     rst.extend(assets)
 
+            lg.info( f"[getSimAssets] fetched[ {len(rst)} ] inclGroup[ {incGroup} ]" )
             return rst
     except Exception as e:
-        raise mkErr(f"Failed to get similar group for root {assId}", e)
+        raise mkErr(f"Failed to get similar group for root #{autoId}", e)
 
 
 def countSimPending():

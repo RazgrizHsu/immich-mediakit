@@ -91,11 +91,14 @@ class DtoSets:
     simMin:float = AutoDbField('simMin', float, 0.93)
     simMax:float = AutoDbField('simMax', float, 1.00)
 
+    tskFloat:bool = AutoDbField('tskFloat', bool, False)
+
     autoNext:bool = AutoDbField('autoNext', bool, True)
     showGridInfo:bool = AutoDbField('showGridInfo', bool, True)
 
     simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False)
-    simMaxDepths:int = AutoDbField('simMaxDepths', int, 1)
+    simMaxDepths:int = AutoDbField('simMaxDepths', int, 0)
+    simMaxItems:int = AutoDbField('simMaxItems', int, 100)
 
     @classmethod
     def get(cls, key, default=None):

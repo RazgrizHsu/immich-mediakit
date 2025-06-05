@@ -211,11 +211,11 @@ h3 { font-size: 1.68rem; }
 .test { background: #0B66BC; color: #1A95C3; border: red 1px solid; }
 
 /*======================== task ========================*/
-.tskPanel { margin: 10px 20px 15px 20px; padding: 10px 30px 10px 30px; border-radius: 16px; border: 2px solid #737373; box-shadow: 0 0 6px rgba(255, 255, 255, 0.2); background-image: linear-gradient(to bottom, #5c5c65, #33333F 50%, #292932); }
+.tskPanel { margin: 10px 20px 15px 20px; padding: 10px 30px 10px 30px; border-radius: 16px; border: 2px solid #4ACDFF99; box-shadow: 0 0 6px rgba(255, 255, 255, 0.5); background: #2D4A69; background-image: linear-gradient(to bottom, #516e87, #264A69 50%, #1e3b54); }
 
 .tskPanel .progress { border: #999999 1px solid; }
 
-.tskPanel.fly { position: fixed; top: 66px; right: 20px; margin: 0; width: 50vw; z-index: 1050; box-shadow: 0 0 10px 5px #1F5C9299; animation: slideIn 0.3s ease-out; }
+.tskPanel.fly { position: fixed; top: 33vw; left: 10px; margin: 0; width: 48vw; z-index: 1050; box-shadow: 0 0 10px 3px #FFFFFF55; animation: slideIn 0.3s ease-out; }
 
 .tskPanel button:not(:last-child) { margin-right: auto; }
 
@@ -237,7 +237,7 @@ h3 { font-size: 1.68rem; }
 
 .ITab .nav .nav-link.dis { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; background: #444444; color: #999999; }
 
-.ITab .tab-acts { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.ITab .tab-acts { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 5px; border-bottom: #cccccc 1px dotted; }
 
 .ITab .tab-acts .left { display: flex; }
 
@@ -313,6 +313,10 @@ h3 { font-size: 1.68rem; }
 
 .img-card .head .floatR { position: absolute; bottom: 5px; right: 5px; display: flex; justify-content: end; width: 100%; }
 
+.gv .hr { grid-column: 1 / -1; width: 100%; padding: 0.5rem 0; border-bottom: #cccccc 1px dotted; }
+
+.gv .hr label { background-image: linear-gradient(to bottom, #8abb55, #6DAA2B 50%, #578822); border-radius: 6px; border: #6DAA2B; padding: 0 12px 2px 12px; text-shadow: 0 0 3px #4A4A4A; box-shadow: 0 0 3px #6DAA2B; }
+
 .card.sim { border: #555555 solid 3px; }
 
 .card.sim.has-related { border: 2px solid var(--warn-bs) !important; box-shadow: 0 0 8px rgba(254, 178, 4, 0.3); }
@@ -322,6 +326,10 @@ h3 { font-size: 1.68rem; }
 .card.sim.main { background: #1F5C92; background-image: linear-gradient(to bottom, #4c7da8, #1F5C92 50%, #194a75); }
 
 .card.sim.main .card-header { background: linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent); }
+
+.card.sim.rels { background: #4A4A4A; background-image: linear-gradient(to bottom, #6e6e6e, #4A4A4A 50%, #3b3b3b); }
+
+.card.sim.rels .card-header { background: linear-gradient(to right, rgba(13, 110, 253, 0.15), transparent); }
 
 .card.sim .card-header .row > div:first-child { white-space: nowrap; overflow: hidden; }
 
@@ -356,14 +364,3 @@ h3 { font-size: 1.68rem; }
 .card.sim .exif tr td { font-size: 12px; }
 
 .card.sim .exif tr td:first-child { color: #36CCFF; font-size: 10px; width: 30%; }
-
-/*======================== related group card ========================*/
-.related-group { border: 1px solid #4A4A4A; transition: all 0.3s ease; }
-
-.related-group:hover { border-color: var(--warning); box-shadow: 0 0 8px rgba(254, 178, 4, 0.2); }
-
-.related-group .card-header { background-color: #2A2A2A; border-bottom: 1px solid #4A4A4A; padding: 0.5rem 1rem; }
-
-.related-group .img-thumbnail { border: 1px solid #555555; background-color: #333333; padding: 2px; }
-
-.related-group .img-thumbnail:hover { border-color: var(--primary); }

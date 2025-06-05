@@ -4,9 +4,11 @@ from util import log
 from mod import models
 import db
 
+
 lg = log.get(__name__)
 
 from ui import gvExif
+
 
 def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
     if not assets or len(assets) == 0:
@@ -16,7 +18,6 @@ def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
             else:
                 return onEmpty
         return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
-
 
     cntAss = len(assets)
 
@@ -36,19 +37,32 @@ def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
         }
         styItem = {}
 
-    rows = [htm.Div(mkCardSim(a), style=styItem) for idx, a in enumerate(assets)]
+    rows = []
+    firstRels = False
+
+    cntRelats = sum(1 for a in assets if a.view.isRelats)
+
+    for idx, a in enumerate(assets):
+        card = mkCardSim(a)
+
+        if a.view.isRelats and not firstRels:
+            firstRels = True
+            rows.append(htm.Div(
+                htm.Label(f"relates ({cntRelats}) :"),
+                className="hr"
+            ))
+
+        rows.append(htm.Div(card, style=styItem))
 
     lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
 
-    return htm.Div(rows, style=styGrid)
+    return htm.Div(rows, className="gv", style=styGrid)
 
 
 def mkCardSim(ass: models.Asset):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.id}" if ass.id else None
-
-    isMain = ass.view.isMain
 
     assId = ass.id
     fnm = ass.originalFileName
@@ -57,14 +71,17 @@ def mkCardSim(ass: models.Asset):
     checked = ass.view.selected
     cssIds = "checked" if checked else ""
 
-
     exi = ass.jsonExif
 
     imgW = exi.exifImageWidth
     imgH = exi.exifImageHeight
 
+    isMain = ass.view.isMain
+    isRels = ass.view.isRelats
+
     cssClass = f"h-100 sim {cssIds}"
     if isMain: cssClass += " main"
+    if isRels: cssClass += " rels"
 
     return dbc.Card([
         dbc.CardHeader(
@@ -79,11 +96,10 @@ def mkCardSim(ass: models.Asset):
                         ]
                         if isMain else
                         [
-                            htm.Span(f"{ass.view.score:.5f}", className="tag lg ms-1"),
-                            htm.Span(">>", className="tag sm second no-border"),
+                            htm.Span("score:", className="tag sm info no-border"),
                             htm.Span(f"{ass.view.score:.5f}", className="tag lg ms-1")
                         ]
-                        if db.dto.simIncRelGrp else
+                        if isRels else
                         [
                             htm.Span("score: ", className="tag sm second no-border"),
                             htm.Span(f"{ass.view.score:.5f}", className="tag lg ms-1")
@@ -140,119 +156,6 @@ def mkCardSim(ass: models.Asset):
         ], className="p-0"),
     ], className=cssClass)
 
-
-# def mkRelatGroups(assets: list[models.Asset], minW=230, maxW=300):
-#     styItem = {"maxWidth": f"{maxW}px"}
-#     styGrid = {
-#         "display": "grid",
-#         "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
-#         "gap": "1rem",
-#         "justifyItems": "center"
-#     }
-#     cntAss = len(assets)
-#     if cntAss <= 4:
-#         styItem.pop("maxWidth")
-#         styGrid.pop("justifyItems")
-#
-#     return htm.Div([
-#         htm.Hr(className="my-4"),
-#         htm.H5([
-#             htm.Span("RelatGroups ", className=""),
-#             htm.Span(f"({len(assets)})", className="badge bg-warning ms-2")
-#         ], className="mb-3"),
-#         # htm.Div([
-#         #
-#         #     mkGroupCard(rg) for rg in assets
-#         #
-#         # ], style=styGrid)
-#     ])
-
-
-def mkGroupCard(ass: models.Asset):
-    return dbc.Card([
-        dbc.CardHeader([
-            htm.Div([
-                htm.Span(f"#{ass.autoId} - {ass.originalFileName}", className="text-truncate"),
-                dbc.Button(
-                    "View Group",
-                    id={"type": "btn-view-group", "id": ass.id},
-                    color="primary",
-                    size="sm",
-                    className="float-end"
-                )
-            ], className="d-flex justify-content-between align-items-center")
-        ], className="py-2"),
-        dbc.CardBody([
-            # 顯示群組中的所有照片縮圖
-            htm.Div([
-                # 左側主圖
-                htm.Div([
-                    htm.Div([
-                        htm.Img(
-                            src=f"/api/img/{ass.id}" if ass.id else "assets/noimg.png",
-                            className="img-thumbnail",
-                            style={"height": "120px", "width": "120px", "objectFit": "cover"},
-                            title=f"#{ass.autoId} - {ass.originalFileName}"
-                        ),
-                        htm.Span("Main", className="badge bg-warning position-absolute",
-                                 style={"top": "5px", "left": "5px"})
-                    ], className="position-relative")
-                ], className="me-3"),
-
-                # 右側次圖網格
-                htm.Div([
-                    htm.Div([
-                        # 顯示前7張次圖
-                        *[
-                            htm.Div([
-                                htm.Img(
-                                    src=f"/api/img/{si.id}",
-                                    className="img-thumbnail",
-                                    style={"height": "60px", "width": "60px", "objectFit": "cover"},
-                                ),
-                                htm.Span(
-                                    f"{si.score:.3f}",
-                                    className="badge bg-info position-absolute",
-                                    style={"bottom": "2px", "right": "2px", "fontSize": "10px", "padding": "2px 4px"}
-                                )
-                            ], className="position-relative")
-                            for si in (ass.simInfos[1:8] if len(ass.simInfos) > 1 else [])
-                        ],
-                        # 如果超過8張（1主圖+7次圖），第8格顯示更多提示
-                        htm.Div([
-                            htm.Span(
-                                f"...{len(ass.simInfos) - 8} more",
-                                className="text-muted",
-                                style={"fontSize": "11px", "fontWeight": "bold"}
-                            )
-                        ], className="d-flex align-items-center justify-content-center",
-                            style={"height": "60px", "width": "60px", "backgroundColor": "#2a2a2a", "borderRadius": "4px"})
-                        if len(ass.simInfos) > 8 else None
-                    ], style={
-                        "display": "grid",
-                        "gridTemplateColumns": "repeat(4, 1fr)",
-                        "gap": "0.25rem"
-                    })
-                ], className="flex-grow-1")
-            ], className="d-flex align-items-start"),
-            htm.Hr(className="my-2"),
-            htm.Div([
-                htm.Small([
-                    htm.Span("Photos in group: ", className="text-muted"),
-                    htm.Span(f"{len(ass.groupAssets) if hasattr(ass, 'groupAssets') else 0}", className="badge bg-info me-2")
-                ]),
-                htm.Small([
-                    htm.Span("Similarity range: ", className="text-muted"),
-                    htm.Span(
-                        f"{min(s.score for s in ass.simInfos if s.score):.3f} - {max(s.score for s in ass.simInfos if s.score):.3f}"
-                        if ass.simInfos and any(s.score for s in ass.simInfos)
-                        else "N/A",
-                        className="badge bg-secondary"
-                    )
-                ])
-            ], className="d-flex justify-content-between")
-        ], className="p-2")
-    ], className="h-100 related-group")
 
 
 def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
