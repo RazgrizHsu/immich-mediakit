@@ -229,7 +229,7 @@ def mdlImg_OnImgPopClicked(clks, dta_mdl):
     trigIdx = ctx.triggered_id
     if isinstance(trigIdx, dict) and "index" in trigIdx:
         assId = trigIdx["index"]
-        lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
+        #lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
 
         if assId:
             mdl.isMulti = False
@@ -264,7 +264,7 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl, dta_now):
     trigIdx = ctx.triggered_id
     if isinstance(trigIdx, dict) and "id" in trigIdx:
         assId = trigIdx["id"]
-        lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
+        # lg.info(f"[mdlImg] clicked, assId[{assId}] clicked[{clks}]")
 
         if assId and now.sim.assCur:
             mdl.open = True
