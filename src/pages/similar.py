@@ -34,6 +34,9 @@ class k:
     txtCntNo = 'sim-txt-cnt-no'
     txtCntSel = 'sim-txt-cnt-sel'
 
+    btnAllSelect = 'sim-btn-AllSelect'
+    btnAllCancel = 'sim-btn-AllCancel'
+
     btnFind = "sim-btn-find"
     btnClear = "sim-btn-clear"
     btnRmSel = "sim-btn-RmSel"
@@ -145,6 +148,10 @@ def layout(autoId=None, **kwargs):
                             htm.Div([
 
                                 htm.Div([
+
+                                    dbc.Button( [ htm.Span( className="fake-checkbox checked" ), "select All"], id=k.btnAllSelect, size="sm", color="secondary", disabled=True ),
+                                    dbc.Button( [ htm.Span( className="fake-checkbox" ),"Deselect All"], id=k.btnAllCancel, size="sm", color="secondary", disabled=True ),
+
                                 ], className="left"),
 
 
@@ -478,7 +485,7 @@ ccbk(
     cbkFn( "similar", "onNowSyncToDummyInit" ),
     out({"type": "dummy-output", "id": "init-selection"}, "children"),
     inp(ks.sto.now, "data"),
-    prevent_initial_call=True
+    prevent_initial_call="initial_duplicate"
 )
 
 

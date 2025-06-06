@@ -292,9 +292,11 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl, dta_now):
 
 
 #------------------------------------------------------------------------
-# callbacks
+# Client-side callback for mdlImg content update
 #------------------------------------------------------------------------
-@cbk(
+ccbk(
+    cbkFn("mdlImg", "onContentUpdate"),
+
     [
         out(k.modal, "is_open"),
         out(k.content, "children"),
@@ -311,77 +313,18 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl, dta_now):
     ],
     inp(k.store, "data"),
     [
-        ste(k.modal, "is_open"),
         ste(ks.sto.now, "data"),
         ste(ks.sto.ste, "data"),
     ],
     prevent_initial_call=True
 )
-def mdlImg_IsOpen(dta_mdl, is_open, dta_now, dta_ste):
-    if not ctx.triggered: return noUpd.by(12)
 
-    trgId = getTrgId()
+#------------------------------------------------------------------------
+# Client-side callback for mdlImg navigation
+#------------------------------------------------------------------------
+ccbk(
+    cbkFn("mdlImg", "onNavigation"),
 
-    if trgId != k.store: return noUpd.by(12)
-
-    mdl = models.MdlImg.fromDict(dta_mdl)
-    now = models.Now.fromDict(dta_now)
-    ste = models.Ste.fromDict(dta_ste)
-
-    htms = _buildImageContent(mdl, now)
-    prevStyle, nextStyle = _getNavStyles(mdl, now)
-
-    badgeStyle = {"display": "block"} if mdl.isMulti else {"display": "none"}
-    btnSelectStyle = {"display": "none"}
-    btnSelectText = "◻️ Select"
-    btnSelectColor = "primary"
-
-    if mdl.isMulti and now.sim.assCur and mdl.curIdx < len(now.sim.assCur):
-        fullAss = now.sim.assCur[mdl.curIdx]
-
-        btnSelectStyle = {"display": "block"}
-        isSelected = _isAssetSelected(ste, fullAss.autoId)
-        btnSelectText, btnSelectColor = _getSelectBtnState(isSelected)
-
-    helpCss, helpTxt = _getHelpState(mdl)
-    infoCss, infoTxt = _getInfoState(mdl)
-    infoContent = []
-
-    if mdl.isMulti and now.sim.assCur and mdl.curIdx < len(now.sim.assCur):
-        ass = now.sim.assCur[mdl.curIdx]
-        if ass:
-            assetRows = [
-                htm.Tr([
-                    htm.Td("autoId"),
-                    htm.Td([
-                        htm.Span(f"#{ass.autoId}", className="tag"),
-                        htm.Span(f"@{','.join(map(str, ass.simGIDs))}", className="tag")
-                    ])
-                ]),
-                htm.Tr([
-                    htm.Td("id"),
-                    htm.Td(htm.Span(ass.id, className="tag sm second"))
-                ]),
-                htm.Tr([htm.Td("Filename"), htm.Td(ass.originalFileName)]),
-            ]
-            exifRows = gvExif.mkExifRows(ass)
-            allRows = assetRows + exifRows
-
-            infoContent = htm.Table(
-                htm.Tbody(allRows),
-                className="table-sm table-striped",
-                style={"width": "100%"}
-            )
-
-    return [
-        mdl.open, htms, prevStyle, nextStyle,
-        btnSelectStyle, btnSelectText, btnSelectColor,
-        helpCss, helpTxt,
-        infoCss, infoTxt, infoContent
-    ]
-
-
-@cbk(
     [
         out(k.store, "data", allow_duplicate=True),
         out(k.content, "children", allow_duplicate=True),
@@ -395,54 +338,66 @@ def mdlImg_IsOpen(dta_mdl, is_open, dta_now, dta_ste):
         inp(k.btnNext, "n_clicks"),
     ],
     [
-        ste(k.store, "data"),
         ste(ks.sto.now, "data"),
         ste(ks.sto.ste, "data"),
+        ste(k.store, "data"),
     ],
     prevent_initial_call=True
 )
-def mdlImg_OnNavClicked(clk_prev, clk_next, dta_mdl, dta_now, dta_ste):
-    if not clk_prev and not clk_next: return noUpd.by(6)
 
-    if not ctx.triggered: return noUpd.by(6)
+#------------------------------------------------------------------------
+# Client-side callback for mdlImg help toggle
+#------------------------------------------------------------------------
+ccbk(
+    cbkFn("mdlImg", "onHelpToggle"),
 
-    now = models.Now.fromDict(dta_now)
-    mdl = models.MdlImg.fromDict(dta_mdl)
-    ste = models.Ste.fromDict(dta_ste) if dta_ste else models.Ste()
+    [
+        out(k.store, "data", allow_duplicate=True),
+        out(k.help, "className", allow_duplicate=True),
+        out(k.btnHelp, "children", allow_duplicate=True),
+    ],
+    inp(k.btnHelp, "n_clicks"),
+    ste(k.store, "data"),
+    prevent_initial_call=True
+)
 
-    if not mdl.isMulti or not now.sim.assCur: return noUpd.by(6)
+#------------------------------------------------------------------------
+# Client-side callback for mdlImg info toggle
+#------------------------------------------------------------------------
+ccbk(
+    cbkFn("mdlImg", "onInfoToggle"),
 
-    trgId = getTrgId()
+    [
+        out(k.store, "data", allow_duplicate=True),
+        out(k.info, "className", allow_duplicate=True),
+        out(k.btnInfo, "children", allow_duplicate=True),
+    ],
+    inp(k.btnInfo, "n_clicks"),
+    ste(k.store, "data"),
+    prevent_initial_call=True
+)
 
-    if trgId == k.btnPrev:
-        if mdl.curIdx > 0:
-            mdl.curIdx = mdl.curIdx - 1
-        else:
-            return noUpd.by(6)
-    elif trgId == k.btnNext:
-        if mdl.curIdx < len(now.sim.assCur) - 1:
-            mdl.curIdx = mdl.curIdx + 1
-        else:
-            return noUpd.by(6)
+#------------------------------------------------------------------------
+# Client-side callback for mdlImg mode toggle
+#------------------------------------------------------------------------
+ccbk(
+    cbkFn("mdlImg", "onModeToggle"),
 
-    curAss = now.sim.assCur[mdl.curIdx]
-    aid = curAss.autoId
-    mdl.imgUrl = f"/api/img/{aid}?q=preview"
+    [
+        out(k.modal, "className"),
+        out(k.btnMode, "children")
+    ],
+    inp(k.btnMode, "n_clicks"),
+    ste(k.modal, "className"),
+    prevent_initial_call=True
+)
 
-    # Rebuild content with new image
-    htms = _buildImageContent(mdl, now)
-    prevStyle, nextStyle = _getNavStyles(mdl, now)
+#------------------------------------------------------------------------
+# Client-side callback for mdlImg ste changes
+#------------------------------------------------------------------------
+ccbk(
+    cbkFn("mdlImg", "onSteChanged"),
 
-    # Get select button state
-    isSelected = _isAssetSelected(ste, curAss.autoId)
-    btnSelectText, btnSelectColor = _getSelectBtnState(isSelected)
-
-    lg.info(f"[mdlImg] nav to idx[{mdl.curIdx}] autoId[{curAss.autoId} selected[{isSelected}]")
-
-    return mdl.toDict(), htms, prevStyle, nextStyle, btnSelectText, btnSelectColor
-
-
-@cbk(
     [
         out(k.btnSelect, "children", allow_duplicate=True),
         out(k.btnSelect, "color", allow_duplicate=True),
@@ -454,94 +409,6 @@ def mdlImg_OnNavClicked(clk_prev, clk_next, dta_mdl, dta_now, dta_ste):
     ],
     prevent_initial_call=True
 )
-def mdlImg_OnSteChanged(dta_ste, dta_now, dta_mdl):
-    if not dta_ste or not dta_now or not dta_mdl: return noUpd.by(2)
-
-    now = models.Now.fromDict(dta_now)
-    mdl = models.MdlImg.fromDict(dta_mdl)
-    ste = models.Ste.fromDict(dta_ste)
-
-    if not mdl.isMulti or not now.sim.assCur or mdl.curIdx >= len(now.sim.assCur):
-        return noUpd.by(2)
-
-    curAss = now.sim.assCur[mdl.curIdx]
-    if not curAss: return noUpd.by(2)
-
-    isSelected = _isAssetSelected(ste, curAss.autoId)
-    btnText, btnColor = _getSelectBtnState(isSelected)
-
-    lg.info(f'[mdlImg:ste] Updated button state for autoId[{curAss.autoId}] selected[{isSelected}]')
-
-    return btnText, btnColor
-
-
-@cbk(
-    [
-        out(k.modal, "className"),
-        out(k.btnMode, "children")
-    ],
-    inp(k.btnMode, "n_clicks"),
-    ste(k.modal, "className"),
-    prevent_initial_call=True
-)
-def mdlImg_ToggleMode(n_clicks, classes):
-    if not n_clicks: return [noUpd.by(2)]
-
-    if not classes: classes = ""
-
-    hasClass = k.cssAuto in classes.split()
-
-    if hasClass:
-        css = " ".join([c for c in classes.split() if c != k.cssAuto])
-        txt = k.txtHFix
-    else:
-        css = classes + f" {k.cssAuto}" if classes else k.cssAuto
-        txt = k.txtHAuto
-
-    return [css, txt]
-
-
-@cbk(
-    [
-        out(k.store, "data", allow_duplicate=True),
-        out(k.help, "className", allow_duplicate=True),
-        out(k.btnHelp, "children", allow_duplicate=True),
-    ],
-    inp(k.btnHelp, "n_clicks"),
-    ste(k.store, "data"),
-    prevent_initial_call=True
-)
-def mdlImg_ToggleHelp(clks, dta_mdl):
-    if not clks: return noUpd.by(3)
-
-    mdl = models.MdlImg.fromDict(dta_mdl)
-    mdl.helpCollapsed = not mdl.helpCollapsed
-
-    helpCss, helpTxt = _getHelpState(mdl)
-
-    return mdl.toDict(), helpCss, helpTxt
-
-
-@cbk(
-    [
-        out(k.store, "data", allow_duplicate=True),
-        out(k.info, "className", allow_duplicate=True),
-        out(k.btnInfo, "children", allow_duplicate=True),
-    ],
-    inp(k.btnInfo, "n_clicks"),
-    ste(k.store, "data"),
-    prevent_initial_call=True
-)
-def mdlImg_ToggleInfo(clks, dta_mdl):
-    if not clks: return noUpd.by(3)
-
-    mdl = models.MdlImg.fromDict(dta_mdl)
-    mdl.infoCollapsed = not mdl.infoCollapsed
-
-    infoCss, infoTxt = _getInfoState(mdl)
-
-    return mdl.toDict(), infoCss, infoTxt
-
 
 #------------------------------------------------------------------------
 # Client-side callback for mdlImg selection
