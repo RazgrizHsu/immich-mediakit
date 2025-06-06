@@ -24,6 +24,10 @@ h3 { font-size: 1.68rem; }
 
 ::-webkit-scrollbar-thumb:hover { background: #777777; }
 
+.fake-checkbox { pointer-events: none; display: inline-block; width: 1rem; height: 1rem; margin-right: 0.5rem; vertical-align: sub; background-color: #FFFFFF; background-repeat: no-repeat; background-position: center; background-size: contain; border: 1px solid #ADB5BD; border-radius: 0.25em; transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out; }
+
+.fake-checkbox.checked { background-color: #0D6EFD; border-color: #0D6EFD; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e"); }
+
 .page .side { flex: 0 0 250px; min-width: 200px; max-width: 300px; }
 
 .page > div > div > .body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 3px 8px; padding: 12px; }
@@ -237,9 +241,11 @@ h3 { font-size: 1.68rem; }
 
 .ITab .nav .nav-link.dis { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; background: #444444; color: #999999; }
 
-.ITab .tab-acts { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 5px; border-bottom: #cccccc 1px dotted; }
+.ITab .tab-acts { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 5px; border-bottom: #CCCCCC 1px dotted; }
 
-.ITab .tab-acts .left { display: flex; }
+.ITab .tab-acts .left > button:not(:last-child) { margin-right: 6px; }
+
+.ITab .tab-acts .left > button { margin-top: 20px; }
 
 .ITab .tab-acts .right { display: flex; }
 
@@ -313,7 +319,7 @@ h3 { font-size: 1.68rem; }
 
 .img-card .head .floatR { position: absolute; bottom: 5px; right: 5px; display: flex; justify-content: end; width: 100%; }
 
-.gv .hr { grid-column: 1 / -1; width: 100%; padding: 0.5rem 0; border-bottom: #cccccc 1px dotted; }
+.gv .hr { grid-column: 1 / -1; width: 100%; padding: 0.5rem 0; border-bottom: #CCCCCC 1px dotted; }
 
 .gv .hr label { background-image: linear-gradient(to bottom, #8abb55, #6DAA2B 50%, #578822); border-radius: 6px; border: #6DAA2B; padding: 0 12px 2px 12px; text-shadow: 0 0 3px #4A4A4A; box-shadow: 0 0 3px #6DAA2B; }
 
