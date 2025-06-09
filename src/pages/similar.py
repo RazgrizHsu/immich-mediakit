@@ -73,7 +73,7 @@ def layout(autoId=None, **kwargs):
     import ui
     return ui.renderBody([
         #====== top start =======================================================
-        dcc.Store(id=k.assFromUrl, data=guideAss),
+        dcc.Store(id=k.assFromUrl, data=guideAss.toDict() if guideAss else {}),
 
         # 客戶端選擇狀態管理的 dummy 元素
         htm.Div(id={"type": "dummy-output", "id": "selection"}, style={"display": "none"}),
@@ -347,7 +347,6 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     mdl = Mdl()
     mdl.id = ks.pg.similar
     mdl.cmd = ks.cmd.sim.fdSim
-    mdl.name = f'Find similar for #{ass.autoId}'
     mdl.msg = f'Search images similar to {ass.originalFileName} with threshold [{thMin:.2f} - {thMax:.2f}]'
     mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': True}
 
@@ -567,6 +566,9 @@ def sim_OnSwitchViewGroup(clks, dta_now):
     now = Now.fromDict(dta_now)
 
     trgId = ctx.triggered_id
+
+    if not trgId: return noUpd.by(2)
+
     assId = trgId["id"]
 
     lg.info(f"[sim:vgrp] switch: id[{assId}] clks[{clks}]")
@@ -647,7 +649,7 @@ def sim_RunModal(
     if tsk.id:
         if mgr and mgr.getInfo(tsk.id):
             ti = mgr.getInfo(tsk.id)
-            if ti.status in ['pending', 'running']:
+            if ti and ti.status in ['pending', 'running']:
                 nfy.warn(f"[similar] Task already running: {tsk.id}")
                 return noUpd.by(4).updFr(0, nfy.toDict())
             # lg.info(f"[similar] Clearing completed task: {tsk.id}")
@@ -837,7 +839,7 @@ def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
             msg = "No similarity records to clear"
             lg.info(msg)
             nfy.info(msg)
-            return nfy, now, msg
+            return sto, msg
 
         doReport(30, "Clearing similarity records from database...")
 

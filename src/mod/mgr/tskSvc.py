@@ -11,9 +11,9 @@ mgr: Optional[TskMgr] = None
 
 @dataclass
 class DashTask(BseTsk):
-    tsk: Optional[Tsk] = None
-    fn: Optional[Callable] = None
-    store: Optional[ITaskStore] = None
+    tsk: Tsk
+    fn: Callable
+    store: ITaskStore
 
     # def __init__(self, tsk: models.Tsk, fn: Callable, store: ITaskStore):
     #     super().__init__(tsk.name)
@@ -23,6 +23,8 @@ class DashTask(BseTsk):
 
     @classmethod
     def mk(cls, tsk: Tsk, fn: Callable, store: ITaskStore):
+        if not tsk: raise RuntimeError( "cannot create DashTask without tsk" )
+        if not tsk.name: raise RuntimeError( f"cannot create DashTask by tsk[{tsk}]" )
         return cls(
             name=tsk.name,
             tsk=tsk,
@@ -81,7 +83,7 @@ def mkTask(tsk: Tsk, fn: Callable, sto: ITaskStore) -> str:
     tskSn = mgr.regBy(DashTask.mk(tsk, fn, sto))
 
     # Inject cancel checker into store
-    sto.setCancelChecker(lambda: mgr.isCancelled(tskSn))
+    sto.setCancelChecker(lambda: mgr.isCancelled(tskSn)) #type:ignore
 
     return tskSn
 
@@ -95,14 +97,12 @@ def cancelBy(tskId: str) -> bool:
     return mgr.cancel(tskId)
 
 
-def getResultBy(tskId: str) -> Optional[ITaskStore]:
-    if not mgr: return None
+def getResultBy(tskId: str) -> ITaskStore:
+    if not mgr: raise RuntimeError( "TskMgr not init" )
 
     ti = mgr.getInfo(tskId)
     if ti and tskId in mgr.tsks:
         dTsk = mgr.tsks[tskId]
-        if isinstance(dTsk, DashTask):
-            return dTsk.store
+        if isinstance(dTsk, DashTask): return dTsk.store
 
-    lg.error(f"[TskSvc] failed get result from tskId[{tskId}]")
-    return None
+    raise RuntimeError(f"[TskSvc] failed get result from tskId[{tskId}]")

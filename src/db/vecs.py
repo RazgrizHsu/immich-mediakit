@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import qdrant_client.http.models
@@ -40,6 +40,7 @@ def close():
 
 def create():
     try:
+        if not conn: raise RuntimeError( "[qdrant] not connection" )
         if not conn.collection_exists(keyColl):
             lg.info(f"[qdrant] creating coll[{keyColl}]...")
             conn.create_collection(
@@ -57,7 +58,7 @@ def create():
 
 def cleanAll():
     try:
-        if conn is None: raise RuntimeError("[qdrant] not connectioned")
+        if conn is None: raise RuntimeError("[qdrant] not connection")
 
         exist = conn.collection_exists(keyColl)
 
@@ -88,7 +89,7 @@ def deleteBy(aids: list[int]):
 
         rst = conn.delete(
             collection_name=keyColl,
-            points_selector=qmod.PointIdsList(points=aids)
+            points_selector=qmod.PointIdsList(points=aids) # type: ignore
         )
 
         lg.info(f"[vec] delete status[{rst}] count[ {len(aids)} ]")
@@ -103,9 +104,6 @@ def deleteBy(aids: list[int]):
 def save(aid: int, vector: np.ndarray, confirm=True):
     try:
         if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
-
-        if not isinstance(vector, np.ndarray):
-            raise ValueError(f"[vecs] Cannot convert vector from {type(vector)} to list")
 
         vecList = vector.tolist()
         if not vecList or len(vecList) != 2048:
@@ -134,7 +132,7 @@ def save(aid: int, vector: np.ndarray, confirm=True):
         raise mkErr(f"Error saving vector for asset {aid}", e)
 
 
-def getBy(aid: int):
+def getBy(aid: int) -> List[float]:
     try:
         if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
 
@@ -163,13 +161,8 @@ def getBy(aid: int):
 
         if not isinstance(vector, list):
             raise RuntimeError(f"[vecs] Vector not a list: {type(vector)}")
-            # try:
-            #     vector = list(vector)
-            #     lg.warn(f"[vecs] Converted vector from {type(vector)} to list, length: {len(vector)}")
-            # except Exception as e:
-            #     raise RuntimeError(f"[vecs] Cannot convert vector to list: {str(e)}")
 
-        return vector
+        return vector #type: ignore
 
     except Exception as e:
         raise mkErr(f"[vecs] Error get asset vector aid[{aid}]", e)

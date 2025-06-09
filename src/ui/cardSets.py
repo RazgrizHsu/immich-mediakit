@@ -43,7 +43,7 @@ def renderCard():
                 htm.Label("Threshold Range", className="txt-sm"),
                 htm.Div([
                     dcc.RangeSlider(
-                        id=k.id(k.ths), min=0.5, max=1, step=0.01, marks=ks.defs.thMarks,
+                        id=k.id(k.ths), min=0.5, max=1, step=0.01, marks=ks.defs.thMarks, #type: ignore
                         value=[db.dto.simMin, db.dto.simMax],
                         tooltip={
                             "placement": "top", "always_visible": True,
@@ -78,7 +78,7 @@ def renderCard():
 
                     htm.Div([
                         htm.Label("Max Items: "),
-                        dbc.Select(id=k.id(k.simMaxItems), options=optMaxItems, value=db.dto.simMaxItems, className="")
+                        dbc.Select(id=k.id(k.simMaxItems), options=optMaxItems, value=db.dto.simMaxItems, className="") #type: ignore
                     ]),
                 ], className="icbxs"),
                 htm.Ul([

@@ -1,4 +1,4 @@
-from typing import List, Optional, Callable, Literal
+from typing import List, Optional, Callable, Any
 import json
 
 from dsh import htm, dbc, dcc, cbk, out, inp, ste, ctx, ALL
@@ -47,7 +47,7 @@ def createStore(
     ]
 
 
-def createPager(pgId: str, idx: int = 0, className: str = None, showInfo: bool = True, avFirstLast: bool = True, avPrevNext: bool = True, btnSize: int = 7, page: int = 1, size: int = 20, total: int = 0) -> List:
+def createPager(pgId: str, idx: int = 0, className: Optional[str] = None, showInfo: bool = True, avFirstLast: bool = True, avPrevNext: bool = True, btnSize: int = 7, page: int = 1, size: int = 20, total: int = 0) -> List:
     htms = _buildUI(
         pgrId=pgId,
         idx=idx,
@@ -194,7 +194,7 @@ def _buildUI(pgrId: str, idx: int, page: int, size: int, total: int, btnSize: in
             className="item" + (" disabled" if page >= totalPages else "")
         ))
 
-    components = [
+    components : list[Any] = [
         htm.Ul(
             items,
             id=f"{pgrId}-{idx}",

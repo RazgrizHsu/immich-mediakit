@@ -137,26 +137,28 @@ def count(usrId=None):
 #========================================================================
 # quary
 #========================================================================
-def getByAutoId(autoId) -> Optional[models.Asset]:
+def getByAutoId(autoId) -> models.Asset:
     try:
         with mkConn() as conn:
             c = conn.cursor()
             c.execute("Select * From assets Where autoId= ?", (autoId,))
             row = c.fetchone()
-            if row is None: return None
+
+            if not row: raise RuntimeError(f"not found aid[{autoId}]")
+
             asset = models.Asset.fromDB(c, row)
             return asset
     except Exception as e:
         raise mkErr("Failed to get asset by autoId", e)
 
 
-def getById(assId) -> Optional[models.Asset]:
+def getById(assId) -> models.Asset:
     try:
         with mkConn() as conn:
             c = conn.cursor()
             c.execute("Select * From assets Where id = ?", (assId,))
             row = c.fetchone()
-            if row is None: return None
+            if not row: raise RuntimeError( f"NotFound id[{assId}]" )
             asset = models.Asset.fromDB(c, row)
             return asset
     except Exception as e:
@@ -309,7 +311,7 @@ def getFiltered(
 # update
 #========================================================================
 
-def setVectoredBy(asset: models.Asset, done=1, cur: Cursor = None):
+def setVectoredBy(asset: models.Asset, done=1, cur: Optional[Cursor] = None):
     try:
         if cur:
             # Use provided cursor (for transactions)
@@ -483,9 +485,9 @@ def deleteBy(assets: List[models.Asset]):
                 # Find assets with any of these mainGIDs in simGIDs (where simOk=0)
                 for mainGID in mainGIDs:
                     c.execute("""
-                        SELECT id, simGIDs FROM assets 
+                        SELECT id, simGIDs FROM assets
                         WHERE EXISTS (
-                            SELECT 1 FROM json_each(simGIDs) 
+                            SELECT 1 FROM json_each(simGIDs)
                             WHERE value = ?
                         ) AND simOk = 0
                     """, (mainGID,))
@@ -551,7 +553,7 @@ def countHasSimIds(isOk=0):
         with mkConn() as conn:
             c = conn.cursor()
             sql = '''
-                SELECT COUNT(*) FROM assets 
+                SELECT COUNT(*) FROM assets
                 WHERE simOk = ? AND json_array_length(simInfos) > 0
             '''
             c.execute(sql, (isOk,))
@@ -569,7 +571,7 @@ def getAnySimPending() -> Optional[models.Asset]:
         with mkConn() as conn:
             c = conn.cursor()
             c.execute("""
-                SELECT * FROM assets 
+                SELECT * FROM assets
                 WHERE
                     simOk = 0 AND json_array_length(simInfos) > 1
                 LIMIT 1
@@ -585,7 +587,7 @@ def getAllSimOks(isOk=0) -> List[models.Asset]:
         with mkConn() as conn:
             c = conn.cursor()
             c.execute("""
-                SELECT * FROM assets 
+                SELECT * FROM assets
                 WHERE
                     simOk = ? AND json_array_length(simInfos) > 1
                 ORDER BY autoId
@@ -615,11 +617,11 @@ def setSimAutoMark():
         with mkConn() as cnn:
             c = cnn.cursor()
             c.execute("""
-                UPDATE assets 
+                UPDATE assets
                 SET simOk = 1
                 WHERE
                     simOk = 0 AND json_array_length(simInfos) = 1
-                    AND EXISTS 
+                    AND EXISTS
                     (
                         SELECT 1 FROM json_each(simInfos) si
                             WHERE json_extract(si.value, '$.isSelf') = 1
@@ -635,9 +637,9 @@ def getAssetsByGID(gid: int) -> list[models.Asset]:
         with mkConn() as conn:
             c = conn.cursor()
             c.execute("""
-                SELECT * FROM assets 
+                SELECT * FROM assets
                 WHERE EXISTS (
-                    SELECT 1 FROM json_each(simGIDs) 
+                    SELECT 1 FROM json_each(simGIDs)
                     WHERE value = ?
                 ) AND json_array_length(simInfos) > 1
                 ORDER BY json_array_length(simInfos) DESC, autoId
@@ -652,32 +654,33 @@ def getAssetsByGID(gid: int) -> list[models.Asset]:
 
 
 # If incGroup, include assets with same simGIDs, else only simInfos
-def getSimAssets(autoId: int, incGroup=False) -> Optional[List[models.Asset]]:
+def getSimAssets(autoId: int, incGroup=False) -> List[models.Asset]:
     import numpy as np
     from db import vecs
 
     lg.info( f"[getSimAssets] loading #{autoId} inclGroup[ {incGroup} ]" )
+    rst = []
+
     try:
         with mkConn() as conn:
             c = conn.cursor()
             c.execute("""
                 WITH main_check AS (
                     SELECT DISTINCT gid.value as main_autoId
-                    FROM assets a2 
+                    FROM assets a2
                     CROSS JOIN json_each(a2.simGIDs) gid
                     WHERE a2.autoId != gid.value
                 )
-                SELECT 
+                SELECT
                     a.*,
                     CASE WHEN mc.main_autoId IS NOT NULL THEN 1 ELSE 0 END as isMain
-                FROM assets a 
+                FROM assets a
                 LEFT JOIN main_check mc ON a.autoId = mc.main_autoId
                 WHERE a.autoId = ?
             """, (autoId,))
             row = c.fetchone()
             if row is None:
-                lg.warn(f"[pics] SimGroup Root asset #{autoId} not found")
-                return None
+                raise RuntimeError(f"[pics] SimGroup Root asset #{autoId} not found")
 
             root = models.Asset.fromDB(c, row)
             root.view.isMain = bool(row['isMain'])
@@ -693,14 +696,14 @@ def getSimAssets(autoId: int, incGroup=False) -> Optional[List[models.Asset]]:
                 c.execute(f"""
                     WITH main_check AS (
                         SELECT DISTINCT gid.value as main_autoId
-                        FROM assets a2 
+                        FROM assets a2
                         CROSS JOIN json_each(a2.simGIDs) gid
                         WHERE a2.autoId != gid.value
                     )
-                    SELECT 
+                    SELECT
                         a.*,
                         CASE WHEN mc.main_autoId IS NOT NULL THEN 1 ELSE 0 END as isMain
-                    FROM assets a 
+                    FROM assets a
                     LEFT JOIN main_check mc ON a.autoId = mc.main_autoId
                     WHERE a.autoId IN ({qargs})
                 """, simAids)
@@ -733,22 +736,22 @@ def getSimAssets(autoId: int, incGroup=False) -> Optional[List[models.Asset]]:
                 c.execute(f"""
                     WITH main_check AS (
                         SELECT DISTINCT gid.value as main_autoId
-                        FROM assets a2 
+                        FROM assets a2
                         CROSS JOIN json_each(a2.simGIDs) gid
                         WHERE a2.autoId != gid.value
                     )
-                    SELECT 
+                    SELECT
                         a.*,
                         CASE WHEN mc.main_autoId IS NOT NULL THEN 1 ELSE 0 END as isMain
                     FROM assets a
                     LEFT JOIN main_check mc ON a.autoId = mc.main_autoId
                     WHERE a.autoId != ? AND (
                         EXISTS (
-                            SELECT 1 FROM json_each(a.simGIDs) 
+                            SELECT 1 FROM json_each(a.simGIDs)
                             WHERE value IN ({gid_placeholders})
                         )
                         OR EXISTS (
-                            SELECT 1 FROM json_each(a.simGIDs) 
+                            SELECT 1 FROM json_each(a.simGIDs)
                             WHERE value = ?
                         )
                     )
@@ -839,7 +842,7 @@ def getPagedPending(page=1, size=20) -> list[models.Asset]:
                     WHERE a.simOk = 0 AND json_array_length(a.simInfos) > 1
                 ),
                 gidCounts AS (
-                    SELECT 
+                    SELECT
                         gid.value as gid,
                         COUNT(*) as cntRelats
                     FROM assets a
@@ -848,7 +851,7 @@ def getPagedPending(page=1, size=20) -> list[models.Asset]:
                       AND a.autoId != gid.value
                     GROUP BY gid.value
                 )
-                SELECT 
+                SELECT
                     a.*,
                     COALESCE(gc.cntRelats, 0) as cntRelats
                 FROM assets a

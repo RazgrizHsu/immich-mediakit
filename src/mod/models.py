@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, Callable, Tuple
 
-from conf import ks, envs
+from conf import ks, envs, co
 from util import log
 from .bse.baseModel import BaseDictModel
 
@@ -52,7 +52,7 @@ class Nfy(BaseDictModel):
 @dataclass
 class Cmd(BaseDictModel):
     id: Optional[str] = None
-    cmd: Optional[str] = None
+    cmd: Optional[co.tit] = None
     args: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -88,25 +88,22 @@ class Mdl(Cmd):
         tsk = Tsk()
 
         tit = ks.pg.find(self.id)
-        if tit:
-            # lg.info( f"tit.cmds({type(tit.cmds)}) => {tit.cmds}" )
-            if not self.cmd in tit.cmds.values():
-                lg.error(f'the MDL.cmd[{self.cmd}] not in [{tit.cmds}]')
-                return None
+        if not tit: raise RuntimeError(f"not found tit for id[{self.id}]")
 
-            cmd = next(v for k, v in tit.cmds.items() if v == self.cmd)
-            # lg.info( f"cmd => type({type(cmd)}) v:{cmd}" )
+        # lg.info( f"tit.cmds({type(tit.cmds)}) => {tit.cmds}" )
+        if not self.cmd in tit.cmds.values(): raise RuntimeError(f'the MDL.cmd[{self.cmd}] not in [{tit.cmds}]')
 
-            tsk.id = self.id
-            tsk.name = tit.name
-            tsk.cmd = self.cmd
-            tsk.args |= self.args
+        cmd = next(v for k, v in tit.cmds.items() if v == self.cmd)
+        # lg.info( f"cmd => type({type(cmd)}) v:{cmd}" )
 
-            if hasattr(cmd, 'desc'): tsk.msg = cmd.desc
+        tsk.id = self.id
+        tsk.name = tit.name
+        tsk.cmd = self.cmd
+        tsk.args |= self.args
 
-            return tsk
-        else:
-            return None
+        if hasattr(cmd, 'desc'): tsk.msg = cmd.desc
+
+        return tsk
 
 @dataclass
 class MdlImg(BaseDictModel):
@@ -152,17 +149,17 @@ class ProcessInfo(BaseDictModel):
 
 @dataclass
 class SimInfo(BaseDictModel):
-    aid: Optional[int] = None
-    score: Optional[float] = None
-    isSelf: Optional[bool] = False
+    aid: int = 0
+    score: float = 0
+    isSelf: bool = False
 
 
 @dataclass
 class Usr(BaseDictModel):
-    id: Optional[str] = None
-    name: Optional[str] = None
-    email: Optional[str] = None
-    key: Optional[str] = None
+    id: str
+    name: str
+    email: str
+    key: str
 
 
 @dataclass
@@ -216,8 +213,8 @@ class AssetViewOnly(BaseDictModel):
 
 @dataclass
 class Asset(BaseDictModel):
-    autoId: Optional[int] = None
-    id: Optional[str] = None
+    autoId: int = 0
+    id: str = ""
     ownerId: Optional[str] = None
     deviceId: Optional[str] = None
     type: Optional[str] = None
@@ -231,7 +228,7 @@ class Asset(BaseDictModel):
     thumbnail_path: Optional[str] = None
     preview_path: Optional[str] = None
     fullsize_path: Optional[str] = None
-    jsonExif: Optional[AssetExif] = None
+    jsonExif: AssetExif = field(default_factory=AssetExif)
     isVectored: Optional[int] = 0
     simOk: Optional[int] = 0
     simInfos: List[SimInfo] = field(default_factory=list)
@@ -299,14 +296,15 @@ class PgSim(BaseDictModel):
     pagerPnd: Optional[Pager] = None
     activeTab: Optional[str] = "tab-current"
 
-    assAid: Optional[int] = None
+    assAid: int = 0
     assCur: List[Asset] = field(default_factory=list)
     assPend: List[Asset] = field(default_factory=list)
 
     assFromUrl: Optional[Asset] = None
 
     def clearNow(self):
-        self.assAid = self.assFromUrl = None
+        self.assAid = 0
+        self.assFromUrl = None
         self.assCur.clear()
 
     def clearAll(self):
@@ -341,20 +339,20 @@ class TskStatus(Enum):
 
 @dataclass
 class WsMsg(BaseDictModel):
-    tsn: str = None
-    type: str = None
-    name: str = None
-    message: str = None
-    status: TskStatus = None
+    tsn: Optional[str] = None
+    type: Optional[str] = None
+    name: Optional[str] = None
+    message: Optional[str] = None
+    status: Optional[TskStatus] = None
 
 
 @dataclass
 class ITaskStore:
-    nfy: Nfy = None
-    now: Now = None
-    cnt: Cnt = None
-    tsk: Tsk = None
-    ste: Ste = None
+    nfy: Nfy
+    now: Now
+    cnt: Cnt
+    tsk: Tsk
+    ste: Ste
 
     _canceller: Optional[IFnCancel] = None
 

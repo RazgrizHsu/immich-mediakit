@@ -203,8 +203,12 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
 
             disBtnRun = cntRemote <= cntLocal or cntRemote == 0
 
-            txtBtn = f"Fetch: {usr.name} ({cntRemote})"
-            txtClr = f"Clear local: {usr.name} ({cntLocal})"
+            if usr:
+                txtBtn = f"Fetch: {usr.name} ({cntRemote})"
+                txtClr = f"Clear local: {usr.name} ({cntLocal})"
+            else:
+                txtBtn = "--No user--"
+                txtClr = "--No user--"
 
     lg.info(f"[assets:status] usrId[{usrId}] cnt: {cnt}")
 
@@ -256,9 +260,12 @@ def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk,
             usr = db.psql.fetchUser(now.usrId)
             cnt = db.pics.count(now.usrId)
 
-            mdl.id = ks.pg.fetch
-            mdl.cmd = ks.cmd.fetch.clear
-            mdl.msg = f'Start clearing user[ {usr.name} ] assets[ {cnt} ]'
+            if not usr:
+                nfy.warn( f"No User Id[{ now.usrId }]" )
+            else:
+                mdl.id = ks.pg.fetch
+                mdl.cmd = ks.cmd.fetch.clear
+                mdl.msg = f'Start clearing user[ {usr.name} ] assets[ {cnt} ]'
 
     elif trgSrc == k.btnFetch:
         if not now.usrId:
@@ -268,9 +275,12 @@ def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk,
             cnt = db.psql.count(now.usrId)
             usr = db.psql.fetchUser(now.usrId)
 
-            mdl.id = ks.pg.fetch
-            mdl.cmd = ks.cmd.fetch.asset
-            mdl.msg = f"Start getting assets[ {cnt} ] for user[ {usr.name} ] ?"
+            if not usr:
+                nfy.warn( f"No User Id[{ now.usrId }]" )
+            else:
+                mdl.id = ks.pg.fetch
+                mdl.cmd = ks.cmd.fetch.asset
+                mdl.msg = f"Start getting assets[ {cnt} ] for user[ {usr.name} ] ?"
 
     return mdl.toDict(), nfy.toDict()
 
@@ -292,19 +302,22 @@ def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
     try:
         # todo: add support for all users?
 
+        if not now.usrId:
+            raise RuntimeError( f"No UserId" )
+
         try:
             db.psql.chk()
         except Exception as e:
             msg = f"Error: Cannot connect to PostgreSQL database: {str(e)}"
             nfy.error(msg)
-            return nfy, now, msg
+            return sto, msg
 
         usr = db.psql.fetchUser(now.usrId)
 
         if not usr:
             msg = f"Error: User not found"
             nfy.error(msg)
-            return nfy, now, msg
+            return sto, msg
 
         doReport(5, f"Starting to fetch assets for {usr.name} from PostgreSQL")
 
@@ -312,7 +325,7 @@ def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
         if cntAll <= 0:
             msg = f"No assets found for {usr.name}"
             nfy.info(msg)
-            return nfy, now, msg
+            return sto, msg
 
         doReport(10, f"Found {cntAll} photos, starting to fetch assets")
 
@@ -322,12 +335,12 @@ def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
         except Exception as e:
             msg = f"Error fetching assets for {usr.name}, {str(e)}"
             nfy.error(msg)
-            return nfy, now, msg
+            return sto, msg
 
         if not assets or len(assets) == 0:
             msg = f"No assets retrieved for {usr.name}"
             nfy.info(msg)
-            return nfy, now, msg
+            return sto, msg
 
         doReport(50, f"Retrieved {len(assets)} photos, starting to save to local database")
 
@@ -382,14 +395,17 @@ def onFetchClear(doReport: IFnProg, sto: tskSvc.ITaskStore):
     except Exception as e:
         msg = f"Error: Cannot connect to PostgreSQL database: {str(e)}"
         nfy.error(msg)
-        return nfy, now, msg
+        return sto, msg
 
     try:
+        if not now.usrId:
+            raise RuntimeError( "NoUserId" )
+
         usr = db.psql.fetchUser(now.usrId)
         if not usr:
             msg = f"Error: User not found"
             nfy.error(msg)
-            return nfy, now, msg
+            return sto, msg
 
         doReport(10, f"Starting clear assets for {usr.name}")
 
@@ -398,7 +414,7 @@ def onFetchClear(doReport: IFnProg, sto: tskSvc.ITaskStore):
             msg = f"No assets found for {usr.name}"
             return sto, msg
 
-        assIds = [a.id for a in assets]
+        assIds = [a.autoId for a in assets]
         #------------------------------------
         db.pics.clearBy(now.usrId)
 
