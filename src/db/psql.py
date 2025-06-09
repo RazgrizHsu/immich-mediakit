@@ -140,7 +140,8 @@ def count(usrId=None, assetType="IMAGE"):
                 sql += " AND status = 'active'"
 
                 cursor.execute(sql, params)
-                count = cursor.fetchone()[0]
+                rst = cursor.fetchone()
+                count = rst[0] if rst else 0
 
                 #lg.info( f"[psql] count userId[{usrId}] rst[{count}]" )
 
@@ -173,7 +174,7 @@ def testAssetsPath():
                 if not rows or not len(rows): return "No Assets"
 
                 for row in rows:
-                    path = row.get("path", None)
+                    path = row.get("path", "")
                     if path:
                         path = imgs.fixPath(fixPrefix(path))
                         isOk = os.path.exists(path)
@@ -190,8 +191,9 @@ def testAssetsPath():
 
 
 
-def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: models.IFnProg = None):
+def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
     usrId = usr.id
+    asType = "IIMAGE"
 
     try:
         chk()
@@ -210,6 +212,8 @@ def fetchAssets(usr: models.Usr, asType="IMAGE", onUpdate: models.IFnProg = None
 
                 cursor.execute(cntSql, cntArs)
                 rst = cursor.fetchone()
+                if not rst: raise RuntimeError( "cannot count assets" )
+
                 cntAll = rst.get("count", 0)
 
                 # lg.info(f"Found {cntAll} {asType.lower()} assets...")

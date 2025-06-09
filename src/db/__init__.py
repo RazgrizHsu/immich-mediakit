@@ -1,4 +1,4 @@
-from conf import ks
+from conf import ks, Optional
 from util import log
 
 lg = log.get(__name__)
@@ -82,20 +82,20 @@ class AutoDbField:
 
 
 class DtoSets:
-    usrId:str = AutoDbField('usrId', str, '')
+    usrId:Optional[str] = AutoDbField('usrId', str, '') #type: ignore
 
-    photoQ:str = AutoDbField('photoQ', str, ks.db.thumbnail)
-    simMin:float = AutoDbField('simMin', float, 0.93)
-    simMax:float = AutoDbField('simMax', float, 1.00)
+    photoQ:str = AutoDbField('photoQ', str, ks.db.thumbnail) #type: ignore
+    simMin:float = AutoDbField('simMin', float, 0.93) #type: ignore
+    simMax:float = AutoDbField('simMax', float, 1.00) #type: ignore
 
-    tskFloat:bool = AutoDbField('tskFloat', bool, False)
+    tskFloat:bool = AutoDbField('tskFloat', bool, False) #type: ignore
 
-    autoNext:bool = AutoDbField('autoNext', bool, True)
-    showGridInfo:bool = AutoDbField('showGridInfo', bool, True)
+    autoNext:bool = AutoDbField('autoNext', bool, True) #type: ignore
+    showGridInfo:bool = AutoDbField('showGridInfo', bool, True) #type: ignore
 
-    simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False)
-    simMaxDepths:int = AutoDbField('simMaxDepths', int, 0)
-    simMaxItems:int = AutoDbField('simMaxItems', int, 200)
+    simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False) #type: ignore
+    simMaxDepths:int = AutoDbField('simMaxDepths', int, 0) #type: ignore
+    simMaxItems:int = AutoDbField('simMaxItems', int, 200) #type: ignore
 
     @classmethod
     def get(cls, key, default=None):

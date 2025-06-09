@@ -60,6 +60,73 @@ class TestBase(unittest.TestCase):
 
         lg.info( f"rst: {rst}" )
 
+    def test_sim(self):
+        ass = db.pics.getAnyNonSim()
+        if not ass: raise RuntimeError( "no asset" )
+        lg.info(f"asset: #{ass.autoId}")
+
+
+        infos = db.vecs.findSimiliar(ass.autoId, 0.80, 1.0)
+
+        simIds = [info.dix for info in infos]
+
+        lg.info(f"Found {len(simIds)} similar, ids: {simIds}")
+
+        # select back all simIds assets
+        # db.pics.get()
+
+        for idx, info in enumerate(infos):
+            aid, score = info.toTuple()
+            lg.info(f"  Similar pair {idx + 1}: ID[{aid}], score[{score:.6f}]")
+
+
+
+
+    def test_insert(self):
+        ass = db.pics.getAnyNonSim()
+        lg.info(f"asset: #{ass.autoId}")
+
+        #vecs.deleteBy([ ass.id ])
+
+        pathImg = ass.getImagePath()
+        lg.info( f"path: {pathImg}" )
+
+        img = imgs.getImg(pathImg)
+        vec = imgs.extractFeatures( img )
+
+        lg.info( f"vec: {vec}" )
+
+        ps = vecs.search( vec )
+        lg.info( f"rst: {ps}" )
+
+        vecs.save( ass.id, vec )
+
+        lg.info( "save, read agagin.." )
+
+        ps = vecs.search( vec )
+        lg.info( f"rst: {ps}" )
+
+
+    def test_spec(self):
+        aid = "8d84a68f-ff7c-4559-bbe8-034ba5162260"
+
+        ass = db.pics.getById(aid)
+
+        lg.info( f"ass: {ass}" )
+
+        pathImg = ass.getImagePath()
+        lg.info( f"path: {pathImg}" )
+
+        img = imgs.getImg(pathImg)
+        vec = imgs.extractFeatures( img )
+
+        lg.info( f"vec: {vec}" )
+
+        ps = db.vecs.search( vec, 0.5 )
+        cntPs = len(ps)
+        lg.info( f"rst({cntPs}): {ps}" )
+
+        if cntPs <= 0: self.fail( "should had point in vec db" )
 
 if __name__ == "__main__":
     unittest.main()

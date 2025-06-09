@@ -254,9 +254,7 @@ window.MdlImgClient = {
 			),
 			React.createElement( 'tr', {},
 				React.createElement( 'td', {}, 'id' ),
-				React.createElement( 'td', {},
-					React.createElement( 'span', {className: 'tag sm second'}, curAsset.id )
-				)
+				React.createElement( 'td', {}, React.createElement( 'span', {className: 'tag sm second'}, curAsset.id ) )
 			),
 			React.createElement( 'tr', {},
 				React.createElement( 'td', {}, 'Filename' ),

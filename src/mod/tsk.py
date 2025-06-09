@@ -173,7 +173,10 @@ def tsk_WsConnStatus(state, error):
 def tsk_OnWsConnected(msg):
     if not msg: return noUpd
     try:
-        data = json.loads(msg.get('data') if isinstance(msg, dict) else msg)
+        rawData = msg.get('data') if isinstance(msg, dict) else msg
+        if not rawData: raise RuntimeError( "[wsid] not rawData" )
+
+        data = json.loads(rawData)
         if data.get('type') == 'connected':
             #lg.info(f"[tsk] connected msg[{data.get('message')}]")
             return "ws connected!"
@@ -261,6 +264,7 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
     # lg.info(f"[tws:uui] received: {wmsg}, tsk: {dta_tsk}")
     try:
         rawData = wmsg.get('data') if isinstance(wmsg, dict) else wmsg
+        if not rawData: raise RuntimeError( "[tsk] no rawData" )
         data = json.loads(rawData)
         tsk = models.Tsk.fromDict(dta_tsk)
 
@@ -335,6 +339,7 @@ def tsk_OnData(wmsg):
         # lg.info(f"[tws:dta] Called with msg: {wmsg}")
 
         rawData = wmsg.get('data') if isinstance(wmsg, dict) else wmsg
+        if not rawData: raise RuntimeError( "[tsk] no rawData" )
         data = json.loads(rawData)
 
         if data.get('type') == 'complete':
@@ -388,6 +393,7 @@ def tsk_OnStatus(wmsg, dta_tsk):
 
     try:
         rawData = wmsg.get('data') if isinstance(wmsg, dict) else wmsg
+        if not rawData: raise RuntimeError( "[tsk] no rawData" )
         data = json.loads(rawData)
         msgType = data.get('type')
         tsk = models.Tsk.fromDict(dta_tsk)

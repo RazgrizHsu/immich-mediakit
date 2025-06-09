@@ -296,7 +296,7 @@ def vec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
         if cnt.vec <= 0:
             msg = "No vector data to clear"
             nfy.warn(msg)
-            return nfy, now, msg
+            return sto, msg
 
         doReport(30, "Clearing Vectors...")
 

@@ -101,10 +101,11 @@ def toB64(path):
 
     return None
 
-def fixPath(path: Optional[str]):
+def fixPath(path: Optional[str]) -> str:
     if path and not path.startswith(envs.immichPath):
         path = os.path.join(envs.immichPath, path)
-    return path
+
+    return path if path else ""
 
 def getImg(path) -> Optional[Image.Image]:
     path = fixPath(path)
@@ -143,7 +144,7 @@ def saveVectorBy(asset: models.Asset, photoQ) -> Tuple[models.Asset, Optional[st
         return asset, f"save vector failed: {asset.id} - {str(e)}"
 
 
-def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg = None, isCancelled: models.IFnCancel = None) -> models.ProcessInfo:
+def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg, isCancelled: models.IFnCancel) -> models.ProcessInfo:
     tS = time.time()
     pi = models.ProcessInfo(all=len(assets), done=0, skip=0, erro=0)
     inPct = 15

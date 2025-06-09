@@ -15,7 +15,7 @@ from util import log
 
 lg = log.get(__name__)
 
-from mod.models import TskStatus, IFnRst
+from mod.models import TskStatus, IFnRst, IFnProg
 
 DEBUG = False
 
@@ -39,7 +39,7 @@ class BseTsk(ABC):
     name: str = field()
 
     @abstractmethod
-    def run(self, callback: Optional[Callable[[int, str], None]] = None) -> Any:
+    def run(self, doReport: Optional[IFnProg] = None) -> Any:
         pass
 
 
@@ -204,7 +204,7 @@ class TskMgr:
                         'status': ti.status.value,
                         'error': None
                     }),
-                    self.wsLoop
+                    self.wsLoop #type: ignore
                 )
             sendCancelMessage()
 
@@ -233,7 +233,7 @@ class TskMgr:
             # lg.info(f"[tskMgr] send: {msg}")
             future = aio.run_coroutine_threadsafe(
                 self.broadcast(msg),
-                self.wsLoop
+                self.wsLoop #type: ignore
             )
             pass
 

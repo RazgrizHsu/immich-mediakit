@@ -26,19 +26,19 @@ class co:
     class tit(str):
         name: str = ''
         desc: str = ''
-        cmds: Optional[Dict[str, str]] = None
+        cmds: Dict[str, 'co.tit'] = {}
 
-        def __new__(cls, v='', name='', cmds: Optional[Dict[str, str]] = None, desc='') -> 'co.tit':
+        def __new__(cls, v='', name='', cmds: Optional[Dict[str, 'co.tit']] = None, desc='') -> 'co.tit':
             me = super().__new__(cls, v)
             me.name = name
-            me.cmds = cmds
+            me.cmds = cmds if cmds else {}
             me.desc = desc
             # noinspection PyTypeChecker
             return me
 
     class find:
         @classmethod
-        def find(cls, key: str):
+        def find(cls, key: Optional[str]) -> 'Optional[co.tit]':
             for attr_name in dir(cls):
                 if attr_name.startswith('__') or callable(getattr(cls, attr_name)): continue
                 attr = getattr(cls, attr_name)
@@ -56,7 +56,7 @@ class co:
 
     class vad:
         @staticmethod
-        def float(v, default, mi=0.01, mx=1):
+        def float(v, default, mi=0.01, mx=1.0):
             try:
                 fv = float(v)
                 if fv < mi or fv > mx: return default
