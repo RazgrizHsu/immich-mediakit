@@ -339,7 +339,7 @@ def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         if not assets or len(assets) == 0:
             msg = f"No assets retrieved for {usr.name}"
-            nfy.info(msg)
+            nfy.error(msg)
             return sto, msg
 
         doReport(50, f"Retrieved {len(assets)} photos, starting to save to local database")

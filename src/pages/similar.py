@@ -651,7 +651,7 @@ def sim_RunModal(
             ti = mgr.getInfo(tsk.id)
             if ti and ti.status in ['pending', 'running']:
                 nfy.warn(f"[similar] Task already running: {tsk.id}")
-                return noUpd.by(4).updFr(0, nfy.toDict())
+                return noUpd.by(4).updFr(0, nfy)
             # lg.info(f"[similar] Clearing completed task: {tsk.id}")
             tsk.id = None
             tsk.cmd = None
@@ -693,7 +693,7 @@ def sim_RunModal(
             ]
 
             if nchkRmSel:
-                tsk = mdl.mkTsk()
+                retTsk = mdl.mkTsk()
                 mdl.reset()
 
     #------------------------------------------------------------------------
@@ -714,7 +714,7 @@ def sim_RunModal(
             ]
 
             if ncRS:
-                tsk = mdl.mkTsk()
+                retTsk = mdl.mkTsk()
                 mdl.reset()
 
     #------------------------------------------------------------------------
@@ -734,7 +734,7 @@ def sim_RunModal(
             ]
 
             if ncRA:
-                tsk = mdl.mkTsk()
+                retTsk = mdl.mkTsk()
                 mdl.reset()
 
     #------------------------------------------------------------------------
@@ -751,7 +751,7 @@ def sim_RunModal(
             mdl.msg = f"Are you sure mark resloved current images( {cnt} )?"
 
             if nchkOkAll:
-                tsk = mdl.mkTsk()
+                retTsk = mdl.mkTsk()
                 mdl.reset()
 
     #------------------------------------------------------------------------
@@ -795,7 +795,7 @@ def sim_RunModal(
 
         if not isFromUrl:
             now.sim.clearAll()
-            retNow = now.toDict()
+            retNow = now
 
         if not asset:
             nfy.warn(f"[sim] not any asset to find..")
@@ -808,8 +808,11 @@ def sim_RunModal(
             tsk = mdl.mkTsk()
             mdl.reset()
 
+            lg.info(f"[sim:run] now.sim.assAid[{now.sim.assAid}]")
+
             # only find auto trigger tsk
-            retTsk = tsk.toDict()
+            retTsk = tsk
+            retNow = now
             # mdl.msg = [
             #     f"Begin finding similar?", htm.Br(),
             #     f"threshold[{thMin:.2f}-{thMax:.2f}]]",
@@ -825,46 +828,6 @@ def sim_RunModal(
 #========================================================================
 from mod.models import IFnProg
 
-
-def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
-
-    try:
-        doReport(10, "Preparing to clear similarity records...")
-
-        cntOk = db.pics.countSimOk(isOk=1)
-        cntRs = db.pics.countHasSimIds()
-
-        if cntOk <= 0 and cntRs <= 0:
-            msg = "No similarity records to clear"
-            lg.info(msg)
-            nfy.info(msg)
-            return sto, msg
-
-        doReport(30, "Clearing similarity records from database...")
-
-        db.pics.clearAllSimIds()
-
-        doReport(90, "Updating dynamic data...")
-
-        now.sim.assFromUrl = None
-
-        now.sim.clearAll()
-
-        doReport(100, "Clear completed")
-
-        msg = f"Successfully cleared {cntOk + cntRs} similarity records"
-        lg.info(f"[sim_Clear] {msg}")
-        nfy.success(msg)
-
-        return sto, msg
-
-    except Exception as e:
-        msg = f"Failed to clear similarity records: {str(e)}"
-        lg.error(f"[sim_Clear] {msg}")
-        lg.error(traceback.format_exc())
-        nfy.error(msg)
-        raise RuntimeError(msg)
 
 
 def queueNext(sto: tskSvc.ITaskStore):
@@ -906,8 +869,8 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         now.sim.assFromUrl = None
 
     try:
+        lg.info(f"[sim:fnd] now.sim.assAid[{now.sim.assAid}]")
         autoId = now.sim.assAid
-        simIds = []
         doneIds = []
 
         if not autoId and tsk.args.get('assetId'):
@@ -1121,6 +1084,49 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         lg.error(traceback.format_exc())
         now.sim.clearAll()
         raise RuntimeError(msg)
+
+
+
+def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
+    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+
+    try:
+        doReport(10, "Preparing to clear similarity records...")
+
+        cntOk = db.pics.countSimOk(isOk=1)
+        cntRs = db.pics.countHasSimIds()
+
+        if cntOk <= 0 and cntRs <= 0:
+            msg = "No similarity records to clear"
+            lg.info(msg)
+            nfy.info(msg)
+            return sto, msg
+
+        doReport(30, "Clearing similarity records from database...")
+
+        db.pics.clearAllSimIds()
+
+        doReport(90, "Updating dynamic data...")
+
+        now.sim.assFromUrl = None
+
+        now.sim.clearAll()
+
+        doReport(100, "Clear completed")
+
+        msg = f"Successfully cleared {cntOk + cntRs} similarity records"
+        lg.info(f"[sim_Clear] {msg}")
+        nfy.success(msg)
+
+        return sto, msg
+
+    except Exception as e:
+        msg = f"Failed to clear similarity records: {str(e)}"
+        lg.error(f"[sim_Clear] {msg}")
+        lg.error(traceback.format_exc())
+        nfy.error(msg)
+        raise RuntimeError(msg)
+
 
 
 def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):

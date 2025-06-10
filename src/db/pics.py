@@ -340,7 +340,7 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
             except Exception as e:
                 raise mkErr("[pics.save] Error converting EXIF to JSON", e)
 
-        c.execute("Select autoId, id From assets Where id = ?", (assId,))
+        c.execute("Select autoId, id From assets Where id = ?", (str(assId),))
         row = c.fetchone()
 
         if row is None:

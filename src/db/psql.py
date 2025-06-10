@@ -91,9 +91,10 @@ def fetchUser(usrId: str) -> Optional[models.Usr]:
                 cursor.execute(sql, (usrId,))
                 row = cursor.fetchone()
 
-                if row: return models.Usr.fromDict(row)
+                if not row: raise RuntimeError( "no db row" )
 
-                return None
+                return models.Usr.fromDict(row)
+
     except Exception as e:
         raise mkErr(f"Failed to fetch userId[{usrId}]", e)
 
@@ -193,7 +194,7 @@ def testAssetsPath():
 
 def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
     usrId = usr.id
-    asType = "IIMAGE"
+    asType = "IMAGE"
 
     try:
         chk()
@@ -215,6 +216,8 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 if not rst: raise RuntimeError( "cannot count assets" )
 
                 cntAll = rst.get("count", 0)
+
+                if not cntAll: raise RuntimeError(f"fetch target type[{asType}] not found")
 
                 # lg.info(f"Found {cntAll} {asType.lower()} assets...")
                 onUpdate(15, f"start querying {cntAll}")
@@ -247,19 +250,18 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
 
                     cntFetched += len(batch)
 
-                    for row in batch:
-                        assets.append(row)
+                    for row in batch: assets.append(row)
 
-                    if cntAll > 0:
-                        if cntFetched > 0:
-                            tmUsed = time.time() - tStart
-                            tPerItem = tmUsed / cntFetched
-                            remCnt = cntAll - cntFetched
-                            remTime = tPerItem * remCnt
-                            remMins = int(remTime / 60)
-                            tmSuffix = f"remain: {remMins} mins"
-                        else:
-                            tmSuffix = "calcuating..."
+                    # if cntAll > 0:
+                    #     if cntFetched > 0:
+                    #         tmUsed = time.time() - tStart
+                    #         tPerItem = tmUsed / cntFetched
+                    #         remCnt = cntAll - cntFetched
+                    #         remTime = tPerItem * remCnt
+                    #         remMins = int(remTime / 60)
+                    #         tmSuffix = f"remain: {remMins} mins"
+                    #     else:
+                    #         tmSuffix = "calcuating..."
 
                         # report("fetch", cntFetched, cntAll, f"processed {cntFetched}/{cntAll} ... {tmSuffix}")
 
