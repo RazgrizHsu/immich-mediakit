@@ -159,7 +159,6 @@ class Usr(BaseDictModel):
     id: str
     name: str
     email: str
-    key: str
 
 
 @dataclass
