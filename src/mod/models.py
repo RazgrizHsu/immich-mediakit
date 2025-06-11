@@ -64,11 +64,13 @@ class Tsk(Cmd):
 
     nexts: List['Tsk'] = field(default_factory=list)
 
-    def reset(self, withDone=True):
+    def reset(self):
         self.id = self.name = self.cmd = self.msg = None
         self.args = {}
 
         self.tsn = None
+    def clear(self):
+        self.id = self.cmd = None
 
 
 @dataclass
@@ -210,6 +212,8 @@ class AssetViewOnly(BaseDictModel):
     srcAutoId: int = 0
     isRelats: bool = False
 
+    condGrpId: int = 0
+
 @dataclass
 class Asset(BaseDictModel):
     autoId: int = 0
@@ -295,11 +299,18 @@ class PgSim(BaseDictModel):
     pagerPnd: Optional[Pager] = None
     activeTab: Optional[str] = "tab-current"
 
+
+
     assAid: int = 0
     assCur: List[Asset] = field(default_factory=list)
+
     assPend: List[Asset] = field(default_factory=list)
 
     assFromUrl: Optional[Asset] = None
+
+    fspSize: bool = False
+    fspW: bool = False
+    fspH: bool = False
 
     def clearNow(self):
         self.assAid = 0

@@ -362,7 +362,6 @@ def tsk_OnData(wmsg):
                 ntsk = tsk.nexts[0]
                 ntsk.nexts = tsk.nexts[1:]
 
-                lg.info( f"[tws:dta] ====== continue next ======>>>> {ntsk}" )
                 dicTsk = ntsk.toDict()
             else:
                 # clear id & cmd but keep name
