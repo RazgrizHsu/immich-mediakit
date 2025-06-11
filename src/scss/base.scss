@@ -84,6 +84,12 @@
 	--shadow-box-white:0 0px 2px rgba(255, 255, 255, 0.67);
 }
 
+.txt-c { text-align:center }
+
+@for $i from 10 through 100 {
+  .w-#{$i} { width: unquote($i + '%') }
+}
+
 ul {
 	margin-bottom: 0;
 	padding-left: 1rem;

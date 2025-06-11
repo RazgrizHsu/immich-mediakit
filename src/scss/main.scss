@@ -982,31 +982,30 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		}
 
 	}
-
-	.icbxs {
-		margin-top:3px;
-
-		> div {
-			margin-right:10px;
-			display:inline-block;
-		}
-
-		label {
-			margin-left:10px;
-			margin-right:5px;
-		}
-
-		select {
-			//border: red 1px solid!important;
-			padding:0;
-
-			display:inline-block;
-			width:50px;
-			text-align:center;
-		}
-	}
 }
 
+.icbxs {
+	margin-top:3px;
+
+	> div {
+		margin-right:10px;
+		display:inline-block;
+	}
+
+	label {
+		margin-left:10px;
+		margin-right:5px;
+	}
+
+	select {
+		//border: red 1px solid!important;
+		padding:0;
+
+		display:inline-block;
+		width:50px;
+		text-align:center;
+	}
+}
 
 .img-card {
 

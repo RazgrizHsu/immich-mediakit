@@ -5,7 +5,7 @@ import time
 import immich
 import db
 from conf import ks, co
-from dsh import dash, htm, dcc, dbc, inp, out, ste, getTrgId, noUpd, ctx, ALL
+from dsh import dash, htm, dcc, dbc, inp, out, ste, getTrgId, noUpd, ctx, ALL, Patch
 from dsh import cbk, ccbk, cbkFn
 from util import log
 from mod import mapFns, models, tskSvc
@@ -37,20 +37,21 @@ class k:
     btnAllSelect = 'sim-btn-AllSelect'
     btnAllCancel = 'sim-btn-AllCancel'
 
-    btnFind = "sim-btn-find"
+    btnFind = "sim-btn-fnd"
     btnClear = "sim-btn-clear"
     btnRmSel = "sim-btn-RmSel"
     btnOkSel = "sim-btn-OkSel"
     btnOkAll = "sim-btn-OkAll"
     btnRmAll = "sim-btn-RmAll"
     cbxNChkOkAll = "sim-cbx-NChk-OkAll"
-    cbxNChkRmSel = "sim-btn-NChk-RmSel"
-    cbxNChkOkSel = "sim-btn-NChk-OkSel"
-    cbxNChkRmAll = "sim-btn-NChk-RmAll"
+    cbxNChkRmSel = "sim-cbx-NChk-RmSel"
+    cbxNChkOkSel = "sim-cbx-NChk-OkSel"
+    cbxNChkRmAll = "sim-cbx-NChk-RmAll"
+
 
     tabs = 'sim-tabs'
     tabCur = "tab-current"
-    tabPnd = "tab-pending"
+    tabPnd = "tab-pend"
     pagerPnd = "sim-pager-pnd"
 
     gvSim = "sim-gvSim"
@@ -58,17 +59,20 @@ class k:
 
 
 #========================================================================
-def layout(autoId=None, **kwargs):
+def layout(autoId=None):
     # return flask.redirect('/target-page') #auth?
 
     guideAss: Optional[models.Asset] = None
 
     if autoId:
         lg.info(f"[sim] from url autoId[{autoId}]")
+        try:
 
-        guideAss = db.pics.getByAutoId(autoId)
-        if guideAss:
-            lg.info(f"[sim] =============>>>> set target assetId[{guideAss.id}]")
+            guideAss = db.pics.getByAutoId(autoId)
+            if guideAss:
+                lg.info(f"[sim] =============>>>> set target assetId[{guideAss.id}]")
+        except:
+            lg.error(f"[sim] not found asset from aid[{autoId}]", exc_info=True)
 
     import ui
     return ui.renderBody([
@@ -87,23 +91,28 @@ def layout(autoId=None, **kwargs):
 
         dbc.Row([
             dbc.Col([
+                #------------------------------------------------------------------------
                 dbc.Card([
                     dbc.CardHeader("System Similary Records"),
                     dbc.CardBody([
                         dbc.Row([
                             dbc.Col(htm.Small("NotSearch", className="d-inline-block me-2"), width=6),
-                            dbc.Col(dbc.Alert(f"0", id=k.txtCntNo, color="secondary", className="py-1 px-2 mb-2 text-center")),
+                            dbc.Col(
+                                htm.Div([
+                                    htm.Span(f"0", id=k.txtCntNo, className="tag lg second txt-c"),
+                                    htm.Span(f"0", id=k.txtCntOk, className="tag lg info txt-c")
+                                ],
+                                    style={ "display":"grid", "gridTemplateColumns":"1fr 1fr" }
+                                )
+                            ) ,
                         ]),
                         dbc.Row([
                             dbc.Col(htm.Small("Pending", className="d-inline-block me-2"), width=6),
                             dbc.Col(dbc.Alert(f"0", id=k.txtCntRs, color="info", className="py-1 px-2 mb-2 text-center")),
                         ]),
-                        dbc.Row([
-                            dbc.Col(htm.Small("Resolved", className="d-inline-block me-2"), width=6),
-                            dbc.Col(dbc.Alert(f"0", id=k.txtCntOk, color="success", className="py-1 px-2 mb-2 text-center")),
-                        ]),
-                    ])
+                    ]),
                 ], className="mb-4"),
+                #------------------------------------------------------------------------
             ], width=4),
 
             dbc.Col([
@@ -134,14 +143,12 @@ def layout(autoId=None, **kwargs):
         #------------------------------------------------------------------------
         htm.Div([
 
-            # Tabs
             dbc.Tabs(
                 id=k.tabs,
                 active_tab=k.tabCur,
                 children=[
                     dbc.Tab(
-                        label="current",
-                        tab_id=k.tabCur,
+                        label="current", tab_id=k.tabCur,
                         children=[
 
                             # Action buttons
@@ -158,28 +165,27 @@ def layout(autoId=None, **kwargs):
                                 htm.Div([
 
                                     htm.Div([
-                                        dbc.Button("Del Select, Keep others", id=k.btnRmSel, color="danger", size="sm", disabled=True),
-                                        htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNChkRmSel, label="No-Confirm", className="sm"),
-                                    ]
-                                    ),
-
-                                    htm.Div([
                                         dbc.Button("Keep Select, Delete others", id=k.btnOkSel, color="success", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNChkOkSel, label="No-Confirm", className="sm")
                                     ]),
 
                                     htm.Div([
-                                        dbc.Button("❌ Delete All", id=k.btnRmAll, color="danger", size="sm", disabled=True),
+                                        dbc.Button("Del Select, Keep others", id=k.btnRmSel, color="danger", size="sm", disabled=True),
                                         htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNChkRmAll, label="No-Confirm", className="sm")
+                                        dbc.Checkbox(id=k.cbxNChkRmSel, label="No-Confirm", className="sm"),
                                     ]),
 
                                     htm.Div([
                                         dbc.Button("✅ Keep All", id=k.btnOkAll, color="success", size="sm", disabled=True),
                                         htm.Br(),
                                         dbc.Checkbox(id=k.cbxNChkOkAll, label="No-Confirm", className="sm")
+                                    ]),
+
+                                    htm.Div([
+                                        dbc.Button("❌ Delete All", id=k.btnRmAll, color="danger", size="sm", disabled=True),
+                                        htm.Br(),
+                                        dbc.Checkbox(id=k.cbxNChkRmAll, label="No-Confirm", className="sm")
                                     ]),
 
                                 ], className="right"),
@@ -218,7 +224,7 @@ def layout(autoId=None, **kwargs):
                                 *pager.createStore(pgId=k.pagerPnd),
                             ], className="text-center")
                         ]
-                    )
+                    ),
                 ]
             )
         ],
@@ -229,17 +235,6 @@ def layout(autoId=None, **kwargs):
     ])
 
 
-#========================================================================
-# todo (think):
-# - when select assets equal 2, display pair compare view?
-#     card = gvs.create_pair_card(
-#         photo1_id=pair["photo1_id"],
-#         photo2_id=pair["photo2_id"],
-#         similarity=pair["similarity"],
-#         index=i + 1,
-#         selected_images=selected_images
-#     )
-#========================================================================
 
 #========================================================================
 # callbacks
@@ -269,6 +264,7 @@ def sim_OnTabChange(active_tab, dta_now):
     patch = dash.Patch()
     patch['sim']['activeTab'] = active_tab
     return patch
+
 
 
 #------------------------------------------------------------------------
@@ -341,14 +337,10 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     now.sim.assFromUrl = ass
     now.sim.assAid = ass.autoId
 
-    thMin = co.vad.float(db.dto.simMin, 0.7)
-    thMax = co.vad.float(db.dto.simMax, 1.0)
-
     mdl = Mdl()
     mdl.id = ks.pg.similar
-    mdl.cmd = ks.cmd.sim.fdSim
-    mdl.msg = f'Search images similar to {ass.originalFileName} with threshold [{thMin:.2f} - {thMax:.2f}]'
-    mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': True}
+    mdl.cmd = ks.cmd.sim.fnd
+    mdl.msg = f'Search images similar to {ass.autoId}'
 
     tsk = mdl.mkTsk()
 
@@ -385,7 +377,7 @@ def sim_Load(dta_now, dta_nfy):
     nfy = Nfy.fromDict(dta_nfy)
 
     trgId = getTrgId()
-    lg.info(f"[sim:load] load, trig: [ {trgId} ]")
+    if trgId: lg.info(f"[sim:load] load, trig: [ {trgId} ]")
 
     cntNo = db.pics.countSimOk(isOk=0)
     cntOk = db.pics.countSimOk(isOk=1)
@@ -396,9 +388,16 @@ def sim_Load(dta_now, dta_nfy):
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
-    gvSim = gvs.mkGrid(now.sim.assCur, onEmpty=[
-        dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
-    ])
+    # Check condition group mode from dto settings
+    if db.dto.simModeCondGrp and any(a.view.condGrpId for a in now.sim.assCur):
+        gvSim = gvs.mkGroupGrid(now.sim.assCur, onEmpty=[
+            dbc.Alert("No grouped results found..", color="secondary", className="text-center m-5"),
+        ])
+    else:
+        # Normal similarity mode
+        gvSim = gvs.mkGrid(now.sim.assCur, onEmpty=[
+            dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
+        ])
 
     # Initialize or get pager
     pgr = now.sim.pagerPnd
@@ -420,7 +419,7 @@ def sim_Load(dta_now, dta_nfy):
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:load] trig[{trgId}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) assCur[{len(now.sim.assCur)}] assAid[{now.sim.assAid}]")
+    lg.info(f"[sim:load] trig[{trgId}] modeCondGrp[{db.dto.simModeCondGrp}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) assCur[{len(now.sim.assCur)}] assAid[{now.sim.assAid}]")
 
     # Load pending data - reload if count changed or no data
     needReload = False
@@ -803,8 +802,7 @@ def sim_RunModal(
             now.sim.assAid = asset.autoId
 
             mdl.id = ks.pg.similar
-            mdl.cmd = ks.cmd.sim.fdSim
-            mdl.args = {'thMin': thMin, 'thMax': thMax, 'fromUrl': isFromUrl}
+            mdl.cmd = ks.cmd.sim.fnd
             tsk = mdl.mkTsk()
             mdl.reset()
 
@@ -818,6 +816,7 @@ def sim_RunModal(
             #     f"threshold[{thMin:.2f}-{thMax:.2f}]]",
             # ]
 
+
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
     return noUpd.by( 4 ).updFr( 0, [nfy, retNow, mdl, retTsk] )
@@ -829,9 +828,8 @@ def sim_RunModal(
 from mod.models import IFnProg
 
 
-
 def queueNext(sto: tskSvc.ITaskStore):
-    now, nfy, tsk = sto.now, sto.nfy, sto.tsk
+    nfy, tsk = sto.nfy, sto.tsk
 
     ass = db.pics.getAnyNonSim()
     if ass:
@@ -839,7 +837,7 @@ def queueNext(sto: tskSvc.ITaskStore):
 
         mdl = models.Mdl()
         mdl.id = ks.pg.similar
-        mdl.cmd = ks.cmd.sim.fdSim
+        mdl.cmd = ks.cmd.sim.fnd
         mdl.args = {'thMin': db.dto.simMin, 'thMax': db.dto.simMax}
 
         ntsk = mdl.mkTsk()
@@ -852,230 +850,94 @@ def queueNext(sto: tskSvc.ITaskStore):
 
 
 def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt, tsk = sto.nfy, sto.now, sto.cnt, sto.tsk
+    from db import sim
 
-    thMin, thMax, isFromUrl = tsk.args.get("thMin"), tsk.args.get("thMax"), tsk.args.get("fromUrl", False)
+    nfy, now, tsk = sto.nfy, sto.now, sto.tsk
+
+    maxDepth = db.dto.simMaxDepths
+    maxItems = db.dto.simMaxItems
+    thMin, thMax = db.dto.simMin, db.dto.simMax
 
     thMin = co.vad.float(thMin, 0.9)
     thMax = co.vad.float(thMax, 1.0)
 
-    maxDepth = db.dto.simMaxDepths
-    maxItems = db.dto.simMaxItems
+    isFromUrl = now.sim.assFromUrl is not None and now.sim.assFromUrl.autoId is not None
+
     lg.info(f"[sim:fnd] config maxDepths[{maxDepth}] maxItems[{maxItems}]")
 
-    # 如果是從 URL 進入，清除引導避免重複搜尋
-    if isFromUrl and now.sim.assFromUrl:
-        lg.info(f"[sim:fnd] Clear guidance {now.sim.assFromUrl.autoId if now.sim.assFromUrl else 'unknown'}")
+    # Clear URL guidance to avoid duplicate searches
+    if now.sim.assFromUrl:
         now.sim.assFromUrl = None
 
     try:
         lg.info(f"[sim:fnd] now.sim.assAid[{now.sim.assAid}]")
-        autoId = now.sim.assAid
-        doneIds = []
-
-        if not autoId and tsk.args.get('assetId'):
-            lg.info(f"[sim:fnd] search from task args assetId")
-            assetId = tsk.args.get('assetId')
-            asset = db.pics.getById(assetId)
-            if asset: autoId = asset.autoId
-        else:
-            asset = db.pics.getByAutoId(autoId) if autoId else None
-
-        if not autoId: raise RuntimeError(f"[tsk] sim.assAid is empty")
-
         doReport(1, f"prepare..")
 
-        if not asset: raise RuntimeError(f"[sim:fnd] not found asset #{autoId}")
+        # Create progress reporter
+        autoReport = sim.createProgressReporter(doReport)
 
-        if asset.simGIDs:
-            now.sim.assCur = []
-            return sto, [
-                f"[sim:fnd] asset #{asset.autoId} already searched",
-                " if you want find again, please clear All Records first"
-            ]
+        # Find asset candidate
+        try:
+            asset = sim.findAssetCandidate(now.sim.assAid, tsk.args)
+        except RuntimeError as e:
+            if "already searched" in str(e):
+                now.sim.assCur = []
+                return sto, [str(e)]
+            raise e
 
-        cntFnd = 0
+        # Search for similar assets
+        sch = sim.searchSimilar(asset, thMin, thMax, autoReport, isFromUrl, doReport)
 
-        #------------------------------------------------
-        # auto calc progress report
-        #------------------------------------------------
-        def autoReport(msg):
-            cntAll = db.pics.count()
-            cntOk = db.pics.countSimOk(1)
-            doReport(round(cntOk / cntAll * 100, 2), msg)
-            return cntOk, cntAll
+        if not sch.hasVector:
+            nfy.info(f"Asset #{sch.asset.autoId} has no vector stored")
+            return sto, f"Asset #{sch.asset.autoId} has no vector stored"
 
+        if not sch.foundSimilar:
+            nfy.info(f"Asset #{sch.asset.autoId} no similar found")
+            return sto, f"Asset #{sch.asset.autoId} no similar found"
 
-        #------------------------------------------------
-        # while process
-        #------------------------------------------------
-        while True:
-            if cntFnd <= 0:
-                msg = f"[sim:fnd] search #{asset.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
-                doReport(10, msg)
+        # Process children assets in similarity tree
+        asset = sch.asset
+        doneIds = sim.processChildren(asset, sch.bseInfos, sch.simAids, thMin, thMax, maxDepth, maxItems, doReport)
 
-            time.sleep(0.1)
-
-            # will contain at least itself
-            cntFnd += 1
-            bseVec, bseInfos = db.vecs.findSimiliar(asset.autoId, thMin, thMax)
-
-            #------------------------------------
-            if not bseInfos:
-                lg.warn(f"[sim:fnd] asset #{asset.autoId} not found any similar, may not store vector")
-                db.pics.setVectoredBy(asset, 0)
-
-                #------------------------------------
-                # from url, stop
-                #------------------------------------
-                if isFromUrl:
-                    msg = f"[sim:fnd] Asset #{asset.autoId} has no vector stored"
-                    doReport(100, msg)
-                    nfy.info(msg)
-                    return sto, msg
-
-                #------------------------------------
-                # try find next
-                #------------------------------------
-                nextAss = db.pics.getAnyNonSim()
-                if not nextAss:
-                    msg = f"[sim:fnd] 沒有圖片可以繼續搜尋"
-                    doReport(100, msg)
-                    nfy.info(msg)
-                    return sto, msg
-
-                lg.info(f"[sim:fnd] No vector for #{asset.autoId}, next: #{nextAss.autoId}")
-
-                autoReport(f"No vector for #{asset.autoId}, continuing to #{nextAss.autoId}...")
-
-                asset = nextAss
-                now.sim.assAid = asset.autoId
-
-                continue
-
-            #------------------------------------
-            # found simInfos
-            #------------------------------------
-            simAids = [i.aid for i in bseInfos if not i.isSelf]
-
-            #------------------------------------
-            # only contains self
-            #------------------------------------
-            if not simAids:
-                lg.info(f"[sim:fnd] NoFound #{asset.autoId}")
-                db.pics.setSimInfos(asset.autoId, bseInfos, isOk=1)
-
-                #------------------------------------
-                # from url, stop
-                #------------------------------------
-                if isFromUrl:
-                    msg = f"[sim:fnd] Asset #{asset.autoId} 沒有找到相似圖片"
-                    doReport(100, msg)
-                    nfy.info(msg)
-                    return sto, msg
-                #------------------------------------
-                # try find next
-                #------------------------------------
-                nextAss = db.pics.getAnyNonSim()
-                if not nextAss:
-                    msg = f"[sim:fnd] 沒有圖片可以繼續搜尋"
-                    doReport(100, msg)
-                    nfy.info(msg)
-                    return sto, msg
-
-                lg.info(f"[sim:fnd] Next: #{nextAss.autoId}")
-
-                autoReport(f"No similar found for #{asset.autoId}, continuing to #{nextAss.autoId}...")
-                asset = nextAss
-                now.sim.assAid = nextAss.autoId
-
-                continue
-
-            #------------------------------------
-            # 找到有相似圖片的，跳出迴圈繼續處理
-            #------------------------------------
-            break
-
-        #------------------------------------------------
-        # continue find children
-        #------------------------------------------------
-
-        #set main asset
-        rootGID = asset.autoId
-        db.pics.setSimGIDs(asset.autoId, rootGID)
-        db.pics.setSimInfos(asset.autoId, bseInfos)
-
-        doneIds = {asset.autoId}
-
-        # Initialize queue with depth tracking (assId, depth)
-        simQ = [(said, 0) for said in simAids]
-
-
-        # looping find all childs
-        while simQ:
-            aid, depth = simQ.pop(0)
-            if aid in doneIds: continue
-
-            doneIds.add(aid)
-
-            doReport(50, f"Processing children similar photo #{aid} depth({depth}) count({len(doneIds)})")
-
-            try:
-                ass = db.pics.getByAutoId(aid)
-
-                if ass.simOk: continue #ignore already resolved
-
-                lg.info(f"[sim:fnd] search child #{aid} depth[{depth}] mx({maxDepth}) items({len(doneIds)}/{maxItems})")
-                cVec, cInfos = db.vecs.findSimiliar(aid, thMin, thMax)
-
-
-                db.pics.setSimGIDs(aid, rootGID)
-                db.pics.setSimInfos(aid, cInfos)
-
-                # haven't reached max
-                if depth < maxDepth and len(doneIds) < maxItems:
-                    for inf in cInfos:
-                        if inf.aid not in doneIds:
-                            # lg.info(f"[sim:fnd] add tree #{inf.aid} depth[{depth + 1}] mx({maxDepth})")
-                            simQ.append((inf.aid, depth + 1))
-
-            except Exception as ce:
-                raise RuntimeError(f"Error processing similar image {aid}: {ce}")
-
-
-            # check limit
-            if len(doneIds) >= maxItems:
-                nfy.warn(f"[sim:fnd] Reached max items limit ({maxItems}), stopping search..")
-                doReport(90, f"Reached max items limit ({maxItems}), processing current item...")
-                break
-
-
-        # auto mark
+        # Auto mark single items as resolved
         db.pics.setSimAutoMark()
 
-        doReport(95, f"Finalizing similar photo relationships")
+        # Process groups and mark assets
+        maxGroups = db.dto.simFilterMaxGroups if db.dto.simModeCondGrp else 1
+        condAssets = sim.processCondGroup(asset, 1)
+
+        # Search for additional groups if in group mode
+        grps = sim.searchCondGroups(condAssets, maxGroups, thMin, thMax, maxDepth, maxItems, doReport)
+
+        doReport(95, f"Finalizing {grps.groupCount} group(s) with {len(grps.allGroupAssets)} total assets")
         time.sleep(0.5)
 
+        # Update state
         now.sim.assAid = asset.autoId
-        now.sim.assCur = db.pics.getSimAssets(asset.autoId, db.dto.simIncRelGrp)
+        now.sim.assCur = grps.allGroupAssets
         now.sim.activeTab = k.tabCur
 
-        lg.info(f"[sim:fnd] done, asset #{asset.autoId}")
+        lg.info(f"[sim:fnd] done, found {grps.groupCount} group(s) with {len(grps.allGroupAssets)} assets")
 
-        if not now.sim.assCur: raise RuntimeError(f"the get SimGroup not found by asset.id[{asset.id}]")
+        if not now.sim.assCur: raise RuntimeError(f"No groups found")
 
-        doReport(100, f"Completed finding similar photos for #{asset.autoId}")
+        doReport(100, f"Completed finding {grps.groupCount} similar photo group(s)")
 
-        cntInfos = len(bseInfos)
-        msg = [f"Found {len(bseInfos)} similar photos for #{asset.autoId}"]
-
-        cntAll = len(doneIds)
-        if cntAll > cntInfos: msg.append(f"include ({cntAll - cntInfos}) asset extra tree in similar tree.")
-        if cntFnd > 1: msg.append(f"Auto-processed {cntFnd} assets before finding similar photos.")
-        if cntAll >= maxItems: msg.append(f"Reached maximum search limit ({maxItems} items).")
+        # Generate completion message
+        if db.dto.simModeCondGrp:
+            msg = [f"Found {grps.groupCount} similar photo group(s) with {len(grps.allGroupAssets)} total photos"]
+            if grps.groupCount >= maxGroups: msg.append(f"Reached maximum group limit ({maxGroups} groups).")
+        else:
+            cntInfos = len(sch.bseInfos)
+            msg = [f"Found {len(sch.bseInfos)} similar photos for #{asset.autoId}"]
+            cntAll = len(doneIds)
+            if cntAll > cntInfos:
+                msg.append(f"include ({cntAll - cntInfos}) asset extra tree in similar tree.")
+            if cntAll >= maxItems:
+                msg.append(f"Reached maximum search limit ({maxItems} items).")
 
         nfy.success(msg)
-
         return sto, msg
 
     except Exception as e:
@@ -1265,10 +1127,11 @@ def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
+
 #========================================================================
 # Set up global functions
 #========================================================================
-mapFns[ks.cmd.sim.fdSim] = sim_FindSimilar
+mapFns[ks.cmd.sim.fnd] = sim_FindSimilar
 mapFns[ks.cmd.sim.clear] = sim_ClearSims
 mapFns[ks.cmd.sim.selOk] = sim_SelectedReslove
 mapFns[ks.cmd.sim.selRm] = sim_SelectedDelete

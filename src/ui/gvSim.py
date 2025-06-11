@@ -1,3 +1,4 @@
+from typing import List
 from dsh import htm, dbc
 from conf import co
 from util import log
@@ -47,10 +48,7 @@ def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
 
         if a.view.isRelats and not firstRels:
             firstRels = True
-            rows.append(htm.Div(
-                htm.Label(f"relates ({cntRelats}) :"),
-                className="hr"
-            ))
+            rows.append(htm.Div( htm.Label(f"relates ({cntRelats}) :"), className="hr"))
 
         rows.append(htm.Div(card, style=styItem))
 
@@ -63,10 +61,6 @@ def mkCardSim(ass: models.Asset):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.autoId}" if ass.id else None
-
-    assId = ass.id
-    fnm = ass.originalFileName
-    dtc = ass.fileCreatedAt
 
     checked = False
     cssIds = "checked" if checked else ""
@@ -130,6 +124,7 @@ def mkCardSim(ass: models.Asset):
 
             dbc.Row([
                 htm.Span("id"), htm.Span(f"{ass.id}", className="badge bg-success text-truncate"),
+                htm.Span("GIDs"), htm.Span(f"{ass.simGIDs}", className="badge bg-success text-truncate"),
                 htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="text-truncate"),
                 htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
 
@@ -145,12 +140,7 @@ def mkCardSim(ass: models.Asset):
             dbc.Row(),
 
             # htm.Div([
-            #     dbc.Button(
-            #         "Details",
-            #         id={"type": "details-btn", "id": assId},
-            #         color="secondary",
-            #         size="sm"
-            #     )
+            #     dbc.Button( "Details", id={"type": "details-btn", "id": assId}, color="secondary", size="sm")
             # ], className="d-flex justify-content-between align-items-center"),
 
         ], className="p-0"),
@@ -193,16 +183,12 @@ def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
 
 
 def mkCardPnd(ass: models.Asset, showRelated=True):
-    if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.autoId}" if ass.autoId else "assets/noimg.png"
 
-    if not ass.id:
-        return htm.Div("-Render None-")
+    if not ass.id: return htm.Div("-No ass.id-")
 
     assId = ass.id
-    fnm = ass.originalFileName
-    dtc = ass.fileCreatedAt
 
     checked = False
     cssIds = "checked" if checked else ""
@@ -213,13 +199,6 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
     imgH = exi.exifImageHeight if exi else 0
 
     htmSimInfos = []
-
-    # for si in ass.simInfos:
-    #     if not si.isSelf:
-    #         htmSimInfos.append(htm.Div([
-    #             htm.Span(f"score[{si.score:.6f}]", className="tag"),
-    #             htm.Span(f"{si.id[:8]}...", className="badge bg-primary txt-sm"),
-    #         ]))
 
     htmRelated = None
     if ass.view.cntRelats and showRelated:
@@ -284,14 +263,74 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
             htm.Div(htmSimInfos),
             htm.Div(htmRelated),
 
-            # htm.Div([
-            #     dbc.Button(
-            #         "Details",
-            #         id={"type": "details-btn", "id": assId},
-            #         color="secondary",
-            #         size="sm"
-            #     )
-            # ], className="d-flex justify-content-between align-items-center"),
-
         ], className="p-2")
     ], className=f"h-100 sim {cssIds}")
+
+
+def mkGroupGrid(assets: List[models.Asset], minW=230, maxW=300, onEmpty=None):
+    if not assets or len(assets) == 0:
+        if onEmpty:
+            if isinstance(onEmpty, str):
+                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
+            else:
+                return onEmpty
+        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
+
+    cntAss = len(assets)
+
+    if cntAss <= 4:
+        styGrid = {
+            "display": "flex",
+            "flexWrap": "wrap",
+            "gap": "1rem",
+            "justifyContent": "center"
+        }
+        styItem = {"flex": f"1 1 {minW}px"}
+    else:
+        styGrid = {
+            "display": "grid",
+            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+            "gap": "1rem"
+        }
+        styItem = {}
+
+    # Group assets
+    groups = {}
+    for asset in assets:
+        grpId = asset.view.condGrpId or 0
+        if grpId not in groups: groups[grpId] = []
+        groups[grpId].append(asset)
+
+    rows = []
+
+    # Sort groups by ID and process each group
+    for grpId in sorted(groups.keys()):
+        grpAssets = groups[grpId]
+        grpCount = len(grpAssets)
+
+        # Find main asset (isMain=True) or first asset
+        mainAsset = next((a for a in grpAssets if a.view.isMain), grpAssets[0])
+
+        # Group header with criteria info
+        criteria = []
+        if grpAssets and grpAssets[0].jsonExif:
+            exif = grpAssets[0].jsonExif
+            if exif.fileSizeInByte: criteria.append(f"Size: {co.fmt.size(exif.fileSizeInByte)}")
+            if exif.exifImageWidth: criteria.append(f"W: {exif.exifImageWidth}")
+            if exif.exifImageHeight: criteria.append(f"H: {exif.exifImageHeight}")
+
+        criteriaText = " | ".join(criteria) if criteria else "No criteria"
+
+        # Add group separator
+        rows.append(htm.Div([
+            htm.Label(f"Group {grpId} ({grpCount} items): {criteriaText}"),
+        ], className="hr"))
+
+        # Add assets in this group
+        for asset in grpAssets:
+            card = mkCardSim(asset)
+            rows.append(htm.Div(card, style=styItem))
+
+    lg.info(f"[fsp:gv] assets[{len(assets)}] groups[{len(groups)}] rows[{len(rows)}]")
+
+    return htm.Div(rows, className="gv fsp", style=styGrid)

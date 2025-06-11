@@ -722,18 +722,29 @@ window.handleCardSelect = function ( trigger ){
 	return window.dash_clientside.no_update
 }
 
-// DOM事件監聽器用於全選/取消全選按鈕
 document.addEventListener( 'DOMContentLoaded', function (){
-	// 使用事件委派來處理動態添加的按鈕
+
+	//------------------------------------------------
 	document.addEventListener( 'click', function ( event ){
+
+		const ste = window.ste
+
+		//------------------------------------------------------
+		// acts: cbx select status
+		//------------------------------------------------------
 		if ( event.target.id === 'sim-btn-AllSelect' ){
 			event.preventDefault()
-			if ( window.Ste ) window.Ste.selectAll()
+			if ( ste ) ste.selectAll()
 		}
-		else if ( event.target.id === 'sim-btn-AllCancel' ){
+		if ( event.target.id === 'sim-btn-AllCancel' ){
 			event.preventDefault()
-			if ( window.Ste ) window.Ste.clearAll()
+			if ( ste ) ste.clearAll()
 		}
+
+		//------------------------------------------------------
+		//
+		//------------------------------------------------------
+
 	} )
 } )
 

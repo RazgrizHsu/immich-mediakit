@@ -7,6 +7,7 @@ import db.pics as pics
 import db.sets as sets
 import db.vecs as vecs
 import db.psql as psql
+import db.sim as sim
 
 
 def init():
@@ -96,6 +97,15 @@ class DtoSets:
     simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False) #type: ignore
     simMaxDepths:int = AutoDbField('simMaxDepths', int, 0) #type: ignore
     simMaxItems:int = AutoDbField('simMaxItems', int, 200) #type: ignore
+
+    simFilterSameDate:bool = AutoDbField('simFilterSameDate', bool, False) #type: ignore
+    simFilterSameWidth:bool = AutoDbField('simFilterSameWidth', bool, False) #type: ignore
+    simFilterSameHeight:bool = AutoDbField('simFilterSameHeight', bool, False) #type: ignore
+    simFilterSameSize:bool = AutoDbField('simFilterSameSize', bool, False) #type: ignore
+    simFilterMaxGroups:int = AutoDbField('simFilterMaxGroups', int, 10) #type: ignore
+    simModeCondGrp:bool = AutoDbField('simModeCondGrp', bool, False) #type: ignore
+
+    simFspMxSize:int = AutoDbField( 'simFspMxSize', int, 1 ) #type:ignore
 
     @classmethod
     def get(cls, key, default=None):
