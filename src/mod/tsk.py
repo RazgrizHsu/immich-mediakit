@@ -328,12 +328,13 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
         out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
         out(ks.sto.tsk, "data", allow_duplicate=True),
+        out(ks.sto.ste, "data", allow_duplicate=True),
     ],
     inp(k.wsId, "message"),
     prevent_initial_call=True
 )
 def tsk_OnData(wmsg):
-    if not wmsg: return noUpd.by(4)
+    if not wmsg: return noUpd.by(5)
 
     try:
         # lg.info(f"[tws:dta] Called with msg: {wmsg}")
@@ -348,13 +349,14 @@ def tsk_OnData(wmsg):
             from .mgr import tskSvc
             sto = tskSvc.getResultBy(data.get('tsn'))
 
-            dicCnt, dicNfy, dicNow, dicTsk = noUpd.by(4)
+            dicCnt, dicNfy, dicNow, dicTsk, dicSte = noUpd.by(5)
 
             # every task refresh cnt
             dicCnt = models.Cnt.mkNewCnt().toDict()
 
             dicNfy = sto.nfy.toDict()
             dicNow = sto.now.toDict()
+            dicSte = sto.ste.toDict()
 
             tsk = sto.tsk  #note: can't concurrent
 
@@ -370,12 +372,12 @@ def tsk_OnData(wmsg):
                 tsk.cmd = None
                 dicTsk = tsk.toDict()
 
-            return dicCnt, dicNfy, dicNow, dicTsk
+            return dicCnt, dicNfy, dicNow, dicTsk, dicSte
 
     except Exception as e:
         lg.error(f"[tws:dta] Error in tsk_OnComplete: {e}", exc_info=True)
 
-    return noUpd.by(4)
+    return noUpd.by(5)
 
 
 @cbk(

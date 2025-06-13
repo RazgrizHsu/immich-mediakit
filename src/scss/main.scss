@@ -952,6 +952,30 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		color:#E0E0E0;
 	}
 
+	.igrid {
+
+		hr { margin: 0.6rem 0 0.3rem 0 }
+
+		&.txt-sm {
+			font-size: 12px;
+		}
+
+		.row {
+
+			// padding: 0 3px 0 3px;
+			margin-bottom: 3px!important;
+		}
+
+		select {
+			//border: red 1px solid!important;
+			padding:0;
+
+			display:inline-block;
+			width:30px;
+			text-align:center;
+		}
+	}
+
 	.irow {
 		font-size:14px;
 		margin:0;
@@ -980,7 +1004,6 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			font-size:12px;
 			color:#AAAAAA;
 		}
-
 	}
 }
 
@@ -1183,12 +1206,11 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	}
 
 	.grid {
-		width:96%;
 		@include optional-border(red, 1px, dotted);
 		display:grid;
 		grid-template-columns: 20% 80%;
 		gap:2px 2px;
-		margin:5px 3px 5px 3px;
+		margin:5px 10px;
 		padding:0px;
 
 		> *:nth-child(2n-1) {
@@ -1206,30 +1228,6 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		}
 	}
 
-
-	.grid2 {
-		width:96%;
-		@include optional-border(red, 1px, dotted);
-		display:grid;
-		grid-template-columns: 20% 80%;
-		gap:2px 2px;
-		margin:5px auto 5px auto;
-		padding:0px;
-
-		> *:nth-child(2n-1) {
-			justify-self:center;
-			white-space:nowrap;
-			font-size:12px;
-			overflow:visible;
-			padding:0px;
-			@include optional-border(white, 1px, dotted);
-		}
-
-		> *:nth-child(2n) {
-			justify-self:start;
-			@include optional-border(white, 1px, dotted);
-		}
-	}
 
 
 	.exif {

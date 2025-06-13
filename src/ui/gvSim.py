@@ -174,12 +174,12 @@ def mkCard(ass: models.Asset):
         dbc.CardBody([
 
             dbc.Row([
-                htm.Span("id"), htm.Span(f"{ass.id}", className="badge bg-success text-truncate"),
-                htm.Span("GIDs"), htm.Span(f"{ass.simGIDs}", className="badge bg-success text-truncate"),
-                htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="text-truncate"),
-                htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="text-truncate txt-sm"),
+                htm.Span("id"), htm.Span(f"{ass.id}", className="tag"),
+                htm.Span("GIDs"), htm.Span(f"{ass.simGIDs}", className="tag second txt-c"),
+                htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="tag second"),
+                htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="tag second"),
 
-            ], class_name="grid2"
+            ], class_name="grid"
             ) if db.dto.showGridInfo else None,
 
             dbc.Row([

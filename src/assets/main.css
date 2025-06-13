@@ -469,6 +469,14 @@ h3 { font-size: 1.68rem; }
 
 .card-body { color: #E0E0E0; }
 
+.card .igrid hr { margin: 0.6rem 0 0.3rem 0; }
+
+.card .igrid.txt-sm { font-size: 12px; }
+
+.card .igrid .row { margin-bottom: 3px !important; }
+
+.card .igrid select { padding: 0; display: inline-block; width: 30px; text-align: center; }
+
 .card .irow { font-size: 14px; margin: 0; }
 
 .card .irow:not(:last-child) { border-bottom: 1px solid #888888AA; padding-bottom: 5px; }
@@ -537,17 +545,11 @@ h3 { font-size: 1.68rem; }
 
 .card.sim .img > div:nth-of-type(2) { position: absolute; bottom: 5px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; }
 
-.card.sim .grid { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 3px 5px 3px; padding: 0px; }
+.card.sim .grid { display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 10px; padding: 0px; }
 
 .card.sim .grid > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
 
 .card.sim .grid > *:nth-child(2n) { justify-self: start; }
-
-.card.sim .grid2 { width: 96%; display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px auto 5px auto; padding: 0px; }
-
-.card.sim .grid2 > *:nth-child(2n-1) { justify-self: center; white-space: nowrap; font-size: 12px; overflow: visible; padding: 0px; }
-
-.card.sim .grid2 > *:nth-child(2n) { justify-self: start; }
 
 .card.sim .exif { margin: 5px 15px 5px 15px; }
 
