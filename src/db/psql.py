@@ -334,6 +334,46 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                     chunkPct = min((idx + 1) * szChunk, len(assetIds))
 
                 #----------------------------------------------------------------
+                # query livephoto videos
+                #----------------------------------------------------------------
+                onUpdate(42, "query livephoto videos...")
+
+                livePhotoSql = """
+                WITH photo AS (
+                  SELECT
+                    a.id AS photo_id,
+                    a."originalPath" AS photo_path,
+                    a."livePhotoVideoId" AS video_id
+                  FROM assets a
+                  JOIN exif e ON a.id = e."assetId"
+                  WHERE e."livePhotoCID" IS NOT NULL
+                    AND a.type = 'IMAGE'
+                    AND a."livePhotoVideoId" IS NOT NULL
+                    AND a.id = ANY(%s)
+                )
+                SELECT
+                  p.photo_id,
+                  v."originalPath" AS video_path
+                FROM photo p
+                LEFT JOIN assets v
+                  ON v.id = p.video_id
+                  AND v.type = 'VIDEO'
+                WHERE v."originalPath" IS NOT NULL
+                """
+
+                livePhotoData = {}
+                for idx, i in enumerate(range(0, len(assetIds), szChunk)):
+                    chunk = assetIds[i:i + szChunk]
+                    cursor.execute(livePhotoSql, (chunk,))
+                    chunkResults = cursor.fetchall()
+
+                    for row in chunkResults:
+                        photoId = row['photo_id']
+                        videoPath = row['video_path']
+                        if videoPath:
+                            livePhotoData[photoId] = fixPrefix(videoPath)
+
+                #----------------------------------------------------------------
                 # combine & fetch thumbnail image
                 #----------------------------------------------------------------
                 onUpdate(45, "files ready, combine data...")
@@ -351,6 +391,9 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                             elif typ == ks.db.preview: asset['preview_path'] = fixPrefix(path)
 
                     asset['fullsize_path'] = fixPrefix(asset.get('originalPath', ''))
+
+                    if assetId in livePhotoData:
+                        asset['livephoto_path'] = livePhotoData[assetId]
 
                     if assetId in exifData:
                         asset['exifInfo'] = exifData[assetId]

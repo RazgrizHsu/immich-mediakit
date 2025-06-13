@@ -3,6 +3,8 @@ from mod import models
 from conf import ks, envs
 from db import psql
 import immich
+import torch
+import conf
 
 class k:
     connInfo = 'div-conn-info'
@@ -16,7 +18,7 @@ def layout():
             dbc.CardHeader("env"),
             dbc.CardBody(id=k.cardEnv, children=[
                 htm.Div( "connecting..." )
-            ])
+            ], className="igrid")
         ], className="mb-2"),
 
         dbc.Card([
@@ -71,28 +73,56 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
     if testDA and not testDA.startswith("OK"):
         nfy.error(["[system] access to IMMICH_PATH is Failed,",htm.Br(),htm.Small(f"{testDA}")])
 
+    # 獲取GPU設備信息
+    dvcType = conf.device.type
+    if dvcType == 'cuda':
+        try:
+            gpuNam = torch.cuda.get_device_name(0)
+            gpuMem = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            dvcInfo = f"NVIDIA {gpuNam[:20]}... ({gpuMem:.1f}GB)"
+            dvcStyle = "tag info"
+        except:
+            dvcInfo = "CUDA GPU"
+            dvcStyle = "tag info"
+    elif dvcType == 'mps':
+        try:
+            import platform
+            processor = platform.processor() or "Apple Silicon"
+            import psutil
+            cMem = psutil.virtual_memory().total / (1024**3)
+            dvcInfo = f"Apple {processor} ({cMem:.1f}GB)"
+            dvcStyle = "tag info"
+        except:
+            dvcInfo = "Apple MPS"
+            dvcStyle = "tag info"
+    else:
+        import multiprocessing
+        cCpu = multiprocessing.cpu_count()
+        dvcInfo = f"CPU ({cCpu} cores)"
+        dvcStyle = "tag"
+
     envRows = [
-        dbc.Row([
-            dbc.Col([htm.Small("logic check:")], width=5, className=""),
-            dbc.Col([
-                htm.Span(
-                    f"Github checked!", className="tag info"
-                ) if logicOk else htm.Span
-                    (
-                    f"Fail!!", className="tag"
-                )
-            ]),
+        htm.Div([
+            htm.Small("Logic Check:"),
+            htm.Span(
+                f"Github checked!", className="tag info"
+            ) if logicOk else htm.Span
+                (
+                f"Fail!!", className="tag"
+            )
         ], className="mb-2"),
-        dbc.Row([
-            dbc.Col([htm.Small("Path Test:")], width=5, className=""),
-            dbc.Col([
-                htm.Span(
-                    f"OK", className="tag info"
-                ) if testOk else htm.Span
-                    (
-                    f"Failed", className="tag"
-                )
-            ]),
+        htm.Div([
+            htm.Small("Path Test:"),
+            htm.Span(
+                f"OK", className="tag info"
+            ) if testOk else htm.Span
+                (
+                f"Failed", className="tag"
+            )
+        ], className="mb-2"),
+        htm.Div([
+            htm.Small("device:"),
+            htm.Span(dvcInfo, className=dvcStyle, title=f"Device: {conf.device}")
         ], className="mb-2"),
     ]
 

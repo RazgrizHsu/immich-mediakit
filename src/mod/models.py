@@ -231,6 +231,7 @@ class Asset(BaseDictModel):
     thumbnail_path: Optional[str] = None
     preview_path: Optional[str] = None
     fullsize_path: Optional[str] = None
+    livephoto_path: Optional[str] = None
     jsonExif: AssetExif = field(default_factory=AssetExif)
     isVectored: Optional[int] = 0
     simOk: Optional[int] = 0
@@ -253,6 +254,12 @@ class Asset(BaseDictModel):
         if not path: raise RuntimeError(f"the thumbnail path is empty, assetId[{self.id}]")
 
         return os.path.join(envs.immichPath, path)
+
+    def isLivePhoto(self) -> bool:
+        return (self.livephoto_path is not None and
+                self.jsonExif and
+                hasattr(self.jsonExif, 'livePhotoCID') and
+                self.jsonExif.livePhotoCID is not None)
 
 
 @dataclass

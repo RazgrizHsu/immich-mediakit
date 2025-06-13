@@ -7,6 +7,7 @@ torchvision~=0.22.0
 qdrant-client~=1.14.2
 psycopg[binary]~=3.2.3
 python-dotenv~=1.1.0
+psutil~=6.1.2
 
 dash==3.0.4
 dash-bootstrap-components>=2.0.3,<3

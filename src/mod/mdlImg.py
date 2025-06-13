@@ -83,7 +83,32 @@ def _getInfoState(mdl: models.MdlImg):
 def _buildImageContent(mdl, now):
     htms = []
 
-    if mdl.imgUrl:
+    if mdl.isMulti and now.sim.assCur and mdl.curIdx < len(now.sim.assCur):
+        fullAss = now.sim.assCur[mdl.curIdx]
+
+        if fullAss and fullAss.isLivePhoto():
+            # LivePhoto in modal - show video player with controls
+            htms.append(htm.Div([
+                htm.Video(
+                    src=f"/api/livephoto/{fullAss.autoId}",
+                    id={"type": "livephoto-modal-video", "aid": fullAss.autoId},
+                    className="livephoto-video-modal",
+                    autoPlay=True,
+                    loop=True,
+                    muted=True,
+                    controls=False
+                ),
+                htm.Div([
+                    htm.Button("⏸️", className="play-pause-btn", id="livephoto-play-pause"),
+                    htm.Div([
+                        htm.Div(className="progress-fill", id="livephoto-progress-fill")
+                    ], className="progress-bar", id="livephoto-progress-bar"),
+                    htm.Div("0:00 / 0:00", className="time-display", id="livephoto-time-display")
+                ], className="livephoto-controls", id="livephoto-controls")
+            ], className="modal-livephoto-player"))
+        elif mdl.imgUrl:
+            htms.append(htm.Img(src=mdl.imgUrl))
+    elif mdl.imgUrl:
         htms.append(htm.Img(src=mdl.imgUrl))
 
     if mdl.isMulti and now.sim.assCur and mdl.curIdx < len(now.sim.assCur):
@@ -97,7 +122,6 @@ def _buildImageContent(mdl, now):
                 )
                 , className="acts B")
             )
-            #htms.append(htm.Div(_buildAssetInfo(fullAss), className="mt-2"))
 
     return htms
 
