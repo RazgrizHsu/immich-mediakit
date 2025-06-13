@@ -44,7 +44,7 @@ def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
     cntRelats = sum(1 for a in assets if a.view.isRelats)
 
     for idx, a in enumerate(assets):
-        card = mkCardSim(a)
+        card = mkCard(a)
 
         if a.view.isRelats and not firstRels:
             firstRels = True
@@ -57,7 +57,58 @@ def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
     return htm.Div(rows, className="gv", style=styGrid)
 
 
-def mkCardSim(ass: models.Asset):
+def mkGroupGrid(assets: List[models.Asset], minW=250, maxW=300, onEmpty=None):
+    if not assets or len(assets) == 0:
+        if onEmpty:
+            if isinstance(onEmpty, str):
+                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
+            else:
+                return onEmpty
+        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
+
+    cntAss = len(assets)
+
+    if cntAss <= 4:
+        styGrid = {
+            "display": "flex",
+            "flexWrap": "wrap",
+            "gap": "1rem",
+            "justifyContent": "center"
+        }
+        styItem = {"flex": f"1 1 {minW}px"}
+    else:
+        styGrid = {
+            "display": "grid",
+            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+            "gap": "1rem"
+        }
+        styItem = {}
+
+    groups = {}
+    for asset in assets:
+        grpId = asset.view.condGrpId or 0
+        if grpId not in groups: groups[grpId] = []
+        groups[grpId].append(asset)
+
+    rows = []
+    for grpId in sorted(groups.keys()):
+        grpAssets = groups[grpId]
+        grpCount = len(grpAssets)
+
+
+        rows.append(htm.Div([htm.Label(f"Group {grpId} ( {grpCount} items )")], className="hr"))
+
+        for asset in grpAssets:
+            card = mkCard(asset)
+            rows.append(htm.Div(card, style=styItem))
+
+    lg.info(f"[fsp:gv] assets[{len(assets)}] groups[{len(groups)}] rows[{len(rows)}]")
+
+    return htm.Div(rows, className="gv fsp", style=styGrid)
+
+
+
+def mkCard(ass: models.Asset):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.autoId}" if ass.id else None
@@ -132,9 +183,7 @@ def mkCardSim(ass: models.Asset):
             ) if db.dto.showGridInfo else None,
 
             dbc.Row([
-                htm.Table(
-                    htm.Tbody(gvExif.mkExifRows(ass))
-                    , className="exif"),
+                htm.Table( htm.Tbody(gvExif.mkExifRows(ass)) , className="exif"),
             ]) if db.dto.showGridInfo else None,
 
             dbc.Row(),
@@ -266,71 +315,3 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
         ], className="p-2")
     ], className=f"h-100 sim {cssIds}")
 
-
-def mkGroupGrid(assets: List[models.Asset], minW=230, maxW=300, onEmpty=None):
-    if not assets or len(assets) == 0:
-        if onEmpty:
-            if isinstance(onEmpty, str):
-                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
-            else:
-                return onEmpty
-        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
-
-    cntAss = len(assets)
-
-    if cntAss <= 4:
-        styGrid = {
-            "display": "flex",
-            "flexWrap": "wrap",
-            "gap": "1rem",
-            "justifyContent": "center"
-        }
-        styItem = {"flex": f"1 1 {minW}px"}
-    else:
-        styGrid = {
-            "display": "grid",
-            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
-            "gap": "1rem"
-        }
-        styItem = {}
-
-    # Group assets
-    groups = {}
-    for asset in assets:
-        grpId = asset.view.condGrpId or 0
-        if grpId not in groups: groups[grpId] = []
-        groups[grpId].append(asset)
-
-    rows = []
-
-    # Sort groups by ID and process each group
-    for grpId in sorted(groups.keys()):
-        grpAssets = groups[grpId]
-        grpCount = len(grpAssets)
-
-        # Find main asset (isMain=True) or first asset
-        mainAsset = next((a for a in grpAssets if a.view.isMain), grpAssets[0])
-
-        # Group header with criteria info
-        criteria = []
-        if grpAssets and grpAssets[0].jsonExif:
-            exif = grpAssets[0].jsonExif
-            if exif.fileSizeInByte: criteria.append(f"Size: {co.fmt.size(exif.fileSizeInByte)}")
-            if exif.exifImageWidth: criteria.append(f"W: {exif.exifImageWidth}")
-            if exif.exifImageHeight: criteria.append(f"H: {exif.exifImageHeight}")
-
-        criteriaText = " | ".join(criteria) if criteria else "No criteria"
-
-        # Add group separator
-        rows.append(htm.Div([
-            htm.Label(f"Group {grpId} ({grpCount} items): {criteriaText}"),
-        ], className="hr"))
-
-        # Add assets in this group
-        for asset in grpAssets:
-            card = mkCardSim(asset)
-            rows.append(htm.Div(card, style=styItem))
-
-    lg.info(f"[fsp:gv] assets[{len(assets)}] groups[{len(groups)}] rows[{len(rows)}]")
-
-    return htm.Div(rows, className="gv fsp", style=styGrid)

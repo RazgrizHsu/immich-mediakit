@@ -96,14 +96,32 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
         ], className="mb-2"),
     ]
 
+    sizeL = 5
+
     cacheRows = [
         dbc.Row([
-            dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=6),
+            dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=sizeL),
             dbc.Col(dbc.Alert(f"{cnt.ass}", color="info", className="py-0 px-2 mb-2 text-center")),
         ]),
         dbc.Row([
-            dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=6),
+            dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=sizeL),
             dbc.Col(dbc.Alert(f"{cnt.vec}", color="info", className="py-0 px-2 mb-2 text-center")),
+        ]),
+
+        dbc.Row([
+            dbc.Col(htm.Small("NotSearch", className="d-inline-block me-2"), width=sizeL),
+            dbc.Col(
+                htm.Div([
+                    htm.Span(f"{cnt.simOk}", className="tag lg second txt-c"),
+                    htm.Span(f"{cnt.simNo}", className="tag lg info txt-c")
+                ],
+                    style={ "display":"grid", "gridTemplateColumns":"1fr 1fr" }
+                )
+            ) ,
+        ]),
+        dbc.Row([
+            dbc.Col(htm.Small("Pending", className="d-inline-block me-2"), width=sizeL),
+            dbc.Col(dbc.Alert(f"{cnt.simPnd}", color="info", className="py-1 px-2 mb-2 text-center")),
         ]),
     ]
 

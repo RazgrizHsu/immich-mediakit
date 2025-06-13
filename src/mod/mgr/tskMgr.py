@@ -204,7 +204,7 @@ class TskMgr:
                         'status': ti.status.value,
                         'error': None
                     }),
-                    self.wsLoop #type: ignore
+                    self.wsLoop #type:ignore
                 )
             sendCancelMessage()
 
@@ -233,7 +233,7 @@ class TskMgr:
             # lg.info(f"[tskMgr] send: {msg}")
             future = aio.run_coroutine_threadsafe(
                 self.broadcast(msg),
-                self.wsLoop #type: ignore
+                self.wsLoop #type:ignore
             )
             pass
 

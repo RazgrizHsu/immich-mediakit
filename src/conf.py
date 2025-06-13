@@ -189,8 +189,6 @@ class ks:
             # "updatedAt": "Updated At",
             # "updateId": "Update ID"
         }
-        thMarks = {0.5:"0.5", 0.7: "0.7", 0.8: "0.8", 0.85:"0.85", 0.9: "0.9", 0.95: "0.95", 1: "1"}
-
 
     class css:
         show = {"display": ""}

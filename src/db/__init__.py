@@ -83,29 +83,31 @@ class AutoDbField:
 
 
 class DtoSets:
-    usrId:Optional[str] = AutoDbField('usrId', str, '') #type: ignore
+    tskFloat:bool = AutoDbField('tskFloat', bool, False) #type:ignore
 
-    photoQ:str = AutoDbField('photoQ', str, ks.db.thumbnail) #type: ignore
-    simMin:float = AutoDbField('simMin', float, 0.93) #type: ignore
-    simMax:float = AutoDbField('simMax', float, 1.00) #type: ignore
+    usrId:Optional[str] = AutoDbField('usrId', str, '') #type:ignore
 
-    tskFloat:bool = AutoDbField('tskFloat', bool, False) #type: ignore
+    photoQ:str = AutoDbField('photoQ', str, ks.db.thumbnail) #type:ignore
+    simMin:float = AutoDbField('simMin', float, 0.93) #type:ignore
+    simMax:float = AutoDbField('simMax', float, 1.00) #type:ignore
 
-    autoNext:bool = AutoDbField('autoNext', bool, True) #type: ignore
-    showGridInfo:bool = AutoDbField('showGridInfo', bool, True) #type: ignore
+    autoNext:bool = AutoDbField('autoNext', bool, True) #type:ignore
+    showGridInfo:bool = AutoDbField('showGridInfo', bool, True) #type:ignore
 
-    simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False) #type: ignore
-    simMaxDepths:int = AutoDbField('simMaxDepths', int, 0) #type: ignore
-    simMaxItems:int = AutoDbField('simMaxItems', int, 200) #type: ignore
+    simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False) #type:ignore
+    simMaxDepths:int = AutoDbField('simMaxDepths', int, 0) #type:ignore
+    simMaxItems:int = AutoDbField('simMaxItems', int, 200) #type:ignore
 
-    simFilterSameDate:bool = AutoDbField('simFilterSameDate', bool, False) #type: ignore
-    simFilterSameWidth:bool = AutoDbField('simFilterSameWidth', bool, False) #type: ignore
-    simFilterSameHeight:bool = AutoDbField('simFilterSameHeight', bool, False) #type: ignore
-    simFilterSameSize:bool = AutoDbField('simFilterSameSize', bool, False) #type: ignore
-    simFilterMaxGroups:int = AutoDbField('simFilterMaxGroups', int, 10) #type: ignore
-    simModeCondGrp:bool = AutoDbField('simModeCondGrp', bool, False) #type: ignore
+    simCondGrpMode:bool = AutoDbField('simCondGrpMode', bool, False) #type:ignore
+    simCondSameDate:bool = AutoDbField('simCondSameDate', bool, False) #type:ignore
+    simCondSameWidth:bool = AutoDbField('simCondSameWidth', bool, False) #type:ignore
+    simCondSameHeight:bool = AutoDbField('simCondSameHeight', bool, False) #type:ignore
+    simCondSameSize:bool = AutoDbField('simCondSameSize', bool, False) #type:ignore
+    simCondMaxGroups:int = AutoDbField('simCondMaxGroups', int, 10) #type:ignore
 
-    simFspMxSize:int = AutoDbField( 'simFspMxSize', int, 1 ) #type:ignore
+    auSelEnable:bool = AutoDbField('autoSelectEnable', bool, False ) #type:ignore
+    auSel_Early:bool = AutoDbField('autoSelect_Early', bool, False ) #type:ignore
+    auSel_Exif_More:bool = AutoDbField('autoSelect_Exif_More', bool, False ) #type:ignore
 
     @classmethod
     def get(cls, key, default=None):
@@ -121,10 +123,8 @@ class DtoSets:
         for attr_name in dir(self.__class__):
             attr = getattr(self.__class__, attr_name)
             if isinstance(attr, AutoDbField):
-                # noinspection PyProtectedMember
                 cache_key = attr._cache_key
-                if hasattr(self, cache_key):
-                    delattr(self, cache_key)
+                if hasattr(self, cache_key): delattr(self, cache_key)
 
 # global
 dto = DtoSets()

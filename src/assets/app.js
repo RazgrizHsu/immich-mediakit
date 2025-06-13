@@ -598,6 +598,20 @@ document.addEventListener( 'keydown', function ( ev ){
 	}
 } )
 
+function getCardById(targetId) {
+	const cards = document.querySelectorAll(`[id*='"type":"card-select"']`);
+	for (const card of cards) {
+		try {
+			const idAttr = JSON.parse(card.id);
+			if (idAttr.id === targetId && idAttr.type === "card-select") {
+				return card;
+			}
+		} catch (e) {
+			console.error("Error parsing ID attribute:", card.id, e);
+		}
+	}
+	return null; // Card not found
+}
 
 window.Ste = {
 	cntTotal: 0,
@@ -624,11 +638,14 @@ window.Ste = {
 	},
 
 	updateCardVisual( aid ){
-		const card = document.querySelector( `[id*='"type":"card-select"'][id*='"id":${aid}']` )
+
+		// const card = document.querySelector( `[id*='"type":"card-select"'][id*='"id":${aid}']` )
+		let card = getCardById(aid)
 		if ( !card ){
 			console.error( `[Selection] No cards found for ${aid}` )
 			return
 		}
+
 
 		const parentCard = card.closest( '.card' )
 		const checkbox = card.querySelector( 'input[type="checkbox"]' )
@@ -636,7 +653,13 @@ window.Ste = {
 
 		//console.log( `[Selection] updateCardVisual ${aid}: isSelected=${isSelected}, parentCard=${!!parentCard}, checkbox=${!!checkbox}` )
 
-		if ( parentCard ) parentCard.classList[ isSelected ? 'add' : 'remove' ]( 'checked' )
+		if( !parentCard ) console.error( `[updateCardVisual] not found aid[${aid}] card` )
+
+		if ( parentCard ) {
+			console.info( `classList: `, parentCard )
+			console.info( `classList: `, parentCard.classList )
+			parentCard.classList[ isSelected ? 'add' : 'remove' ]( 'checked' )
+		}
 
 		if ( checkbox ) checkbox.checked = isSelected
 	},

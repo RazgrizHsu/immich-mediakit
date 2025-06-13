@@ -92,26 +92,8 @@ def layout(autoId=None):
         dbc.Row([
             dbc.Col([
                 #------------------------------------------------------------------------
-                dbc.Card([
-                    dbc.CardHeader("System Similary Records"),
-                    dbc.CardBody([
-                        dbc.Row([
-                            dbc.Col(htm.Small("NotSearch", className="d-inline-block me-2"), width=6),
-                            dbc.Col(
-                                htm.Div([
-                                    htm.Span(f"0", id=k.txtCntNo, className="tag lg second txt-c"),
-                                    htm.Span(f"0", id=k.txtCntOk, className="tag lg info txt-c")
-                                ],
-                                    style={ "display":"grid", "gridTemplateColumns":"1fr 1fr" }
-                                )
-                            ) ,
-                        ]),
-                        dbc.Row([
-                            dbc.Col(htm.Small("Pending", className="d-inline-block me-2"), width=6),
-                            dbc.Col(dbc.Alert(f"0", id=k.txtCntRs, color="info", className="py-1 px-2 mb-2 text-center")),
-                        ]),
-                    ]),
-                ], className="mb-4"),
+                cardSets.renderThreshold(),
+                cardSets.renderAutoSelect(),
                 #------------------------------------------------------------------------
             ], width=4),
 
@@ -354,9 +336,6 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
 #------------------------------------------------------------------------
 @cbk(
     [
-        out(k.txtCntOk, "children"),
-        out(k.txtCntRs, "children"),
-        out(k.txtCntNo, "children"),
         out(k.gvSim, "children"),
         out(k.gvPnd, "children"),
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -369,32 +348,32 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     inp(ks.sto.now, "data"),
     [
         ste(ks.sto.nfy, "data"),
+        ste(ks.sto.cnt, "data"),
     ],
     prevent_initial_call="initial_duplicate"
 )
-def sim_Load(dta_now, dta_nfy):
+def sim_Load(dta_now, dta_nfy, dta_cnt):
     now = Now.fromDict(dta_now)
     nfy = Nfy.fromDict(dta_nfy)
+    cnt = Cnt.fromDict(dta_cnt)
 
     trgId = getTrgId()
     if trgId: lg.info(f"[sim:load] load, trig: [ {trgId} ]")
 
-    cntNo = db.pics.countSimOk(isOk=0)
-    cntOk = db.pics.countSimOk(isOk=1)
-    cntPn = db.pics.countSimPending()
+    cntNo, cntOk, cntPn = cnt.simNo, cnt.simOk, cnt.simPnd
 
     gvSim = []
 
     if cntNo <= 0:
         nfy.info("Not have any vectors, please do generate vectors first")
 
+
     # Check condition group mode from dto settings
-    if db.dto.simModeCondGrp and any(a.view.condGrpId for a in now.sim.assCur):
+    if db.dto.simCondGrpMode and any(a.view.condGrpId for a in now.sim.assCur):
         gvSim = gvs.mkGroupGrid(now.sim.assCur, onEmpty=[
             dbc.Alert("No grouped results found..", color="secondary", className="text-center m-5"),
         ])
     else:
-        # Normal similarity mode
         gvSim = gvs.mkGrid(now.sim.assCur, onEmpty=[
             dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
         ])
@@ -402,7 +381,6 @@ def sim_Load(dta_now, dta_nfy):
     # Initialize or get pager
     pgr = now.sim.pagerPnd
     if not pgr:
-        lg.info("[sim:load] create pager")
         pgr = Pager(idx=1, size=20)
         now.sim.pagerPnd = pgr
 
@@ -419,7 +397,7 @@ def sim_Load(dta_now, dta_nfy):
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:load] trig[{trgId}] modeCondGrp[{db.dto.simModeCondGrp}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) assCur[{len(now.sim.assCur)}] assAid[{now.sim.assAid}]")
+    lg.info(f"[sim:load] trig[{trgId}] condGrp[{db.dto.simCondGrpMode}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) assCur[{len(now.sim.assCur)}] assAid[{now.sim.assAid}]")
 
     # Load pending data - reload if count changed or no data
     needReload = False
@@ -456,7 +434,6 @@ def sim_Load(dta_now, dta_nfy):
     activeTab = now.sim.activeTab if now.sim.activeTab else k.tabCur
 
     return [
-        cntOk, cntPn, cntNo,
         gvSim, gvPnd,
         nfy.toDict(), nowDict,
         pagerData.toDict() if pagerData else noUpd,
@@ -522,7 +499,7 @@ def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
 
     # Find 按鈕邏輯
     cntNo = cnt.ass - cnt.simOk if cnt else 0
-    cntPn = cnt.simPend if cnt else 0
+    cntPn = cnt.simPnd if cnt else 0
     disFind = cntNo <= 0 or (cntPn >= cntNo) or isTaskRunning
 
     # Clear 按鈕邏輯
@@ -904,7 +881,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         db.pics.setSimAutoMark()
 
         # Process groups and mark assets
-        maxGroups = db.dto.simFilterMaxGroups if db.dto.simModeCondGrp else 1
+        maxGroups = db.dto.simCondMaxGroups if db.dto.simCondGrpMode else 1
         condAssets = sim.processCondGroup(asset, 1)
 
         # Search for additional groups if in group mode
@@ -925,7 +902,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         doReport(100, f"Completed finding {grps.groupCount} similar photo group(s)")
 
         # Generate completion message
-        if db.dto.simModeCondGrp:
+        if db.dto.simCondGrpMode:
             msg = [f"Found {grps.groupCount} similar photo group(s) with {len(grps.allGroupAssets)} total photos"]
             if grps.groupCount >= maxGroups: msg.append(f"Reached maximum group limit ({maxGroups} groups).")
         else:
