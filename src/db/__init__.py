@@ -106,8 +106,16 @@ class DtoSets:
     simCondMaxGroups:int = AutoDbField('simCondMaxGroups', int, 10) #type:ignore
 
     auSelEnable:bool = AutoDbField('autoSelectEnable', bool, False ) #type:ignore
-    auSel_Early:bool = AutoDbField('autoSelect_Early', bool, False ) #type:ignore
-    auSel_Exif_More:bool = AutoDbField('autoSelect_Exif_More', bool, False ) #type:ignore
+    auSel_HighSimilarity:bool = AutoDbField('autoSelect_HighSimilarity', bool, False ) #type:ignore
+
+    auSel_Earlier:int = AutoDbField('autoSelect_Earlier', int, 0 ) #type:ignore
+    auSel_Later:int = AutoDbField('autoSelect_Later', int, 0 ) #type:ignore
+    auSel_ExifRicher:int = AutoDbField('autoSelect_ExifRicher', int, 0 ) #type:ignore
+    auSel_ExifPoorer:int = AutoDbField('autoSelect_ExifPoorer', int, 0 ) #type:ignore
+    auSel_BiggerSize:int = AutoDbField('autoSelect_BiggerSize', int, 0 ) #type:ignore
+    auSel_SmallerSize:int = AutoDbField('autoSelect_SmallerSize', int, 0 ) #type:ignore
+    auSel_BiggerDimensions:int = AutoDbField('autoSelect_BiggerDimensions', int, 0 ) #type:ignore
+    auSel_SmallerDimensions:int = AutoDbField('autoSelect_SmallerDimensions', int, 0 ) #type:ignore
 
     @classmethod
     def get(cls, key, default=None):

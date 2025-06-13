@@ -369,7 +369,7 @@ def sim_Load(dta_now, dta_nfy, dta_cnt):
 
 
     # Check condition group mode from dto settings
-    if db.dto.simCondGrpMode and any(a.view.condGrpId for a in now.sim.assCur):
+    if db.dto.simCondGrpMode:
         gvSim = gvs.mkGroupGrid(now.sim.assCur, onEmpty=[
             dbc.Alert("No grouped results found..", color="secondary", className="text-center m-5"),
         ])
@@ -460,6 +460,7 @@ ccbk(
     cbkFn( "similar", "onNowSyncToDummyInit" ),
     out({"type": "dummy-output", "id": "init-selection"}, "children"),
     inp(ks.sto.now, "data"),
+    inp(ks.sto.ste, "data"),
     prevent_initial_call="initial_duplicate"
 )
 
@@ -913,6 +914,17 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 msg.append(f"include ({cntAll - cntInfos}) asset extra tree in similar tree.")
             if cntAll >= maxItems:
                 msg.append(f"Reached maximum search limit ({maxItems} items).")
+
+        # Auto-select assets if enabled
+        lg.info(f"[sim:fnd] Starting auto-selection check, enable={db.dto.auSelEnable}")
+        autoSelectedIds = sim.getAutoSelectedAssets(now.sim.assCur) if now.sim.assCur else []
+        if autoSelectedIds:
+            lg.info(f"[sim:fnd] Auto-selected {len(autoSelectedIds)} assets: {autoSelectedIds}")
+            sto.ste.selectedIds = autoSelectedIds
+            sto.ste.cntTotal = len(now.sim.assCur)
+            lg.info(f"[sim:fnd] Updated ste store: selectedIds={sto.ste.selectedIds}, cntTotal={sto.ste.cntTotal}")
+        else:
+            lg.info(f"[sim:fnd] No assets auto-selected")
 
         nfy.success(msg)
         return sto, msg

@@ -52,10 +52,57 @@ window.dash_clientside.similar = {
 		return dash_clientside.no_update
 	},
 
-	onNowSyncToDummyInit( now_data ){
+	onNowSyncToDummyInit( now_data, ste_data ){
 		if ( now_data && now_data.sim && now_data.sim.assCur ){
 			let assets = now_data.sim.assCur
-			if ( window.Ste ) window.Ste.init( assets.length )
+			if ( window.Ste ){
+				// Create hash to avoid duplicate processing
+				const selectedIdsArray = ste_data && ste_data.selectedIds ? ste_data.selectedIds : []
+				const syncHash = `${assets.length}-${selectedIdsArray.join(',')}`
+
+				// Skip if already processed this exact state
+				if ( window.Ste._lastSyncHash === syncHash ){
+					console.log( `[Selection] Skipping duplicate sync for hash: ${syncHash}` )
+					return dash_clientside.no_update
+				}
+
+				window.Ste._lastSyncHash = syncHash
+
+				// Initialize without triggering sync (silent mode)
+				window.Ste.initSilent( assets.length )
+
+				// Sync initial selection from ste store without triggering events
+				if ( ste_data && ste_data.selectedIds && Array.isArray( ste_data.selectedIds ) ){
+					// Add selections silently
+					for ( const autoId of ste_data.selectedIds ){
+						window.Ste.selectedIds.add( autoId )
+					}
+
+					// Use longer timeout to ensure DOM is fully rendered
+					setTimeout( () => {
+						// Double check that cards are available before updating
+						const cards = document.querySelectorAll(`[id*='\"type\":\"card-select\"']`);
+						if ( cards.length > 0 ){
+							window.Ste.updateAllCardVisuals()
+							window.Ste.updateButtonStates()
+							console.log( `[Selection] Synced ${ste_data.selectedIds.length} initial selections from server:`, ste_data.selectedIds )
+						} else {
+							console.log( `[Selection] Cards not ready, retrying in 200ms...` )
+							setTimeout( () => {
+								window.Ste.updateAllCardVisuals()
+								window.Ste.updateButtonStates()
+								console.log( `[Selection] Retry synced ${ste_data.selectedIds.length} initial selections from server:`, ste_data.selectedIds )
+							}, 200 )
+						}
+					}, 300 )
+				} else {
+					// No initial selections, just update buttons
+					setTimeout( () => {
+						window.Ste.updateButtonStates()
+						console.log( `[Selection] Initialized with ${assets.length} assets, no initial selections` )
+					}, 300 )
+				}
+			}
 		}
 		return dash_clientside.no_update
 	}
@@ -600,22 +647,33 @@ document.addEventListener( 'keydown', function ( ev ){
 
 function getCardById(targetId) {
 	const cards = document.querySelectorAll(`[id*='"type":"card-select"']`);
+	console.log(`[getCardById] Looking for targetId: ${targetId} (type: ${typeof targetId}), found ${cards.length} cards`);
+
 	for (const card of cards) {
 		try {
 			const idAttr = JSON.parse(card.id);
-			if (idAttr.id === targetId && idAttr.type === "card-select") {
+			// Convert both to numbers for comparison to handle type mismatches
+			const cardId = parseInt(idAttr.id);
+			const searchId = parseInt(targetId);
+
+			// console.log(`[getCardById] Checking card: cardId=${cardId} (type: ${typeof cardId}), searchId=${searchId} (type: ${typeof searchId}), type=${idAttr.type}`);
+
+			if (cardId === searchId && idAttr.type === "card-select") {
+				console.log(`[getCardById] Found matching card for ID: ${targetId}`);
 				return card;
 			}
 		} catch (e) {
 			console.error("Error parsing ID attribute:", card.id, e);
 		}
 	}
+	console.warn(`[getCardById] No card found for targetId: ${targetId}`);
 	return null; // Card not found
 }
 
 window.Ste = {
 	cntTotal: 0,
 	selectedIds: new Set(),
+	_lastSyncHash: null,
 
 	init( cnt ){
 		this.cntTotal = cnt
@@ -623,6 +681,13 @@ window.Ste = {
 		console.log( `[Selection] Initialized with ${cnt} assets, selected[ ${this.selectedIds.size} ]` )
 
 		dsh.syncSte( this.cntTotal, this.selectedIds )
+	},
+
+	initSilent( cnt ){
+		this.cntTotal = cnt
+		this.selectedIds.clear()
+		console.log( `[Selection] Silent init with ${cnt} assets, selected[ ${this.selectedIds.size} ]` )
+		// No sync to avoid loops
 	},
 
 	toggle( aid ){
@@ -638,27 +703,36 @@ window.Ste = {
 	},
 
 	updateCardVisual( aid ){
+		console.log( `[Selection] updateCardVisual called for aid: ${aid} (type: ${typeof aid})` )
 
-		// const card = document.querySelector( `[id*='"type":"card-select"'][id*='"id":${aid}']` )
 		let card = getCardById(aid)
 		if ( !card ){
 			console.error( `[Selection] No cards found for ${aid}` )
+			// Try to debug by listing all available cards
+			const allCards = document.querySelectorAll(`[id*='"type":"card-select"']`);
+			console.log( `[Selection] Available cards:` )
+			allCards.forEach( (c, idx) => {
+				try {
+					const idAttr = JSON.parse(c.id);
+					console.log( `  Card ${idx}: id=${idAttr.id} (type: ${typeof idAttr.id}), type=${idAttr.type}` )
+				} catch (e) {
+					console.log( `  Card ${idx}: parse error for ${c.id}` )
+				}
+			});
 			return
 		}
-
 
 		const parentCard = card.closest( '.card' )
 		const checkbox = card.querySelector( 'input[type="checkbox"]' )
 		const isSelected = this.selectedIds.has( aid )
 
-		//console.log( `[Selection] updateCardVisual ${aid}: isSelected=${isSelected}, parentCard=${!!parentCard}, checkbox=${!!checkbox}` )
+		console.log( `[Selection] updateCardVisual ${aid}: isSelected=${isSelected}, parentCard=${!!parentCard}, checkbox=${!!checkbox}` )
 
 		if( !parentCard ) console.error( `[updateCardVisual] not found aid[${aid}] card` )
 
 		if ( parentCard ) {
-			console.info( `classList: `, parentCard )
-			console.info( `classList: `, parentCard.classList )
 			parentCard.classList[ isSelected ? 'add' : 'remove' ]( 'checked' )
+			console.log( `[Selection] Updated card ${aid} visual state: ${isSelected ? 'checked' : 'unchecked'}` )
 		}
 
 		if ( checkbox ) checkbox.checked = isSelected
@@ -716,7 +790,7 @@ window.Ste = {
 			if ( idStr && idStr.includes( 'card-select' ) )
 			{
 				const match = idStr.match( /"id":(\d+)/ )
-				return match ? match[ 1 ] : null
+				return match ? parseInt(match[1]) : null // Return number instead of string
 			}
 		}
 		catch ( e )
