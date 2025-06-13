@@ -10,6 +10,8 @@ lg = log.get(__name__)
 
 TIMEOUT = (60 * 60 * 24) * 30  #30day
 
+CacheBrowserSecs = 60
+
 
 def regBy(app):
     import db
@@ -40,7 +42,7 @@ def regBy(app):
 
             if os.path.exists(cache_path):
                 rep = make_response(send_file(cache_path, mimetype='image/jpeg'))
-                rep.headers['Cache-Control'] = 'public, max-age=31536000'  # client 1year
+                rep.headers['Cache-Control'] = f'public, max-age={CacheBrowserSecs}'  # client 1year
                 return rep
 
             with db.pics.mkConn() as conn:
@@ -62,7 +64,7 @@ def regBy(app):
                                 with open(path, 'rb') as src: f.write(src.read())
 
                             rep = make_response(send_file(cache_path, mimetype='image/jpeg'))
-                            rep.headers['Cache-Control'] = 'public, max-age=31536000'
+                            rep.headers['Cache-Control'] = f'public, max-age={CacheBrowserSecs}'
                             return rep
 
             return send_file(noimg_path, mimetype='image/png')

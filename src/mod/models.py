@@ -259,18 +259,20 @@ class Asset(BaseDictModel):
 class Cnt(BaseDictModel):
     ass: int = 0  # 總資產數
     vec: int = 0  # 已向量化數
-    simOk: int = 0  # 已處理相似數
-    simPend: int = 0  # 待處理相似數
+    simOk: int = 0
+    simNo: int = 0
+    simPnd: int = 0  # 待處理相似數
 
     def reset(self):
-        self.ass = self.vec = self.simOk = self.simPend = 0
+        self.ass = self.vec = self.simOk = self.simPnd = 0
 
     def refreshFromDB(self):
         import db
         self.ass = db.pics.count()
         self.vec = db.vecs.count()
         self.simOk = db.pics.countSimOk(1)
-        self.simPend = db.pics.countSimPending();
+        self.simNo = db.pics.countSimOk(0)
+        self.simPnd = db.pics.countSimPending();
 
     @classmethod
     def mkNewCnt(cls) -> 'Cnt':

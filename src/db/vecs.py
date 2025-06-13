@@ -162,7 +162,7 @@ def getBy(aid: int) -> List[float]:
         if not isinstance(vector, list):
             raise RuntimeError(f"[vecs] Vector not a list: {type(vector)}")
 
-        return vector #type: ignore
+        return vector #type:ignore
 
     except Exception as e:
         raise mkErr(f"[vecs] Error get asset vector aid[{aid}]", e)

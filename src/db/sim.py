@@ -39,12 +39,12 @@ def createProgressReporter(doReport: IFnProg) -> Callable[[str], Tuple[int, int]
 
 def checkGroupConditions(assets: List[models.Asset]) -> bool:
     if not assets or len(assets) < 2: return False
-    if not db.dto.simModeCondGrp: return True
+    if not db.dto.simCondGrpMode: return True
 
-    doDate = db.dto.simFilterSameDate
-    doWidth = db.dto.simFilterSameWidth
-    doHeight = db.dto.simFilterSameHeight
-    doSize = db.dto.simFilterSameSize
+    doDate = db.dto.simCondSameDate
+    doWidth = db.dto.simCondSameWidth
+    doHeight = db.dto.simCondSameHeight
+    doSize = db.dto.simCondSameSize
 
     if not any([doDate, doWidth, doHeight, doSize]): return True
 
@@ -178,7 +178,7 @@ def searchSimilar(
             continue
 
         # Found similar assets, check group conditions if enabled
-        if db.dto.simModeCondGrp:
+        if db.dto.simCondGrpMode:
             similarAssets = [asset] + [db.pics.getByAutoId(aid) for aid in simAids if db.pics.getByAutoId(aid)]
 
             if not checkGroupConditions(similarAssets):
@@ -271,7 +271,7 @@ def searchCondGroups( currentAssets: List[models.Asset], maxGroups: int, thMin: 
     result.groupCount = 1
     result.maxGroups = maxGroups
 
-    if not db.dto.simModeCondGrp or result.groupCount >= maxGroups:
+    if not db.dto.simCondGrpMode or result.groupCount >= maxGroups:
         return result
 
     doReport(80, f"Searching for additional groups ({result.groupCount}/{maxGroups})...")
