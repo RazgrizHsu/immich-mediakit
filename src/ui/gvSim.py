@@ -159,8 +159,21 @@ def mkCard(ass: models.Asset):
                 src=imgSrc,
                 id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
                 className="card-img"
-            ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img")
-            ,
+            ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img"),
+
+            # LivePhoto overlay
+            htm.Div([
+                htm.Video(
+                    src=f"/api/livephoto/{ass.autoId}",
+                    id={"type": "livephoto-video", "aid": ass.autoId},
+                    className="livephoto-video",
+                    loop=True,
+                    muted=True,
+                    style={"display": "none"}
+                ),
+                htm.Div("LIVE", className="livephoto-badge")
+            ], className="livephoto-overlay", style={"display": "block" if ass.isLivePhoto() else "none"}),
+
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="tag"),
             ]),

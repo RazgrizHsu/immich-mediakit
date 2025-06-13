@@ -8,7 +8,16 @@ import torch
 # ssl._create_default_https_context = ssl._create_unverified_context
 
 dotenv.load_dotenv()
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+def getDevice():
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        return torch.device('mps')
+    else:
+        return torch.device('cpu')
+
+device = getDevice()
 pathRoot = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 isDock = os.path.exists('/.dockerenv')
 

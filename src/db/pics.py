@@ -59,6 +59,7 @@ def init():
                     thumbnail_path   TEXT,
                     preview_path     TEXT,
                     fullsize_path    TEXT,
+                    livephoto_path   TEXT,
                     jsonExif         TEXT Default '{}',
                     isVectored       INTEGER Default 0,
                     simOk            INTEGER Default 0,
@@ -347,8 +348,8 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
             c.execute('''
                 Insert Into assets (id, ownerId, deviceId, type, originalFileName,
                 fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
-                localDateTime, thumbnail_path, preview_path, fullsize_path, jsonExif)
-                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                localDateTime, thumbnail_path, preview_path, fullsize_path, livephoto_path, jsonExif)
+                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 str(assId),
                 str(asset.get('ownerId')),
@@ -364,6 +365,7 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
                 asset.get('thumbnail_path'),
                 asset.get('preview_path'),
                 asset.get('fullsize_path', asset.get('originalPath')),
+                asset.get('livephoto_path'),
                 jsonExif,
             ))
 
