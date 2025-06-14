@@ -62,6 +62,44 @@ class TskMgr:
     #------------------------------------------------
     # thread: svc
     #------------------------------------------------
+    async def _sendCurrentTaskStatus(self, conn: ServerConnection):
+        """Send current running task status to newly connected client"""
+        try:
+            running_tasks = [(tsn, ti) for tsn, ti in self.infos.items() if ti.status in [TskStatus.RUNNING, TskStatus.PENDING]]
+
+            if not running_tasks:
+                # lg.info(f"[tskMgr] No running tasks to send to new client")
+                return
+
+            for tsn, ti in running_tasks:
+                lg.info(f"[tskMgr] Sending current task status to new client: {ti.name} - {ti.status.value}")
+
+                # Send start message
+                start_msg = {
+                    'type': 'start',
+                    'tsn': tsn,
+                    'name': ti.name
+                }
+                lg.info(f"[tskMgr] Sending start message: {start_msg}")
+                await conn.send(json.dumps(start_msg))
+
+                # Send current progress if running
+                if ti.status == TskStatus.RUNNING:
+                    progress_msg = {
+                        'type': 'progress',
+                        'tsn': tsn,
+                        'progress': ti.prog,
+                        'message': ti.msg,
+                        'status': ti.status.value
+                    }
+                    lg.info(f"[tskMgr] Sending progress message: {progress_msg}")
+                    await conn.send(json.dumps(progress_msg))
+
+                break  # Only one task should be running at a time
+        except Exception as e:
+            lg.error(f"[tskMgr] Error sending current task status: {e}")
+
+    #------------------------------------------------
     async def _handler(self, conn: ServerConnection) -> None:
         self.conns.add(conn)
 
@@ -73,6 +111,13 @@ class TskMgr:
                 'type': 'connected',
                 'message': 'WebSocket connected to TskMgr'
             }))
+
+            # Small delay to ensure client is ready
+            import asyncio
+            await asyncio.sleep(0.1)
+
+            # Send current running task status to newly connected client
+            await self._sendCurrentTaskStatus(conn)
 
             async for message in conn:
                 if DEBUG: lg.info(f"[tskMgr] Received message from client: {message}")

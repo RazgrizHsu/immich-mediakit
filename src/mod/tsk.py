@@ -1,6 +1,4 @@
-from typing import Tuple, Callable, Optional, List
-import json, time, asyncio
-
+import json
 from dsh import htm, dbc, inp, out, ste, cbk, noUpd
 from conf import ks
 from util import log
@@ -85,7 +83,7 @@ def tsk_PanelStatus(dta_tsk):
     cancelDisabled = not (tsk.id and tsk.name)
     closeDisabled = (tsk.id and tsk.name)  # Disable close when task is running
 
-    # lg.info(f"[tsk:panel] id[{tsk.id}] name[{tsk.name}] cancel_disabled[{cancelDisabled}] close_disabled[{closeDisabled}]")
+    # lg.info(f"[tsk:panel] id[{tsk.id}] name[{tsk.name}] style[{style}] cancel_disabled[{cancelDisabled}] close_disabled[{closeDisabled}]")
 
     return style, f"⌖ {tsk.name} ⌖", cancelDisabled, closeDisabled
 
@@ -130,7 +128,7 @@ def tsk_onBtnCancel(_nclk, dta_tsk, dta_nfy):
     if tskSvc.cancelBy(tsk.tsn):
         nfy.info(f"Task {tsk.name} cancelled")
         lg.info(f"[tsk] Cancelled task: {tsk.tsn}")
-        return nfy.toDict(), True  # Disable cancel button
+        return nfy.toDict(), True
     else:
         nfy.warn("Failed to cancel task")
         return nfy.toDict(), noUpd
@@ -178,7 +176,7 @@ def tsk_OnWsConnected(msg):
 
         data = json.loads(rawData)
         if data.get('type') == 'connected':
-            #lg.info(f"[tsk] connected msg[{data.get('message')}]")
+            lg.info(f"[tsk] WebSocket reconnected, checking for running tasks")
             return "ws connected!"
     except Exception as e:
         lg.error(f"[tsk] Error handling connected message: {e}")
@@ -274,8 +272,10 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
         typ = data.get('type')
 
         if typ == 'start':
-            if DEBUG: lg.info(f"[tws:uui] start: {data.get('name', '')}")
-            return 0, "0%", f"Starting {data.get('name', '')}..."
+            taskName = data.get('name', '')
+            tsn = data.get('tsn')
+            lg.info(f"[tws:uui] start: {taskName} (tsn: {tsn}) current tsk: {dta_tsk}")
+            return 0, "0%", f"Starting {taskName}..."
 
         elif typ == 'progress':
             # lg.info(f"[tws:uui] prog recv: {data}")
@@ -321,6 +321,7 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
     return noUpd.by(3)
 
 
+
 # 處理任務完成並更新 store
 @cbk(
     [
@@ -331,19 +332,60 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
         out(ks.sto.ste, "data", allow_duplicate=True),
     ],
     inp(k.wsId, "message"),
+    ste(ks.sto.tsk, "data"),
     prevent_initial_call=True
 )
-def tsk_OnData(wmsg):
+def tsk_OnData(wmsg, dta_tsk):
     if not wmsg: return noUpd.by(5)
 
     try:
-        # lg.info(f"[tws:dta] Called with msg: {wmsg}")
-
         rawData = wmsg.get('data') if isinstance(wmsg, dict) else wmsg
         if not rawData: raise RuntimeError( "[tsk] no rawData" )
         data = json.loads(rawData)
 
-        if data.get('type') == 'complete':
+        msgType = data.get('type')
+        #lg.info(f"[tws:dta] Processing message type: {msgType}")
+
+        # Handle task state sync on WebSocket reconnection for start/progress messages
+        if msgType == 'start' or msgType == 'progress':
+            tsk = models.Tsk.fromDict(dta_tsk)
+
+            if msgType == 'start':
+                lg.info(f"[tws:dta] Received start message for reconnection sync")
+                taskName = data.get('name', '')
+                tsn = data.get('tsn')
+            else:
+                lg.info(f"[tws:dta] Received progress message for reconnection sync")
+                # For progress messages, we need to derive task name from existing tasks
+                tsn = data.get('tsn')
+                taskName = None
+
+                # Try to get task name from task manager
+                from .mgr import tskSvc
+                if tskSvc.mgr and tsn:
+                    ti = tskSvc.mgr.getInfo(tsn)
+                    if ti: taskName = ti.name
+
+                if not taskName:
+                    lg.warning(f"[tws:dta] Could not determine task name from progress message")
+                    return noUpd.by(5)
+
+            lg.info(f"[tws:dta] Current tsk.name: '{tsk.name}', incoming taskName: '{taskName}', tsn: '{tsn}'")
+
+            # If no current task or different task, sync with running task info
+            if not tsk.name or (taskName and tsk.name != taskName):
+                lg.info(f"[tws:dta] Syncing task state on reconnect: {taskName} (tsn: {tsn})")
+                tsk.name = taskName
+                tsk.tsn = tsn
+                tsk.id = f"reconnect-{tsn}" if tsn else f"reconnect-{taskName}"
+                # Don't set cmd to avoid triggering new task
+                return noUpd, noUpd, noUpd, tsk.toDict(), noUpd
+            else:
+                lg.info(f"[tws:dta] Task already synced, no update needed")
+
+            return noUpd.by(5)
+
+        if msgType == 'complete':
             lg.info(f"[tws:dta] Type[{data.get('type')}] tsn[{data.get('tsn')}]")
 
             from .mgr import tskSvc

@@ -503,7 +503,6 @@ def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
     ste = Ste.fromDict(dta_ste) if dta_ste else Ste()
     cnt = Cnt.fromDict(dta_cnt)
 
-    # 檢查是否有任務運行
     from mod.mgr.tskSvc import mgr
     isTaskRunning = False
     if mgr:
@@ -512,30 +511,25 @@ def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
                 isTaskRunning = True
                 break
 
-    # Find 按鈕邏輯
     cntNo = cnt.ass - cnt.simOk if cnt else 0
     cntPn = cnt.simPnd if cnt else 0
     disFind = cntNo <= 0 or (cntPn >= cntNo) or isTaskRunning
 
-    # Clear 按鈕邏輯 (只清除搜尋記錄，保留已解決的)
     cntSrchd = db.pics.countHasSimIds(isOk=0) if not isTaskRunning else 0
     disClear = cntSrchd <= 0 or isTaskRunning
 
-    # Reset 按鈕邏輯 (清除所有記錄)
     cntOk = cnt.simOk if cnt else 0
     disReset = cntOk <= 0 and cntPn <= 0 or isTaskRunning
 
-    # 當前資產相關按鈕
     cntAssets = len(now.sim.assCur) if now.sim.assCur else 0
     disOk = cntAssets <= 0
     disDel = cntAssets <= 0
 
-    # 選擇相關按鈕
     cntSel = len(ste.selectedIds) if ste.selectedIds else 0
     disRm = cntSel == 0
     disRS = cntSel == 0
 
-    lg.info(f"[sim:UpdBtns] disFind[{disFind}]")
+    # lg.info(f"[sim:UpdBtns] disFind[{disFind}]")
 
     return disFind, disClear, disReset, disOk, disDel, disRm, disRS
 
