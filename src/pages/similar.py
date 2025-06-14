@@ -39,6 +39,7 @@ class k:
 
     btnFind = "sim-btn-fnd"
     btnClear = "sim-btn-clear"
+    btnReset = "sim-btn-reset"
     btnRmSel = "sim-btn-RmSel"
     btnOkSel = "sim-btn-OkSel"
     btnOkAll = "sim-btn-OkAll"
@@ -106,11 +107,12 @@ def layout(autoId=None):
                         dbc.Button(f"Find Similar", id=k.btnFind, color="primary", className="w-100", disabled=True),
                         htm.Br(),
                         htm.Small("No similar found → auto-mark resolved", className="ms-2 me-2")
-                    ], width=8),
+                    ], width=6),
 
                     dbc.Col([
-                        dbc.Button("Clear All Records", id=k.btnClear, color="danger", className="w-100", disabled=True),
-                    ], width=4),
+                        dbc.Button("Clear Search record but keep resloved", id=k.btnClear, color="danger me-1", className="w-100 mb-1", disabled=True),
+                        dbc.Button("Reset Search records", id=k.btnReset, color="danger", className="w-58", disabled=True),
+                    ], width=6, className="text-end"),
                 ], className="mt-3"),
 
             ], width=8),
@@ -480,6 +482,7 @@ ccbk(
     [
         out(k.btnFind, "disabled"),
         out(k.btnClear, "disabled"),
+        out(k.btnReset, "disabled"),
         out(k.btnOkAll, "disabled"),
         out(k.btnRmAll, "disabled"),
         out(k.btnRmSel, "disabled"),
@@ -490,7 +493,7 @@ ccbk(
         inp(ks.sto.ste, "data"),
         inp(ks.sto.cnt, "data"),
     ],
-    prevent_initial_call=True
+    prevent_initial_call="initial_duplicate"
 )
 def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
     now = Now.fromDict(dta_now)
@@ -511,9 +514,13 @@ def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
     cntPn = cnt.simPnd if cnt else 0
     disFind = cntNo <= 0 or (cntPn >= cntNo) or isTaskRunning
 
-    # Clear 按鈕邏輯
+    # Clear 按鈕邏輯 (只清除搜尋記錄，保留已解決的)
+    cntSrchd = db.pics.countHasSimIds(isOk=0) if not isTaskRunning else 0
+    disClear = cntSrchd <= 0 or isTaskRunning
+
+    # Reset 按鈕邏輯 (清除所有記錄)
     cntOk = cnt.simOk if cnt else 0
-    disClear = cntOk <= 0 and cntPn <= 0
+    disReset = cntOk <= 0 and cntPn <= 0 or isTaskRunning
 
     # 當前資產相關按鈕
     cntAssets = len(now.sim.assCur) if now.sim.assCur else 0
@@ -525,7 +532,9 @@ def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
     disRm = cntSel == 0
     disRS = cntSel == 0
 
-    return disFind, disClear, disOk, disDel, disRm, disRS
+    lg.info(f"[sim:UpdBtns] disFind[{disFind}]")
+
+    return disFind, disClear, disReset, disOk, disDel, disRm, disRS
 
 
 #------------------------------------------------------------------------
@@ -582,6 +591,7 @@ def sim_OnSwitchViewGroup(clks, dta_now):
     [
         inp(k.btnFind, "n_clicks"),
         inp(k.btnClear, "n_clicks"),
+        inp(k.btnReset, "n_clicks"),
         inp(k.btnRmSel, "n_clicks"),
         inp(k.btnOkSel, "n_clicks"),
         inp(k.btnOkAll, "n_clicks"),
@@ -602,12 +612,12 @@ def sim_OnSwitchViewGroup(clks, dta_now):
     prevent_initial_call=True
 )
 def sim_RunModal(
-    clk_fnd, clk_clr, clk_rm, clk_rs, clk_ok, clk_ra,
+    clk_fnd, clk_clr, clk_rst, clk_rm, clk_rs, clk_ok, clk_ra,
     dta_now, dta_cnt, dta_mdl, dta_tsk, dta_nfy, dta_ste,
     nchkOkAll, nchkRmSel, ncRS, ncRA
 ):
-    if not clk_fnd and not clk_clr and not clk_rm and not clk_rs and not clk_ok and not clk_ra:
-        lg.info( f"[sim:RunModal] fnd[{clk_fnd}] clr[{clk_clr}] rm[{clk_rm}] rs[{clk_rs}] ok[{clk_ok}] ra[{clk_ra}]" )
+    if not clk_fnd and not clk_clr and not clk_rst and not clk_rm and not clk_rs and not clk_ok and not clk_ra:
+        lg.info( f"[sim:RunModal] fnd[{clk_fnd}] clr[{clk_clr}] rst[{clk_rst}] rm[{clk_rm}] rs[{clk_rs}] ok[{clk_ok}] ra[{clk_ra}]" )
         return noUpd.by(4)
 
     trgId = getTrgId()
@@ -645,6 +655,22 @@ def sim_RunModal(
 
     #------------------------------------------------------------------------
     if trgId == k.btnClear:
+        cntRs = db.pics.countHasSimIds(isOk=0)
+        if cntRs <= 0:
+            nfy.warn(f"[similar] No search records to clear")
+            return noUpd.by(4).updFr(0, nfy)
+
+        mdl.reset()
+        mdl.id = ks.pg.similar
+        mdl.cmd = ks.cmd.sim.clear
+        mdl.msg = [
+            f"Clear search records but keep resolved items?", htm.Br(),
+            f"Will clear ({cntRs}) search records", htm.Br(),
+            htm.B("Resolved items (simOk=1) will be kept"), htm.Br(),
+        ]
+
+    #------------------------------------------------------------------------
+    elif trgId == k.btnReset:
         cntOk = db.pics.countSimOk(isOk=1)
         cntRs = db.pics.countHasSimIds()
         if cntOk <= 0 and cntRs <= 0:
@@ -653,10 +679,10 @@ def sim_RunModal(
 
         mdl.reset()
         mdl.id = ks.pg.similar
-        mdl.cmd = ks.cmd.sim.clear
+        mdl.cmd = ks.cmd.sim.reset
         mdl.msg = [
-            f"Are you sure you want to delete all records?", htm.Br(),
-            f"include reslove({cntOk}) and resume({cntRs})", htm.Br(),
+            f"Are you sure you want to reset all records?", htm.Br(),
+            f"include resolved({cntOk}) and search({cntRs})", htm.Br(),
             htm.B("This operation cannot be undone"), htm.Br(),
             "You may need to perform all similarity searches again."
         ]
@@ -947,33 +973,45 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+    nfy, now, cnt, tsk = sto.nfy, sto.now, sto.cnt, sto.tsk
 
     try:
+        keepSimOk = tsk.cmd == ks.cmd.sim.clear
+
         doReport(10, "Preparing to clear similarity records...")
 
-        cntOk = db.pics.countSimOk(isOk=1)
-        cntRs = db.pics.countHasSimIds()
-
-        if cntOk <= 0 and cntRs <= 0:
-            msg = "No similarity records to clear"
-            lg.info(msg)
-            nfy.info(msg)
-            return sto, msg
+        if keepSimOk:
+            cntRs = db.pics.countHasSimIds(isOk=0)
+            if cntRs <= 0:
+                msg = "No search records to clear"
+                lg.info(msg)
+                nfy.info(msg)
+                return sto, msg
+        else:
+            cntOk = db.pics.countSimOk(isOk=1)
+            cntRs = db.pics.countHasSimIds()
+            if cntOk <= 0 and cntRs <= 0:
+                msg = "No similarity records to clear"
+                lg.info(msg)
+                nfy.info(msg)
+                return sto, msg
 
         doReport(30, "Clearing similarity records from database...")
 
-        db.pics.clearAllSimIds()
+        db.pics.clearAllSimIds(keepSimOk=keepSimOk)
 
         doReport(90, "Updating dynamic data...")
 
         now.sim.assFromUrl = None
-
         now.sim.clearAll()
 
         doReport(100, "Clear completed")
 
-        msg = f"Successfully cleared {cntOk + cntRs} similarity records"
+        if keepSimOk:
+            msg = f"Successfully cleared search records but kept resolved items"
+        else:
+            msg = f"Successfully cleared all similarity records"
+
         lg.info(f"[sim_Clear] {msg}")
         nfy.success(msg)
 
@@ -1130,6 +1168,7 @@ def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 #========================================================================
 mapFns[ks.cmd.sim.fnd] = sim_FindSimilar
 mapFns[ks.cmd.sim.clear] = sim_ClearSims
+mapFns[ks.cmd.sim.reset] = sim_ClearSims
 mapFns[ks.cmd.sim.selOk] = sim_SelectedReslove
 mapFns[ks.cmd.sim.selRm] = sim_SelectedDelete
 mapFns[ks.cmd.sim.allOk] = sim_AllReslove
