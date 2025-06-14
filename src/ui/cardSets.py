@@ -281,8 +281,6 @@ def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpE
     db.dto.simMaxDepths = maxDepths
     db.dto.simMaxItems = maxItems
 
-    lg.info(f"[sets:OnUpd] cndGrpEnable[{cndGrpEnable}]")
-
     db.dto.simCondGrpMode = cndGrpEnable
     db.dto.simCondSameDate = cndGrpDate
     db.dto.simCondSameWidth = cndGrpWidth

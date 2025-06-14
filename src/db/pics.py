@@ -572,7 +572,7 @@ def countHasSimIds(isOk=0):
             c.execute(sql, (isOk,))
             row = c.fetchone()
             count = row[0] if row else 0
-            lg.info(f"[pics] count have simInfos and type[{isOk}] cnt[{count}]")
+            # lg.info(f"[pics] count have simInfos and type[{isOk}] cnt[{count}]")
             return count
     except Exception as e:
         raise mkErr(f"Failed to count assets with simInfos and simOk[{isOk}]", e)
