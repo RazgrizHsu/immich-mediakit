@@ -123,6 +123,7 @@ def mkCard(ass: models.Asset):
 
     isMain = ass.view.isMain
     isRels = ass.view.isRelats
+    isLvPh = ass.isLivePhoto()
 
     cssClass = f"h-100 sim {cssIds}"
     if isMain: cssClass += " main"
@@ -152,37 +153,40 @@ def mkCard(ass: models.Asset):
                     )
                 ])
             ], id={"type": "card-select", "id": ass.autoId}),
-            className="p-2 curP"
+            className=f"p-2 curP"
         ),
         htm.Div([
+
+            htm.Video(
+                src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
+                id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
+                className="livephoto-video",
+            )
+            if isLvPh else
+
             htm.Img(
                 src=imgSrc,
                 id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
-                className="card-img"
-            ) if imgSrc else htm.Img(src="assets/noimg.png", className="card-img"),
+                className=f"card-img"
+            )
 
-            # LivePhoto overlay
+            if imgSrc else
+            htm.Img(src="assets/noimg.png", className="card-img")
+            ,
+
             htm.Div([
-                htm.Video(
-                    src=f"/api/livephoto/{ass.autoId}",
-                    id={"type": "livephoto-video", "aid": ass.autoId},
-                    className="livephoto-video",
-                    loop=True,
-                    muted=True,
-                    style={"display": "none"}
-                ),
-                htm.Div("LIVE", className="livephoto-badge")
-            ], className="livephoto-overlay", style={"display": "block" if ass.isLivePhoto() else "none"}),
+                htm.Span(f"LivePhoto", className="tag blue"),
+            ], className="TR") if isLvPh else None,
 
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="tag"),
-            ]),
+            ], className="L"),
             htm.Div([
 
                 htm.Span(f"{co.fmt.size(ass.jsonExif.fileSizeInByte)}", className="tag")
                 if ass.jsonExif else None,
                 htm.Span(f"{imgW} x {imgH}", className="tag lg"),
-            ])
+            ], className="R")
         ], className="img"),
         dbc.CardBody([
 
@@ -191,6 +195,8 @@ def mkCard(ass: models.Asset):
                 htm.Span("GIDs"), htm.Span(f"{ass.simGIDs}", className="tag second txt-c"),
                 htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="tag second"),
                 htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="tag second"),
+
+                *([ htm.Span("livePhoto"), htm.Span(f"{ass.livephoto_path}", className="tag blue"), ] if isLvPh else []),
 
             ], class_name="grid"
             ) if db.dto.showGridInfo else None,
@@ -302,12 +308,12 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
             ),
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="tag sm second"),
-            ]),
+            ], className="L"),
             htm.Div([
                 htm.Span(f"{imgW}", className="tag lg"),
                 htm.Span("x"),
                 htm.Span(f"{imgH}", className="tag lg"),
-            ])
+            ], className="R")
         ], className="img"),
         dbc.CardBody([
             dbc.Row([

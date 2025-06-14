@@ -156,7 +156,7 @@ def count(usrId=None, assetType="IMAGE"):
 # 要對應到真實路徑, 必需要把upload替換為實際路徑
 #------------------------------------------------------
 def fixPrefix(path: Optional[str]):
-    if path and path.startswith('upload/'): return path[7:]
+    if path and path.startswith('upload/'): path = path[7:]
     return path
 
 
@@ -339,26 +339,24 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 onUpdate(42, "query livephoto videos...")
 
                 livePhotoSql = """
-                WITH photo AS (
-                  SELECT
-                    a.id AS photo_id,
-                    a."originalPath" AS photo_path,
-                    a."livePhotoVideoId" AS video_id
-                  FROM assets a
-                  JOIN exif e ON a.id = e."assetId"
-                  WHERE e."livePhotoCID" IS NOT NULL
-                    AND a.type = 'IMAGE'
-                    AND a."livePhotoVideoId" IS NOT NULL
-                    AND a.id = ANY(%s)
-                )
-                SELECT
-                  p.photo_id,
-                  v."originalPath" AS video_path
-                FROM photo p
-                LEFT JOIN assets v
-                  ON v.id = p.video_id
-                  AND v.type = 'VIDEO'
-                WHERE v."originalPath" IS NOT NULL
+                    WITH photo AS (
+                        SELECT
+                            a.id AS photo_id,
+                            a."originalPath" AS photo_path,
+                            a."livePhotoVideoId" AS video_id
+                        FROM assets a
+                        JOIN exif e ON a.id = e."assetId"
+                        WHERE e."livePhotoCID" IS NOT NULL
+                        AND a.type = 'IMAGE'
+                        AND a."livePhotoVideoId" IS NOT NULL
+                        AND a.id = ANY(%s)
+                    )
+                    SELECT
+                        p.photo_id,
+                        v."encodedVideoPath" AS video_path
+                    FROM photo p
+                    LEFT JOIN assets v ON v.id = p.video_id AND v.type = 'VIDEO'
+                    WHERE v."encodedVideoPath" IS NOT NULL
                 """
 
                 livePhotoData = {}

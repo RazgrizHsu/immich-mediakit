@@ -516,6 +516,11 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		@include bg-gradient(#6DAA2B);
 	}
 
+	&.blue {
+		//background:;
+		@include bg-gradient(#3399F6);
+	}
+
 	&.sm {
 		font-size:10px !important;
 		padding:0 2px 2px 5px;
@@ -831,6 +836,39 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	}
 }
 
+// Floating Goto Top Button
+.goto-top-btn {
+	position: fixed;
+	bottom: 30px;
+	right: 30px;
+	z-index: 1000;
+	background-color: var(--main-bs);
+	color: white;
+	border: none;
+	border-radius: 50px;
+	padding: 12px 16px;
+	font-size: 14px;
+	font-weight: 500;
+	cursor: pointer;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	opacity: 0;
+	visibility: hidden;
+	transform: translateY(20px);
+	transition: all 0.3s ease-in-out;
+
+	&.show {
+		opacity: 1;
+		visibility: visible;
+		transform: translateY(0);
+	}
+
+	&:hover {
+		background-color: var(--main-dk);
+		transform: translateY(-2px);
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+	}
+}
+
 @keyframes fadeIn {
 	from { opacity:0; }
 	to { opacity:1; }
@@ -961,8 +999,6 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		}
 
 		.row {
-
-			// padding: 0 3px 0 3px;
 			margin-bottom: 3px!important;
 		}
 
@@ -973,6 +1009,32 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			display:inline-block;
 			width:30px;
 			text-align:center;
+		}
+
+		// use div as rows
+		&.divRows {
+
+			padding: 2px 8px 2px 8px!important;
+
+			> div {
+				display:grid;
+				grid-template-columns: 30% 70%;
+				gap:2px 2px;
+				margin:5px 6px;
+				padding: 0;
+
+				> *:nth-child(2n-1) {
+					justify-self:center;
+					white-space:nowrap;
+					font-size:12px;
+					overflow:visible;
+					padding:0px;
+				}
+
+				> *:nth-child(2n) {
+					justify-self:start;
+				}
+			}
 		}
 	}
 
@@ -1102,35 +1164,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		}
 	}
 
-	border: red 2px solid;
-
 }
-
-.igrid {
-
-	padding: 2px 8px 2px 8px!important;
-
-	> div {
-		display:grid;
-		grid-template-columns: 30% 70%;
-		gap:2px 2px;
-		margin:5px 6px;
-		padding: 0;
-
-		> *:nth-child(2n-1) {
-			justify-self:center;
-			white-space:nowrap;
-			font-size:12px;
-			overflow:visible;
-			padding:0px;
-		}
-
-		> *:nth-child(2n) {
-			justify-self:start;
-		}
-	}
-}
-
 
 
 .card.sim {
@@ -1197,10 +1231,17 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 		position:relative;
 
-		img {
+		&:has(video) {
+			@include bg-gradient(#555555, to top);
+		}
+
+		img, video {
 			object-fit:contain;
 			height:180px;
+			width:100%;
 			cursor:pointer !important;
+
+			z-index: 1;
 
 			&:hover {
 				opacity:1;
@@ -1212,7 +1253,15 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		}
 
 		//floating on img left-bottom
-		> div:nth-of-type(1) {
+		> div.TR {
+			position:absolute;
+			top:5px;
+			right:5px;
+			display:flex;
+			flex-direction:column;
+			align-items:flex-end;
+		}
+		> div.L {
 			position:absolute;
 			bottom:5px;
 			left:5px;
@@ -1220,12 +1269,10 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			justify-content:start;
 		}
 
-		> div:nth-of-type(2) {
+		> div.R {
 			position:absolute;
 			bottom:5px;
 			right:5px;
-			//border: red 1px solid;
-
 			display:flex;
 			flex-direction:column;
 			align-items:flex-end;
@@ -1291,8 +1338,11 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	.livephoto-badge {
 		position: absolute;
 		top: 8px;
-		left: 8px;
-		background: rgba(0, 0, 0, 0.7);
+		right: 8px;
+
+		border: 1px solid white;
+		@include bg-gradient( #3399CC );
+
 		color: white;
 		padding: 2px 6px;
 		border-radius: 4px;

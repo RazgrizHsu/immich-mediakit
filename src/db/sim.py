@@ -451,12 +451,30 @@ def _selectBestAssetByWeights(groupAssets: List[models.Asset]) -> int:
     groupFileSizes = []
     groupDimensions = []
 
+    def normalizeDateForComparison(dt):
+        if dt is None: return None
+        try:
+            if hasattr(dt, 'replace'):
+                return dt.replace(microsecond=0)
+            else:
+                dtStr = str(dt)
+                if '.' in dtStr and ('+' in dtStr or 'Z' in dtStr):
+                    beforeDot = dtStr.split('.')[0]
+                    afterDot = dtStr.split('.')[1]
+                    if '+' in afterDot:
+                        timezone = '+' + afterDot.split('+')[1]
+                        return beforeDot + timezone
+                    elif 'Z' in afterDot:
+                        return beforeDot + 'Z'
+                return dtStr
+        except: return dt
+
     for asset in groupAssets:
         # Date
         dateTime = None
         if asset.jsonExif:
             dateTime = getattr(asset.jsonExif, 'dateTimeOriginal', None) or getattr(asset.jsonExif, 'fileCreatedAt', None)
-        groupDates.append(dateTime)
+        groupDates.append(normalizeDateForComparison(dateTime))
 
         # EXIF count
         exifCount = _countExifFields(asset.jsonExif) if asset.jsonExif else 0
