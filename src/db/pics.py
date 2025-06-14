@@ -48,6 +48,7 @@ def init():
                     id               TEXT Unique,
                     ownerId          TEXT,
                     deviceId         TEXT,
+                    livePhotoVideoId TEXT,
                     type             TEXT,
                     originalFileName TEXT,
                     fileCreatedAt    TEXT,
@@ -346,14 +347,15 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
 
         if row is None:
             c.execute('''
-                Insert Into assets (id, ownerId, deviceId, type, originalFileName,
+                Insert Into assets (id, ownerId, deviceId, livePhotoVideoId, type, originalFileName,
                 fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
                 localDateTime, thumbnail_path, preview_path, fullsize_path, livephoto_path, jsonExif)
-                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 str(assId),
                 str(asset.get('ownerId')),
                 asset.get('deviceId'),
+                str(asset.get('livePhotoVideoId')),
                 asset.get('type'),
                 asset.get('originalFileName'),
                 asset.get('fileCreatedAt'),
@@ -526,10 +528,14 @@ def setResloveBy(assets: List[models.Asset]):
             autoIds = [ass.autoId for ass in assets]
             if not autoIds: return 0
 
+            autoIds = list(set(autoIds))
+            cnt = len(autoIds)
+
             qargs = ','.join(['?' for _ in autoIds])
             c.execute(f"UPDATE assets SET simOk = 1, simGIDs = '[]', simInfos = '[]' WHERE autoId IN ({qargs})", autoIds)
-            conn.commit()
             count = c.rowcount
+            if count != cnt: raise RuntimeError(f"effect[{count}] not match assets[{cnt}] ids[{qargs}]")
+            conn.commit()
             lg.info(f"[pics] set simOk by autoIds[{len(autoIds)}] rst[{count}]")
             return count
     except Exception as e:

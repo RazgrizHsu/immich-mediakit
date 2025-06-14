@@ -283,13 +283,29 @@ h3 { font-size: 1.68rem; }
 
 .img-pop img { max-width: 98vw; margin: auto; }
 
-.img-pop.auto img { max-height: calc(100vh - 70px); }
+.img-pop.auto img, .img-pop.auto .livephoto video { max-height: calc(100vh - 70px); }
 
 .img-pop .modal-header { background-image: linear-gradient(to bottom, #607b99, #385A7F 50%, #2d4866); }
 
 .img-pop .modal-body { flex: none; padding: 0; max-height: calc(100vh - 70px); overflow: auto; }
 
 .img-pop .modal-content { max-height: 100vh; }
+
+.img-pop .livephoto { position: relative; }
+
+.img-pop .livephoto video { width: 100%; height: auto; max-height: 80vh; object-fit: contain; }
+
+.img-pop .livephoto .ctrls { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); padding: 8px 16px; border-radius: 20px; display: flex; align-items: center; gap: 10px; transition: opacity 0.3s ease; opacity: 0; }
+
+.img-pop .livephoto .ctrls .play-pause-btn { background: none; border: none; color: white; cursor: pointer; font-size: 16px; padding: 4px; }
+
+.img-pop .livephoto .ctrls .progress-bar { width: 200px; height: 4px; background: rgba(255, 255, 255, 0.3); border-radius: 2px; position: relative; cursor: pointer; }
+
+.img-pop .livephoto .ctrls .progress-bar .progress-fill { height: 100%; background: #4ACDFF; border-radius: 2px; transition: width 0.1s ease; }
+
+.img-pop .livephoto .ctrls .time-display { color: white; font-size: 12px; min-width: 60px; text-align: center; }
+
+.img-pop .livephoto:hover .ctrls { opacity: 1; }
 
 .img-pop .acts { position: fixed; bottom: 0; margin: auto auto 10px auto; z-index: 1000; display: flex; justify-content: center; align-items: center; width: 96%; gap: 10px; }
 
@@ -401,7 +417,7 @@ h3 { font-size: 1.68rem; }
 .test { background: #0B66BC; color: #1A95C3; border: red 1px solid; }
 
 /*======================== task ========================*/
-.tskPanel { margin: 10px 20px 15px 20px; padding: 10px 30px 10px 30px; border-radius: 16px; border: 2px solid #4ACDFF99; box-shadow: 0 0 6px rgba(255, 255, 255, 0.5); background: #2D4A69; background-image: linear-gradient(to bottom, #516e87, #264A69 50%, #1e3b54); }
+.tskPanel { flex: inherit !important; width: 80vw; margin: 15px auto 15px auto; padding: 10px 30px 10px 30px; border-radius: 16px; border: 2px solid #4ACDFF99; box-shadow: 0 0 6px rgba(255, 255, 255, 0.5); background: #2D4A69; background-image: linear-gradient(to bottom, #516e87, #264A69 50%, #1e3b54); }
 
 .tskPanel .progress { border: #999999 1px solid; }
 
@@ -586,21 +602,3 @@ h3 { font-size: 1.68rem; }
 .livephoto-overlay .livephoto-video.playing { opacity: 1; }
 
 .card:hover .livephoto-overlay .livephoto-video { opacity: 1; }
-
-.modal-livephoto-player { position: relative; }
-
-.modal-livephoto-player .livephoto-video-modal { width: 100%; height: auto; max-height: 80vh; object-fit: contain; }
-
-.modal-livephoto-player .livephoto-controls { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); padding: 8px 16px; border-radius: 20px; display: flex; align-items: center; gap: 10px; transition: opacity 0.3s ease; opacity: 0; }
-
-.modal-livephoto-player .livephoto-controls.visible { opacity: 1; }
-
-.modal-livephoto-player .livephoto-controls .play-pause-btn { background: none; border: none; color: white; cursor: pointer; font-size: 16px; padding: 4px; }
-
-.modal-livephoto-player .livephoto-controls .progress-bar { width: 200px; height: 4px; background: rgba(255, 255, 255, 0.3); border-radius: 2px; position: relative; cursor: pointer; }
-
-.modal-livephoto-player .livephoto-controls .progress-bar .progress-fill { height: 100%; background: #4ACDFF; border-radius: 2px; transition: width 0.1s ease; }
-
-.modal-livephoto-player .livephoto-controls .time-display { color: white; font-size: 12px; min-width: 60px; text-align: center; }
-
-.modal-livephoto-player:hover .livephoto-controls { opacity: 1; }

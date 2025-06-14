@@ -28,7 +28,8 @@ class k:
     cndGrpAuSel = "cndGrpAuSel"
 
     auSelEnable = "autoSelEnable"
-    auSelHighSimilarity = "autoSelHighSimilarity"
+    auSelSkipLowSim = "autoSelSkipLowSim"
+    auSelAllLivePhoto = "auSelAllLivePhoto"
 
     auSelEarlier = "autoSelEarlier"
     auSelLater = "autoSelLater"
@@ -42,8 +43,7 @@ class k:
 
 
     @staticmethod
-    def id(name):
-        return {"type": "sets", "id": f"{name}"}
+    def id(name): return {"type": "sets", "id": f"{name}"}
 
 
 optMaxDepths = []
@@ -104,17 +104,14 @@ def renderAutoSelect():
         dbc.CardBody([
             htm.Div([
                 # Main enable switch
-                dbc.Checkbox(id=k.id(k.auSelEnable), label="Enable Auto Selection", value=db.dto.auSelEnable),
-                htm.Br(),
+                dbc.Checkbox(id=k.id(k.auSelEnable), label="Enable", value=db.dto.auSelEnable), htm.Br(),
 
-                # High similarity filter
-                dbc.Checkbox(id=k.id(k.auSelHighSimilarity), label="Skip low similarity (<0.96)",
-                           value=db.dto.auSel_HighSimilarity, disabled=not db.dto.auSelEnable),
+                dbc.Checkbox(id=k.id(k.auSelSkipLowSim), label="Skip has sim(<0.96) group", value=db.dto.auSel_SkipLowSim, disabled=not db.dto.auSelEnable),
+
+                dbc.Checkbox(id=k.id(k.auSelAllLivePhoto), label="Select ALL LivePhotos", value=db.dto.auSel_AllLivePhoto, disabled=not db.dto.auSelEnable), htm.Br(),
+
                 htm.Hr(),
 
-                htm.H6("Selection Criteria", className="mb-2"),
-
-                # Point selection grid
                 htm.Small("DateTime:", className="text-muted mb-2"),
 
                 dbc.Row([
@@ -166,6 +163,7 @@ def renderAutoSelect():
 
                 htm.Hr(),
                 htm.Ul([
+                    htm.Li("'Always Pick ALL LivePhotos' selects all LivePhoto files in a group, ignoring other criteria"),
                     htm.Li("System calculates points for each photo based on criteria"),
                     htm.Li("Photo with highest total points gets auto-selected"),
                     htm.Li("Points: 0=Not considered, 1=Low priority, 2=High priority")
@@ -319,7 +317,8 @@ def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpE
 
 @cbk(
     [
-        out(k.id(k.auSelHighSimilarity), "disabled"),
+        out(k.id(k.auSelSkipLowSim), "disabled"),
+        out(k.id(k.auSelAllLivePhoto), "disabled"),
         out(k.id(k.auSelEarlier), "disabled"),
         out(k.id(k.auSelLater), "disabled"),
         out(k.id(k.auSelExifRicher), "disabled"),
@@ -330,7 +329,8 @@ def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpE
         out(k.id(k.auSelSmallerDimensions), "disabled"),
     ],
     inp(k.id(k.auSelEnable), "value"),
-    inp(k.id(k.auSelHighSimilarity), "value"),
+    inp(k.id(k.auSelSkipLowSim), "value"),
+    inp(k.id(k.auSelAllLivePhoto), "value"),
     inp(k.id(k.auSelEarlier), "value"),
     inp(k.id(k.auSelLater), "value"),
     inp(k.id(k.auSelExifRicher), "value"),
@@ -341,9 +341,10 @@ def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpE
     inp(k.id(k.auSelSmallerDimensions), "value"),
     prevent_initial_call=True
 )
-def autoSelect_OnUpd(auSelEnable, auSelHighSimilarity, auSelEarlier, auSelLater, auSelExifRicher, auSelExifPoorer, auSelBiggerSize, auSelSmallerSize, auSelBiggerDimensions, auSelSmallerDimensions):
+def autoSelect_OnUpd(auSelEnable, auSelHighSimilarity, auSelAlwaysPickLivePhoto, auSelEarlier, auSelLater, auSelExifRicher, auSelExifPoorer, auSelBiggerSize, auSelSmallerSize, auSelBiggerDimensions, auSelSmallerDimensions):
     db.dto.auSelEnable = auSelEnable
-    db.dto.auSel_HighSimilarity = auSelHighSimilarity
+    db.dto.auSel_SkipLowSim = auSelHighSimilarity
+    db.dto.auSel_AllLivePhoto = auSelAlwaysPickLivePhoto
     db.dto.auSel_Earlier = auSelEarlier
     db.dto.auSel_Later = auSelLater
     db.dto.auSel_ExifRicher = auSelExifRicher
@@ -353,9 +354,9 @@ def autoSelect_OnUpd(auSelEnable, auSelHighSimilarity, auSelEarlier, auSelLater,
     db.dto.auSel_BiggerDimensions = auSelBiggerDimensions
     db.dto.auSel_SmallerDimensions = auSelSmallerDimensions
 
-    lg.info(f"[autoSel:OnUpd] Enable[{auSelEnable}] HighSim[{auSelHighSimilarity}] Earlier[{auSelEarlier}] Later[{auSelLater}] ExifRich[{auSelExifRicher}] ExifPoor[{auSelExifPoorer}] BigSize[{auSelBiggerSize}] SmallSize[{auSelSmallerSize}] BigDim[{auSelBiggerDimensions}] SmallDim[{auSelSmallerDimensions}]")
+    lg.info(f"[autoSel:OnUpd] Enable[{auSelEnable}] HighSim[{auSelHighSimilarity}] AlwaysPickLivePhoto[{auSelAlwaysPickLivePhoto}] Earlier[{auSelEarlier}] Later[{auSelLater}] ExifRich[{auSelExifRicher}] ExifPoor[{auSelExifPoorer}] BigSize[{auSelBiggerSize}] SmallSize[{auSelSmallerSize}] BigDim[{auSelBiggerDimensions}] SmallDim[{auSelSmallerDimensions}]")
 
     # Control enable/disable states
     subOptionsDisabled = not auSelEnable
 
-    return [subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled]
+    return [subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled]

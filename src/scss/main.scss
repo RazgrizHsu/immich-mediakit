@@ -325,7 +325,8 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		margin:auto;
 	}
 
-	&.auto img {
+	&.auto img,
+	&.auto .livephoto video {
 		max-height:calc(100vh - 70px);
 	}
 
@@ -342,6 +343,68 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 	.modal-content {
 		max-height:100vh;
+	}
+
+	.livephoto {
+		position:relative;
+
+		video {
+			width:100%;
+			height:auto;
+			max-height:80vh;
+			object-fit:contain;
+		}
+
+		.ctrls {
+			position:absolute;
+			bottom:10px;
+			left:50%;
+			transform:translateX(-50%);
+			background:rgba(0, 0, 0, 0.7);
+			padding:8px 16px;
+			border-radius:20px;
+			display:flex;
+			align-items:center;
+			gap:10px;
+			transition:opacity 0.3s ease;
+			opacity:0;
+
+			.play-pause-btn {
+				background:none;
+				border:none;
+				color:white;
+				cursor:pointer;
+				font-size:16px;
+				padding:4px;
+			}
+
+			.progress-bar {
+				width:200px;
+				height:4px;
+				background:rgba(255, 255, 255, 0.3);
+				border-radius:2px;
+				position:relative;
+				cursor:pointer;
+
+				.progress-fill {
+					height:100%;
+					background:#4ACDFF;
+					border-radius:2px;
+					transition:width 0.1s ease;
+				}
+			}
+
+			.time-display {
+				color:white;
+				font-size:12px;
+				min-width:60px;
+				text-align:center;
+			}
+		}
+
+		&:hover .ctrls {
+			opacity:1;
+		}
 	}
 
 	.acts {
@@ -702,7 +765,11 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 /*======================== task ========================*/
 .tskPanel {
-	margin:10px 20px 15px 20px;
+
+	flex:inherit!important;
+
+	width:80vw;
+	margin:15px auto 15px auto;
 	padding:10px 30px 10px 30px;
 	border-radius:16px;
 	border:2px solid #4ACDFF99;
@@ -1374,69 +1441,3 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	}
 }
 
-// Modal LivePhoto Player
-.modal-livephoto-player {
-	position: relative;
-
-	.livephoto-video-modal {
-		width: 100%;
-		height: auto;
-		max-height: 80vh;
-		object-fit: contain;
-	}
-
-	.livephoto-controls {
-		position: absolute;
-		bottom: 10px;
-		left: 50%;
-		transform: translateX(-50%);
-		background: rgba(0, 0, 0, 0.7);
-		padding: 8px 16px;
-		border-radius: 20px;
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		transition: opacity 0.3s ease;
-		opacity: 0;
-
-		&.visible {
-			opacity: 1;
-		}
-
-		.play-pause-btn {
-			background: none;
-			border: none;
-			color: white;
-			cursor: pointer;
-			font-size: 16px;
-			padding: 4px;
-		}
-
-		.progress-bar {
-			width: 200px;
-			height: 4px;
-			background: rgba(255, 255, 255, 0.3);
-			border-radius: 2px;
-			position: relative;
-			cursor: pointer;
-
-			.progress-fill {
-				height: 100%;
-				background: #4ACDFF;
-				border-radius: 2px;
-				transition: width 0.1s ease;
-			}
-		}
-
-		.time-display {
-			color: white;
-			font-size: 12px;
-			min-width: 60px;
-			text-align: center;
-		}
-	}
-
-	&:hover .livephoto-controls {
-		opacity: 1;
-	}
-}

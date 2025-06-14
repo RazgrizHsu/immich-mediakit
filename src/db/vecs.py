@@ -21,7 +21,7 @@ conn: Optional[QdrantClient] = None
 def init():
     global conn
     try:
-        conn = QdrantClient(envs.qdrantUrl)
+        conn = QdrantClient(envs.qdrantUrl, timeout=60)
 
         create()
     except Exception as e:
@@ -48,8 +48,13 @@ def create():
                 vectors_config=qmod.VectorParams(
                     size=2048,
                     distance=qmod.Distance.COSINE
-                )
+                ),
+                timeout=60
             )
+
+            if not conn.collection_exists(keyColl):
+                raise RuntimeError(f"[qdrant] Failed to create collection {keyColl}")
+
             lg.info(f"[qdrant] create successfully, coll[{keyColl}]")
 
     except Exception as e:

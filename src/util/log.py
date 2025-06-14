@@ -6,6 +6,7 @@ import logging
 import sys
 import os
 from datetime import datetime
+from typing import Any, Optional
 
 EnableLogFile = False
 LogLevel = logging.INFO
@@ -64,6 +65,49 @@ lg = logging.getLogger('dupfnd')
 
 setup()
 
-def get(name):
-    """Get logger for specific module"""
-    return logging.getLogger(name)
+
+class LoggerAdapter:
+    def __init__(self, logger: logging.Logger):
+        self._logger = logger
+
+    def debug(self, msg: Any, *args: Any, exc_info: Optional[Any] = None,
+              extra: Optional[dict] = None, stack_info: bool = False,
+              stacklevel: int = 1, **kwargs) -> None:
+        self._logger.debug(msg, *args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def info(self, msg: Any, *args: Any, exc_info: Optional[Any] = None,
+             extra: Optional[dict] = None, stack_info: bool = False,
+             stacklevel: int = 1, **kwargs) -> None:
+        self._logger.info(msg, *args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def warn(self, msg: Any, *args: Any, exc_info: Optional[Any] = None,
+             extra: Optional[dict] = None, stack_info: bool = False,
+             stacklevel: int = 1, **kwargs) -> None:
+        self._logger.warning(msg, *args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def error(self, msg: Any, *args: Any, exc_info: Optional[Any] = None,
+              extra: Optional[dict] = None, stack_info: bool = False,
+              stacklevel: int = 1, **kwargs) -> None:
+        self._logger.error(msg, *args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def exception(self, msg: Any, *args: Any, exc_info: Optional[Any] = None,
+                  extra: Optional[dict] = None, stack_info: bool = False,
+                  stacklevel: int = 1, **kwargs) -> None:
+        self._logger.exception(msg, *args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def critical(self, msg: Any, *args: Any, exc_info: Optional[Any] = None,
+                 extra: Optional[dict] = None, stack_info: bool = False,
+                 stacklevel: int = 1, **kwargs) -> None:
+        self._logger.critical(msg, *args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def fatal(self, msg: Any, *args: Any, exc_info: Optional[Any] = None,
+              extra: Optional[dict] = None, stack_info: bool = False,
+              stacklevel: int = 1, **kwargs) -> None:
+        self._logger.fatal(msg, *args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._logger, name)
+
+
+def get(name: str) -> LoggerAdapter:
+    return LoggerAdapter(logging.getLogger(name))

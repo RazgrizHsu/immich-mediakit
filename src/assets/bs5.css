@@ -218,7 +218,7 @@ a:hover { color: #3772FF; }
 
 select { box-shadow: var(--shadow-box-white); border: var(--info-lig) 3px solid; position: relative; }
 
-select:disabled { opacity: 0.6; box-shadow: none !important; border: #9C9C9C 2px dashed !important; }
+select:disabled { opacity: 0.6; box-shadow: none !important; border: #CCC 1px dashed !important; }
 
 .btn { position: relative; border-radius: 6px; font-weight: 400; transition: all 0.3s ease, background-image 0.8s ease, background-color 0.8s ease; border: var(--btn-borderW) solid 1px; z-index: 1; box-shadow: var(--btn-shadow); }
 
