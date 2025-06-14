@@ -256,10 +256,7 @@ class Asset(BaseDictModel):
         return os.path.join(envs.immichPath, path)
 
     def isLivePhoto(self) -> bool:
-        return (self.livephoto_path is not None and
-                self.jsonExif and
-                hasattr(self.jsonExif, 'livePhotoCID') and
-                self.jsonExif.livePhotoCID is not None)
+        return self.livephoto_path is not None
 
 
 @dataclass

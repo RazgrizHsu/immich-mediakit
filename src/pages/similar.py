@@ -182,6 +182,14 @@ def layout(autoId=None):
                                 htm.Div(id=k.gvSim),
                                 color="success", type="border", spinner_style={"width": "3rem", "height": "3rem"},
                             ),
+
+                            # Floating Goto Top Button
+                            htm.Button(
+                                "↑ Top",
+                                id="sim-goto-top-btn",
+                                className="goto-top-btn",
+                                style={"display": ""}
+                            ),
                         ]
                     ),
                     dbc.Tab(

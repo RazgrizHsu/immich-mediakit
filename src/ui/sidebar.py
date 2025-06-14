@@ -18,7 +18,7 @@ def layout():
             dbc.CardHeader("env"),
             dbc.CardBody(id=k.cardEnv, children=[
                 htm.Div( "connecting..." )
-            ], className="igrid")
+            ], className="igrid divRows")
         ], className="mb-2"),
 
         dbc.Card([

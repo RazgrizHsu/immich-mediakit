@@ -162,15 +162,41 @@ window.MdlImgClient = {
 		return [newMdl, htms, prevStyle, nextStyle, selectText, selectColor]
 	},
 
+	isLivePhoto( asset ){
+		return asset && asset.livephoto_path !== null && asset.livephoto_path !== undefined
+	},
+
 	buildImageContent( mdl ){
 		const htms = []
 
-		if ( mdl.imgUrl ){
-			htms.push( React.createElement( 'img', {src: mdl.imgUrl} ) )
-		}
-
 		if ( mdl.isMulti && this.state.now?.sim?.assCur && mdl.curIdx < this.state.now.sim.assCur.length ){
 			const ass = this.state.now.sim.assCur[ mdl.curIdx ]
+
+			if ( ass && this.isLivePhoto( ass ) ){
+				htms.push(
+					React.createElement( 'div', {className: 'modal-livephoto-player'},
+						React.createElement( 'video', {
+							src: `/api/livephoto/${ass.autoId}`,
+							id: `livephoto-modal-video-${ass.autoId}`,
+							className: 'livephoto-video-modal',
+							autoPlay: true,
+							loop: true,
+							muted: true,
+							controls: false
+						}),
+						React.createElement( 'div', {className: 'livephoto-controls', id: 'livephoto-controls'},
+							React.createElement( 'button', {className: 'play-pause-btn', id: 'livephoto-play-pause'}, '⏸️' ),
+							React.createElement( 'div', {className: 'progress-bar', id: 'livephoto-progress-bar'},
+								React.createElement( 'div', {className: 'progress-fill', id: 'livephoto-progress-fill'} )
+							),
+							React.createElement( 'div', {className: 'time-display', id: 'livephoto-time-display'}, '0:00 / 0:00' )
+						)
+					)
+				)
+			} else if ( mdl.imgUrl ){
+				htms.push( React.createElement( 'img', {src: mdl.imgUrl} ) )
+			}
+
 			if ( ass ){
 				htms.push(
 					React.createElement( 'div', {className: 'acts B'},
@@ -180,6 +206,8 @@ window.MdlImgClient = {
 					)
 				)
 			}
+		} else if ( mdl.imgUrl ){
+			htms.push( React.createElement( 'img', {src: mdl.imgUrl} ) )
 		}
 
 		return htms
@@ -766,6 +794,7 @@ window.Ste = {
 		this.updateAllCardVisuals()
 		this.updateButtonStates()
 		console.log( `[Selection] Selected all ${this.selectedIds.size} assets` )
+		dsh.syncSte( this.cntTotal, this.selectedIds )
 	},
 
 	clearAll(){
@@ -773,6 +802,7 @@ window.Ste = {
 		this.updateAllCardVisuals()
 		this.updateButtonStates()
 		console.log( `[Selection] Cleared all selections` )
+		dsh.syncSte( this.cntTotal, this.selectedIds )
 	},
 
 	updateAllCardVisuals(){
@@ -937,7 +967,7 @@ document.addEventListener( 'DOMContentLoaded', function (){
 	//------------------------------------------------
 	document.addEventListener( 'click', function ( event ){
 
-		const ste = window.ste
+		const ste = window.Ste
 
 		//------------------------------------------------------
 		// acts: cbx select status
@@ -956,5 +986,206 @@ document.addEventListener( 'DOMContentLoaded', function (){
 		//------------------------------------------------------
 
 	} )
+
 } )
+
+function notify(msg, type = 'info') {
+    // Create the div element
+    const el = document.createElement('div');
+
+    // Set text content
+    el.textContent = msg;
+
+    // Apply styles
+    el.style.position = 'fixed';
+    el.style.top = '70%';
+    el.style.left = '50%';
+    el.style.transform = 'translate(-50%, -50%)';
+    el.style.padding = '10px 15px';
+    el.style.zIndex = 9999;
+    //el.style.background = type === 'info' ? '#4CAF50' : '#F44336';
+    if (type === 'info') {
+        el.style.background = 'linear-gradient(to bottom, #4CAF50, #00C853)';
+    } else {
+        el.style.background = 'linear-gradient(to bottom, #F44336, #D50000)';
+    }
+    el.style.color = 'white';
+    el.style.borderRadius = '4px';
+    el.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+    el.style.opacity = 0;
+    el.style.transition = 'opacity 0.3s';
+
+    // Append to the body
+    document.body.appendChild(el);
+
+    // Fade in
+    setTimeout(() => {
+        el.style.opacity = 1;
+    }, 10);
+
+    // Fade out and remove
+    setTimeout(() => {
+        el.style.opacity = 0;
+        // Wait for the fade-out transition to complete before removing
+        el.addEventListener('transitionend', function handler() {
+            el.remove();
+            el.removeEventListener('transitionend', handler); // Clean up the event listener
+        });
+    }, 2000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const staticContainer = document.body;
+
+    function bindHoverEvents() {
+        const tagSpans = document.querySelectorAll('span[class*="tag"]');
+
+        tagSpans.forEach(span => {
+            if (!span._hoverEventsBound) {
+                span.addEventListener('mouseenter', function() {
+                    this.style.opacity = '0.6';
+                    this.style.transition = 'opacity 0.3s ease';
+                    this.style.cursor = 'pointer'
+                });
+
+                span.addEventListener('mouseleave', function() {
+                    this.style.opacity = '1';
+                    this.style.transition = 'opacity 0.3s ease';
+                    this.style.cursor = 'default';
+                });
+                span._hoverEventsBound = true;
+            }
+        });
+    }
+
+    bindHoverEvents();
+
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') bindHoverEvents();
+        });
+    });
+
+    observer.observe(staticContainer, { childList: true, subtree: true });
+
+
+    staticContainer.addEventListener('click', async (event) => {
+        const clickedElement = event.target;
+
+        const targetSpan = clickedElement.closest('span[class*="tag"]');
+
+        if (targetSpan) {
+            const textToCopy = targetSpan.textContent;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+					console.log('copy: ' + textToCopy);
+					notify(`copy! ${textToCopy}`)
+                } catch (err) {
+                    console.error('copy failed', err);
+                }
+            } else {
+                console.warn('Not support Clipboard API');
+                const tempInput = document.createElement('textarea');
+                tempInput.value = textToCopy;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                try {
+                    document.execCommand('copy');
+
+					notify(`copy! ${textToCopy}`)
+                    console.log('copy!(old) ' + textToCopy);
+                } catch (err) {
+                    console.error('copy(old) failed', err);
+                }
+                document.body.removeChild(tempInput);
+            }
+        }
+    });
+});
+
+//------------------------------------------------------------------------
+// Goto Top Button
+//------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', function() {
+	console.log('[GotoTop] DOM loaded, searching for button...');
+
+	const gotoTopBtn = document.getElementById('sim-goto-top-btn');
+	console.log('[GotoTop] Button found:', gotoTopBtn);
+
+	if (!gotoTopBtn) {
+		console.warn('[GotoTop] Button not found on DOM load, will retry with observer');
+
+		// Use MutationObserver to wait for dynamic content
+		const observer = new MutationObserver(function(mutations) {
+			const btn = document.getElementById('sim-goto-top-btn');
+			if (btn) {
+				console.log('[GotoTop] Button found via observer:', btn);
+				observer.disconnect();
+				initGotoTop(btn);
+			}
+		});
+
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true
+		});
+
+		return;
+	}
+
+	initGotoTop(gotoTopBtn);
+});
+
+function initGotoTop(gotoTopBtn) {
+
+	function toggleGotoTopBtn() {
+		const currentTab = document.querySelector('.nav-tabs .nav-link.active');
+		const isCurrentTab = currentTab && currentTab.textContent.trim() === 'current';
+		const scrollY = window.scrollY;
+
+		// console.log('[GotoTop] Toggle check - isCurrentTab:', isCurrentTab, 'scrollY:', scrollY);
+
+		if (isCurrentTab && scrollY > 200) {
+			console.log('[GotoTop] Showing button');
+			gotoTopBtn.classList.add('show');
+			gotoTopBtn.style.display = 'block';
+		} else {
+			console.log('[GotoTop] Hiding button');
+			gotoTopBtn.classList.remove('show');
+		}
+	}
+
+	// Scroll to top function
+	function scrollToTop() {
+		const tabActsElement = document.querySelector('#sim-btn-fnd');
+
+		if (tabActsElement) {
+			tabActsElement.scrollIntoView({
+				behavior: 'smooth',
+				block: 'start'
+			});
+		} else {
+			console.warn('[GotoTop] Tab acts element not found, scrolling to top');
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+	}
+
+	// Event listeners
+	window.addEventListener('scroll', toggleGotoTopBtn);
+	gotoTopBtn.addEventListener('click', scrollToTop);
+
+	// Also listen for tab changes
+	document.addEventListener('click', function(e) {
+		if (e.target && e.target.matches('.nav-link')) {
+			console.log('[GotoTop] Tab clicked, checking after delay');
+			setTimeout(toggleGotoTopBtn, 100);
+		}
+	});
+
+	// Initial check
+	console.log('[GotoTop] Performing initial check');
+	toggleGotoTopBtn();
+}
 
