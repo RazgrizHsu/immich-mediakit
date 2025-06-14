@@ -220,6 +220,7 @@ class Asset(BaseDictModel):
     id: str = ""
     ownerId: Optional[str] = None
     deviceId: Optional[str] = None
+    livePhotoVideoId: Optional[str] = None
     type: Optional[str] = None
     originalFileName: Optional[str] = None
     fileCreatedAt: Optional[str] = None
@@ -254,9 +255,6 @@ class Asset(BaseDictModel):
         if not path: raise RuntimeError(f"the thumbnail path is empty, assetId[{self.id}]")
 
         return os.path.join(envs.immichPath, path)
-
-    def isLivePhoto(self) -> bool:
-        return self.livephoto_path is not None
 
 
 @dataclass

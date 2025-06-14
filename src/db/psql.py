@@ -29,8 +29,7 @@ def init():
     uid = envs.psqlUser
     pw = envs.psqlPass
 
-    if not all([host, port, db, uid]):
-        raise RuntimeError("PostgreSQL connection settings not initialized.")
+    if not all([host, port, db, uid]): raise RuntimeError("PostgreSQL connection settings not initialized.")
 
     try:
         with mkConn() as conn:
@@ -60,8 +59,7 @@ def mkConn():
             password=pw
         )
         yield conn
-    except Exception as e:
-        raise
+    except Exception: raise
     finally:
         if conn: conn.close()
 
@@ -379,7 +377,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 cntOk = 0
                 cntErr = 0
 
-                rstAssets = []
+                rst = []
 
                 for asset in assets:
                     assetId = asset['id']
@@ -390,8 +388,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
 
                     asset['fullsize_path'] = fixPrefix(asset.get('originalPath', ''))
 
-                    if assetId in livePhotoData:
-                        asset['livephoto_path'] = livePhotoData[assetId]
+                    if assetId in livePhotoData: asset['livephoto_path'] = livePhotoData[assetId]
 
                     if assetId in exifData:
                         asset['exifInfo'] = exifData[assetId]
@@ -406,15 +403,15 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                         continue
 
                     cntOk += 1
-                    rstAssets.append(asset)
+                    rst.append(asset)
 
                     # if len(assets) > 0 and (cntOk % 100 == 0 or cntOk == len(assets)):
                     #     report("combine", cntOk, len(assets), f"processing {cntOk}/{len(assets)}...")
 
-                lg.info(f"Successfully fetched {len(rstAssets)} {asType.lower()} assets")
-                onUpdate(5, f"Successfully fetched {len(rstAssets)} {asType.lower()} assets")
+                lg.info(f"Successfully fetched {len(rst)} {asType.lower()} assets")
+                onUpdate(5, f"Successfully fetched {len(rst)} {asType.lower()} assets")
 
-                return rstAssets
+                return rst
     except Exception as e:
         msg = f"Failed to FetchAssets: {str(e)}"
         raise mkErr(msg, e)

@@ -129,7 +129,7 @@ def mkCard(ass: models.Asset):
 
     isMain = ass.view.isMain
     isRels = ass.view.isRelats
-    isLvPh = ass.isLivePhoto()
+    isLvPh = ass.livePhotoVideoId is not None
 
     cssClass = f"h-100 sim {cssIds}"
     if isMain: cssClass += " main"

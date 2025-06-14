@@ -95,26 +95,27 @@ class DtoSets:
     showGridInfo:bool = AutoDbField('showGridInfo', bool, True) #type:ignore
 
     simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False) #type:ignore
-    simMaxDepths:int = AutoDbField('simMaxDepths', int, 0) #type:ignore
+    simMaxDepths:int = AutoDbField('simMaxDepths', int, 1) #type:ignore
     simMaxItems:int = AutoDbField('simMaxItems', int, 200) #type:ignore
 
     simCondGrpMode:bool = AutoDbField('simCondGrpMode', bool, False) #type:ignore
+    simCondMaxGroups:int = AutoDbField('simCondMaxGroups', int, 10) #type:ignore
     simCondSameDate:bool = AutoDbField('simCondSameDate', bool, False) #type:ignore
     simCondSameWidth:bool = AutoDbField('simCondSameWidth', bool, False) #type:ignore
     simCondSameHeight:bool = AutoDbField('simCondSameHeight', bool, False) #type:ignore
     simCondSameSize:bool = AutoDbField('simCondSameSize', bool, False) #type:ignore
-    simCondMaxGroups:int = AutoDbField('simCondMaxGroups', int, 10) #type:ignore
 
-    auSelEnable:bool = AutoDbField('autoSelectEnable', bool, False ) #type:ignore
-    auSel_HighSimilarity:bool = AutoDbField('autoSelect_HighSimilarity', bool, False ) #type:ignore
+    auSelEnable:bool = AutoDbField('autoSelectEnable', bool, True ) #type:ignore
+    auSel_SkipLowSim:bool = AutoDbField('autoSelect_SkipLowSim', bool, True ) #type:ignore
+    auSel_AllLivePhoto:bool = AutoDbField('autoSelect_AllLivePhoto', bool, False ) #type:ignore
 
-    auSel_Earlier:int = AutoDbField('autoSelect_Earlier', int, 0 ) #type:ignore
+    auSel_Earlier:int = AutoDbField('autoSelect_Earlier', int, 2 ) #type:ignore
     auSel_Later:int = AutoDbField('autoSelect_Later', int, 0 ) #type:ignore
-    auSel_ExifRicher:int = AutoDbField('autoSelect_ExifRicher', int, 0 ) #type:ignore
+    auSel_ExifRicher:int = AutoDbField('autoSelect_ExifRicher', int, 1 ) #type:ignore
     auSel_ExifPoorer:int = AutoDbField('autoSelect_ExifPoorer', int, 0 ) #type:ignore
-    auSel_BiggerSize:int = AutoDbField('autoSelect_BiggerSize', int, 0 ) #type:ignore
+    auSel_BiggerSize:int = AutoDbField('autoSelect_BiggerSize', int, 2 ) #type:ignore
     auSel_SmallerSize:int = AutoDbField('autoSelect_SmallerSize', int, 0 ) #type:ignore
-    auSel_BiggerDimensions:int = AutoDbField('autoSelect_BiggerDimensions', int, 0 ) #type:ignore
+    auSel_BiggerDimensions:int = AutoDbField('autoSelect_BiggerDimensions', int, 2 ) #type:ignore
     auSel_SmallerDimensions:int = AutoDbField('autoSelect_SmallerDimensions', int, 0 ) #type:ignore
 
     @classmethod

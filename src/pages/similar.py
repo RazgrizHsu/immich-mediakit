@@ -58,6 +58,9 @@ class k:
     gvSim = "sim-gvSim"
     gvPnd = 'sim-gvPnd'
 
+    @staticmethod
+    def id(k): return { "type":"sim", "id":f"{k}" }
+
 
 #========================================================================
 def layout(autoId=None):
@@ -886,11 +889,11 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         doReport(1, f"prepare..")
 
         # Create progress reporter
-        autoReport = sim.createProgressReporter(doReport)
+        autoReport = sim.createReporter(doReport)
 
         # Find asset candidate
         try:
-            asset = sim.findAssetCandidate(now.sim.assAid, tsk.args)
+            asset = sim.findCandidate(now.sim.assAid, tsk.args)
         except RuntimeError as e:
             if "already searched" in str(e):
                 now.sim.assCur = []
@@ -898,7 +901,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             raise e
 
         # Search for similar assets
-        sch = sim.searchSimilar(asset, thMin, thMax, autoReport, isFromUrl, doReport)
+        sch = sim.search(asset, thMin, thMax, autoReport, isFromUrl, doReport)
 
         if not sch.hasVector:
             nfy.info(f"Asset #{sch.asset.autoId} has no vector stored")
@@ -951,7 +954,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         # Auto-select assets if enabled
         lg.info(f"[sim:fnd] Starting auto-selection check, enable={db.dto.auSelEnable}")
-        autoSelectedIds = sim.getAutoSelectedAssets(now.sim.assCur) if now.sim.assCur else []
+        autoSelectedIds = sim.getAutoSelectAuids(now.sim.assCur) if now.sim.assCur else []
         if autoSelectedIds:
             lg.info(f"[sim:fnd] Auto-selected {len(autoSelectedIds)} assets: {autoSelectedIds}")
             sto.ste.selectedIds = autoSelectedIds
@@ -973,7 +976,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt, tsk = sto.nfy, sto.now, sto.cnt, sto.tsk
+    nfy, now, tsk = sto.nfy, sto.now, sto.tsk
 
     try:
         keepSimOk = tsk.cmd == ks.cmd.sim.clear
@@ -1027,7 +1030,7 @@ def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt, ste = sto.nfy, sto.now, sto.cnt, sto.ste
+    nfy, now, ste = sto.nfy, sto.now, sto.ste
     try:
         assAlls = now.sim.assCur
         assSels = ste.getSelected(assAlls) if ste else []
@@ -1038,10 +1041,9 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         if not assSels or cntSelect == 0: raise RuntimeError("Selected not found")
 
-        immich.trashByAssets(assSels)
         db.pics.deleteBy(assSels)
-
         db.pics.setResloveBy(assLefts)  # set unselected to resloved
+        immich.trashByAssets(assSels)
 
         now.sim.clearAll()
 
@@ -1063,7 +1065,7 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt, ste = sto.nfy, sto.now, sto.cnt, sto.ste
+    nfy, now, ste = sto.nfy, sto.now, sto.ste
     try:
         assAlls = now.sim.assCur
         assSels = ste.getSelected(assAlls) if ste else []
@@ -1077,13 +1079,10 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         lg.info(f"[sim:selOk] reslove assets[{cntSelect}] delete[ {cntOthers} ]")
 
-        # Delete other assets first to maintain reference integrity
-        if assOthers:
-            immich.trashByAssets(assOthers)
-            db.pics.deleteBy(assOthers)
-
-        # Then resolve selected assets
+        if assOthers: db.pics.deleteBy(assOthers)
         db.pics.setResloveBy(assSels)
+
+        if assOthers: immich.trashByAssets(assOthers)
 
         now.sim.clearAll()
 
@@ -1132,7 +1131,7 @@ def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
-    nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+    nfy, now = sto.nfy, sto.now
     try:
         assets = now.sim.assCur
         cntAll = len(assets)
@@ -1142,8 +1141,8 @@ def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         lg.info(f"[sim:allDel] delete assets[{cntAll}] ")
 
-        immich.trashByAssets(assets)
         db.pics.deleteBy(assets)
+        immich.trashByAssets(assets)
 
         now.sim.clearAll()
 
