@@ -1,7 +1,6 @@
 window.dash_clientside = window.dash_clientside || {}
 
 
-//
 const dsh = {
 
 	syncStore( key, data ){
@@ -829,6 +828,79 @@ window.Ste = {
 		}
 		return null
 	},
+
+	getGroupCards( groupId ){
+		const groupCards = []
+		const gvContainer = document.querySelector( '.gv' )
+
+		if ( !gvContainer ){
+			console.warn( `[Selection] No .gv container found` )
+			return groupCards
+		}
+
+		const children = Array.from( gvContainer.children )
+		let currentGroupId = null
+		let collectingCards = false
+
+		children.forEach( child => {
+			if ( child.classList.contains( 'hr' ) ){
+				const label = child.querySelector( 'label' )
+				if ( label ){
+					const match = label.textContent.match( /Group (\d+)/ )
+					if ( match ){
+						currentGroupId = parseInt( match[1] )
+						collectingCards = ( currentGroupId === parseInt( groupId ) )
+					}
+				}
+			} else if ( collectingCards ){
+				const cardSelect = child.querySelector( '[id*="card-select"]' )
+				if ( cardSelect ){
+					groupCards.push( cardSelect )
+				} else {
+					collectingCards = false
+				}
+			}
+		} )
+
+		console.log( `[Selection] Found ${groupCards.length} cards for group ${groupId}` )
+		return groupCards
+	},
+
+	selectGroup( groupId ){
+		const groupCards = this.getGroupCards( groupId )
+		let selectedCount = 0
+
+		groupCards.forEach( card => {
+			const assetId = this.extractAssetIdFromElement( card )
+			if ( assetId && !this.selectedIds.has( assetId ) ){
+				this.selectedIds.add( assetId )
+				this.updateCardVisual( assetId )
+				selectedCount++
+			}
+		} )
+
+		this.updateButtonStates()
+		console.log( `[Selection] Selected ${selectedCount} items in group ${groupId}` )
+		dsh.syncSte( this.cntTotal, this.selectedIds )
+	},
+
+	clearGroup( groupId ){
+		const groupCards = this.getGroupCards( groupId )
+		let deselectedCount = 0
+
+		groupCards.forEach( card => {
+			const assetId = this.extractAssetIdFromElement( card )
+			if ( assetId && this.selectedIds.has( assetId ) ){
+				this.selectedIds.delete( assetId )
+				this.updateCardVisual( assetId )
+				deselectedCount++
+			}
+		} )
+
+		this.updateButtonStates()
+		console.log( `[Selection] Deselected ${deselectedCount} items in group ${groupId}` )
+		dsh.syncSte( this.cntTotal, this.selectedIds )
+	},
 }
 
 window.handleCardSelect = function ( trigger ){
@@ -979,6 +1051,20 @@ document.addEventListener( 'DOMContentLoaded', function (){
 		if ( event.target.id === 'sim-btn-AllCancel' ){
 			event.preventDefault()
 			if ( ste ) ste.clearAll()
+		}
+
+		//------------------------------------------------------
+		// group selection
+		//------------------------------------------------------
+		if ( event.target.id && event.target.id.startsWith( 'cbx-sel-grp-all-' ) ){
+			event.preventDefault()
+			const groupId = event.target.id.replace( 'cbx-sel-grp-all-', '' )
+			if ( ste ) ste.selectGroup( groupId )
+		}
+		if ( event.target.id && event.target.id.startsWith( 'cbx-sel-grp-non-' ) ){
+			event.preventDefault()
+			const groupId = event.target.id.replace( 'cbx-sel-grp-non-', '' )
+			if ( ste ) ste.clearGroup( groupId )
 		}
 
 		//------------------------------------------------------

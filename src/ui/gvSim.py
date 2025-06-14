@@ -96,7 +96,13 @@ def mkGroupGrid(assets: List[models.Asset], minW=250, maxW=300, onEmpty=None):
         grpCount = len(grpAssets)
 
 
-        rows.append(htm.Div([htm.Label(f"Group {grpId} ( {grpCount} items )")], className="hr"))
+        rows.append(htm.Div([
+            htm.Label(f"Group {grpId} ( {grpCount} items )", className="me-3"),
+
+            dbc.Button( [ htm.Span( className="fake-checkbox checked" ), "select this group all"], size="sm", color="secondary", id=f"cbx-sel-grp-all-{grpId}", className="txt-sm me-1" ),
+            dbc.Button( [ htm.Span( className="fake-checkbox" ),"deselect this group All"], size="sm", color="secondary", id=f"cbx-sel-grp-non-{grpId}", className="txt-sm" ),
+
+        ], className="hr"))
 
         for asset in grpAssets:
             card = mkCard(asset)
@@ -175,8 +181,9 @@ def mkCard(ass: models.Asset):
             ,
 
             htm.Div([
-                htm.Span(f"LivePhoto", className="tag blue"),
-            ], className="TR") if isLvPh else None,
+                htm.Span(f"LivePhoto", className="tag blue") if isLvPh else None,
+                htm.Span(f"SimOK!", className="tag blue") if ass.simOk else None,
+            ], className="TR"),
 
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="tag"),

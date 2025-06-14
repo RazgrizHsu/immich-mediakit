@@ -537,17 +537,22 @@ def setResloveBy(assets: List[models.Asset]):
 
 
 # noinspection SqlWithoutWhere
-def clearAllSimIds():
+def clearAllSimIds(keepSimOk=False):
     try:
         with mkConn() as conn:
             c = conn.cursor()
-            c.execute("UPDATE assets SET simOk = 0, simInfos = '[]', simGIDs = '[]'")
+            if keepSimOk:
+                c.execute("UPDATE assets SET simInfos = '[]', simGIDs = '[]' WHERE simOk = 0")
+                lg.info(f"Cleared similarity search results but kept resolved items")
+            else:
+                c.execute("UPDATE assets SET simOk = 0, simInfos = '[]', simGIDs = '[]'")
+                lg.info(f"Cleared all similarity results")
             conn.commit()
             count = c.rowcount
             lg.info(f"Cleared similarity results for {count} assets")
             return count
     except Exception as e:
-        raise mkErr("Failed to clear all sim results", e)
+        raise mkErr("Failed to clear sim results", e)
 
 
 def countHasSimIds(isOk=0):
