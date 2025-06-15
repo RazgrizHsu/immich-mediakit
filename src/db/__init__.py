@@ -105,7 +105,7 @@ class DtoSets:
     simCondSameHeight:bool = AutoDbField('simCondSameHeight', bool, False) #type:ignore
     simCondSameSize:bool = AutoDbField('simCondSameSize', bool, False) #type:ignore
 
-    auSelEnable:bool = AutoDbField('autoSelectEnable', bool, True ) #type:ignore
+    auSel_Enable:bool = AutoDbField('autoSelectEnable', bool, True ) #type:ignore
     auSel_SkipLowSim:bool = AutoDbField('autoSelect_SkipLowSim', bool, True ) #type:ignore
     auSel_AllLivePhoto:bool = AutoDbField('autoSelect_AllLivePhoto', bool, False ) #type:ignore
 
@@ -119,6 +119,10 @@ class DtoSets:
     auSel_SmallerDimensions:int = AutoDbField('autoSelect_SmallerDimensions', int, 0 ) #type:ignore
     auSel_NameLonger:int = AutoDbField('autoSelect_NameLonger', int, 1 ) #type:ignore
     auSel_NameShorter:int = AutoDbField('autoSelect_NameShorter', int, 0 ) #type:ignore
+
+    excl_Enable:bool = AutoDbField('exclude_Enable', bool, True ) #type:ignore
+    excl_FndLess:int = AutoDbField('exclude_FindSizeLess', int, 0) #type:ignore
+
 
     @classmethod
     def get(cls, key, default=None):
