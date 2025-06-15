@@ -129,7 +129,7 @@ def mkCard(ass: models.Asset):
 
     isMain = ass.view.isMain
     isRels = ass.view.isRelats
-    isLvPh = ass.livePhotoVideoId is not None
+    isLvPh = ass.livePhotoVideoId
 
     cssClass = f"h-100 sim {cssIds}"
     if isMain: cssClass += " main"
@@ -183,17 +183,17 @@ def mkCard(ass: models.Asset):
             htm.Div([
                 htm.Span(f"LivePhoto", className="tag blue") if isLvPh else None,
                 htm.Span(f"SimOK!", className="tag blue") if ass.simOk else None,
-            ], className="TR"),
+            ], className="RT"),
 
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="tag"),
-            ], className="L"),
+            ], className="LB"),
             htm.Div([
 
                 htm.Span(f"{co.fmt.size(ass.jsonExif.fileSizeInByte)}", className="tag")
                 if ass.jsonExif else None,
                 htm.Span(f"{imgW} x {imgH}", className="tag lg"),
-            ], className="R")
+            ], className="RB")
         ], className="img"),
         dbc.CardBody([
 
@@ -203,7 +203,8 @@ def mkCard(ass: models.Asset):
                 htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="tag second"),
                 htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="tag second"),
 
-                *([ htm.Span("livePhoto"), htm.Span(f"{ass.livephoto_path}", className="tag blue"), ] if isLvPh else []),
+                *([ htm.Span("livePhoto"), htm.Span(f"{ass.pathVdo}", className="tag blue"), ] if isLvPh else []),
+                *([ htm.Span("live VdoId"), htm.Span(f"{ass.livePhotoVideoId}", className="tag blue"), ] if isLvPh else []),
 
             ], class_name="grid"
             ) if db.dto.showGridInfo else None,
@@ -315,12 +316,12 @@ def mkCardPnd(ass: models.Asset, showRelated=True):
             ),
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="tag sm second"),
-            ], className="L"),
+            ], className="LB"),
             htm.Div([
                 htm.Span(f"{imgW}", className="tag lg"),
                 htm.Span("x"),
                 htm.Span(f"{imgH}", className="tag lg"),
-            ], className="R")
+            ], className="RB")
         ], className="img"),
         dbc.CardBody([
             dbc.Row([

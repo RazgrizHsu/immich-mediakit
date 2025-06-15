@@ -48,7 +48,6 @@ def init():
                     id               TEXT Unique,
                     ownerId          TEXT,
                     deviceId         TEXT,
-                    livePhotoVideoId TEXT,
                     type             TEXT,
                     originalFileName TEXT,
                     fileCreatedAt    TEXT,
@@ -57,10 +56,12 @@ def init():
                     isVisible        INTEGER,
                     isArchived       INTEGER,
                     localDateTime    TEXT,
-                    thumbnail_path   TEXT,
-                    preview_path     TEXT,
-                    fullsize_path    TEXT,
-                    livephoto_path   TEXT,
+
+                    vdoId            TEXT,
+                    pathThumbnail    TEXT,
+                    pathPreview      TEXT,
+                    pathFullsize     TEXT,
+                    pathVdo          TEXT,
                     jsonExif         TEXT Default '{}',
                     isVectored       INTEGER Default 0,
                     simOk            INTEGER Default 0,
@@ -347,15 +348,15 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
 
         if row is None:
             c.execute('''
-                Insert Into assets (id, ownerId, deviceId, livePhotoVideoId, type, originalFileName,
+                Insert Into assets (id, ownerId, deviceId, vdoId, type, originalFileName,
                 fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
-                localDateTime, thumbnail_path, preview_path, fullsize_path, livephoto_path, jsonExif)
+                localDateTime, pathThumbnail, pathPreview, pathFullsize, pathVdo, jsonExif)
                 Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 str(assId),
                 str(asset.get('ownerId')),
                 asset.get('deviceId'),
-                str(asset.get('livePhotoVideoId')),
+                str(asset.get('video_id')) if asset.get('video_id') else None,
                 asset.get('type'),
                 asset.get('originalFileName'),
                 asset.get('fileCreatedAt'),
@@ -367,7 +368,7 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
                 asset.get('thumbnail_path'),
                 asset.get('preview_path'),
                 asset.get('fullsize_path', asset.get('originalPath')),
-                asset.get('livephoto_path'),
+                asset.get('video_path'),
                 jsonExif,
             ))
 

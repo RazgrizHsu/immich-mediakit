@@ -280,8 +280,8 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 for idx, i in enumerate(range(0, len(assetIds), szChunk)):
                     chunk = assetIds[i:i + szChunk]
                     cursor.execute(flsSql, (chunk,))
-                    chunkResults = cursor.fetchall()
-                    afs.extend(chunkResults)
+                    chunkRows = cursor.fetchall()
+                    afs.extend(chunkRows)
 
                     chunkPct = min((idx + 1) * szChunk, len(assetIds))
 
@@ -309,9 +309,9 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                     chunk = assetIds[i:i + szChunk]
 
                     cursor.execute(exifSql, (chunk,))
-                    chunkResults = cursor.fetchall()
+                    chunkRows = cursor.fetchall()
 
-                    for row in chunkResults:
+                    for row in chunkRows:
                         assetId = row['assetId']
                         exifItem = {}
 
@@ -326,8 +326,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                             elif val is not None:
                                 exifItem[key] = val
 
-                        if exifItem:
-                            exifData[assetId] = exifItem
+                        if exifItem: exifData[assetId] = exifItem
 
                     chunkPct = min((idx + 1) * szChunk, len(assetIds))
 
@@ -337,37 +336,55 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 onUpdate(42, "query livephoto videos...")
 
                 livePhotoSql = """
-                    WITH photo AS (
-                        SELECT
-                            a.id AS photo_id,
-                            a."originalPath" AS photo_path,
-                            a."livePhotoVideoId" AS video_id
-                        FROM assets a
-                        JOIN exif e ON a.id = e."assetId"
-                        WHERE e."livePhotoCID" IS NOT NULL
-                        AND a.type = 'IMAGE'
-                        AND a."livePhotoVideoId" IS NOT NULL
-                        AND a.id = ANY(%s)
-                    )
+                    -- Method 1: Direct livePhotoVideoId
                     SELECT
-                        p.photo_id,
-                        v."encodedVideoPath" AS video_path
-                    FROM photo p
-                    LEFT JOIN assets v ON v.id = p.video_id AND v.type = 'VIDEO'
-                    WHERE v."encodedVideoPath" IS NOT NULL
+                        a.id AS photo_id,
+                        a."livePhotoVideoId" AS video_id,
+                        v."encodedVideoPath" AS video_path,
+                        v."originalPath" AS video_original_path
+                    FROM assets a
+                    JOIN assets v ON v.id = a."livePhotoVideoId" AND v.type = 'VIDEO'
+                    WHERE a."livePhotoVideoId" IS NOT NULL
+                    AND a.type = 'IMAGE'
+                    AND a.id = ANY(%s)
+
+                    UNION
+
+                    -- Method 2: Match by livePhotoCID (for photos without livePhotoVideoId)
+                    SELECT DISTINCT
+                        a.id AS photo_id,
+                        v.id AS video_id,
+                        v."encodedVideoPath" AS video_path,
+                        v."originalPath" AS video_original_path
+                    FROM assets a
+                    JOIN exif ae ON a.id = ae."assetId"
+                    JOIN exif ve ON ae."livePhotoCID" = ve."livePhotoCID"
+                    JOIN assets v ON ve."assetId" = v.id
+                    WHERE ae."livePhotoCID" IS NOT NULL
+                    AND a."livePhotoVideoId" IS NULL
+                    AND a.type = 'IMAGE'
+                    AND v.type = 'VIDEO'
+                    AND v.id != a.id
+                    AND a.id = ANY(%s)
                 """
 
-                livePhotoData = {}
+                livePaths = {}
+                liveVdoIds = {}
                 for idx, i in enumerate(range(0, len(assetIds), szChunk)):
                     chunk = assetIds[i:i + szChunk]
-                    cursor.execute(livePhotoSql, (chunk,))
-                    chunkResults = cursor.fetchall()
+                    cursor.execute(livePhotoSql, (chunk, chunk))
+                    chunkRows = cursor.fetchall()
 
-                    for row in chunkResults:
+                    for row in chunkRows:
                         photoId = row['photo_id']
+                        videoId = row['video_id']
                         videoPath = row['video_path']
-                        if videoPath:
-                            livePhotoData[photoId] = fixPrefix(videoPath)
+                        originalVideoPath = row['video_original_path']
+
+                        finalPath = videoPath if videoPath else originalVideoPath
+                        if finalPath:
+                            livePaths[photoId] = fixPrefix(finalPath)
+                            liveVdoIds[photoId] = videoId
 
                 #----------------------------------------------------------------
                 # combine & fetch thumbnail image
@@ -386,9 +403,10 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                             if typ == ks.db.thumbnail: asset['thumbnail_path'] = fixPrefix(path)
                             elif typ == ks.db.preview: asset['preview_path'] = fixPrefix(path)
 
-                    asset['fullsize_path'] = fixPrefix(asset.get('originalPath', ''))
+                    asset['fullsize_path'] = fixPrefix(asset['originalPath'])
 
-                    if assetId in livePhotoData: asset['livephoto_path'] = livePhotoData[assetId]
+                    if assetId in livePaths: asset['video_path'] = livePaths[assetId]
+                    if assetId in liveVdoIds: asset['video_id'] = liveVdoIds[assetId]
 
                     if assetId in exifData:
                         asset['exifInfo'] = exifData[assetId]

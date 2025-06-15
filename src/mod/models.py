@@ -229,10 +229,10 @@ class Asset(BaseDictModel):
     isVisible: Optional[int] = 0
     isArchived: Optional[int] = 0
     localDateTime: Optional[str] = None
-    thumbnail_path: Optional[str] = None
-    preview_path: Optional[str] = None
-    fullsize_path: Optional[str] = None
-    livephoto_path: Optional[str] = None
+    pathThumbnail: Optional[str] = None
+    pathPreview: Optional[str] = None
+    pathFullsize: Optional[str] = None
+    pathVdo: Optional[str] = None
     jsonExif: AssetExif = field(default_factory=AssetExif)
     isVectored: Optional[int] = 0
     simOk: Optional[int] = 0
@@ -244,13 +244,13 @@ class Asset(BaseDictModel):
 
     def getImagePath(self, photoQ=None):
         if photoQ == ks.db.fullsize:
-            path = self.fullsize_path
+            path = self.pathFullsize
         elif photoQ == ks.db.preview:
-            path = self.preview_path
+            path = self.pathPreview
         else:
-            path = self.thumbnail_path
+            path = self.pathThumbnail
 
-        if not path: path = self.thumbnail_path
+        if not path: path = self.pathThumbnail
 
         if not path: raise RuntimeError(f"the thumbnail path is empty, assetId[{self.id}]")
 

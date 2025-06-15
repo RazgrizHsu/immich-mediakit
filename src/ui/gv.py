@@ -34,6 +34,7 @@ def createPhotoCard(ass: models.Asset):
     assId = ass.id
     hasEx = ass.jsonExif is not None
     cantFind = ( ass.simOk == 1 ) or ass.simGIDs
+    isLvPh = ass.livePhotoVideoId is not None
 
     image_src = f"/api/img/{ass.autoId}" if ass.autoId else "assets/noimg.png"
 
@@ -46,6 +47,11 @@ def createPhotoCard(ass: models.Asset):
 
     return htm.Div([
         htm.Div([
+            htm.Video(
+                src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
+                style={"height": "160px", "width": "100%", "objectFit": "cover", "cursor": "pointer"},
+                className="livephoto-video",
+            ) if isLvPh else
             dbc.CardImg(
                 src=image_src,
                 top=True,
@@ -53,7 +59,10 @@ def createPhotoCard(ass: models.Asset):
             ),
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="tag sm second"),
-            ], className="floatL top"),
+            ], className="LT"),
+            htm.Div([
+                htm.Span(f"LivePhoto", className="tag blue") if isLvPh else None,
+            ], className="RT"),
         ],
             id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
             className="head"

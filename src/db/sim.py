@@ -580,8 +580,9 @@ def _checkAlwaysPickLivePhoto(groupAssets: List[models.Asset], groupId: int) -> 
 
     livePhotoIds = []
     for asset in groupAssets:
-        hasCID = asset.jsonExif and hasattr(asset.jsonExif, 'livePhotoCID') and asset.jsonExif.livePhotoCID
-        hasPath = asset.livephoto_path
+        # hasCID = asset.jsonExif and hasattr(asset.jsonExif, 'livePhotoCID') and asset.jsonExif.livePhotoCID
+        hasCID = asset.livePhotoVideoId is not None
+        hasPath = asset.pathVdo
 
         if hasCID or hasPath:
             livePhotoIds.append(asset.autoId)

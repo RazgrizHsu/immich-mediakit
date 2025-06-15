@@ -88,7 +88,7 @@ def regBy(app):
             def query_image():
                 with db.pics.mkConn() as conn:
                     cursor = conn.cursor()
-                    cursor.execute("SELECT thumbnail_path, preview_path, fullsize_path FROM assets WHERE autoId = ?", [aid])
+                    cursor.execute("SELECT pathThumbnail, pathPreview, pathFullsize FROM assets WHERE autoId = ?", [aid])
                     row = cursor.fetchone()
 
                     if row:
@@ -117,7 +117,7 @@ def regBy(app):
             def query_livephoto():
                 with db.pics.mkConn() as conn:
                     cursor = conn.cursor()
-                    cursor.execute("SELECT livephoto_path FROM assets WHERE autoId = ?", [aid])
+                    cursor.execute("SELECT pathVdo FROM assets WHERE autoId = ?", [aid])
                     row = cursor.fetchone()
 
                     if not row or not row[0]:

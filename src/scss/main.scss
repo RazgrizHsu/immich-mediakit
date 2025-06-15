@@ -15,6 +15,10 @@ body {
 	box-sizing:border-box;
 }
 
+.navbar {
+  padding: 5px 10px 8px 10px!important;
+}
+
 h3 {
 	font-size:1.68rem;
 }
@@ -358,8 +362,8 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		.ctrls {
 			position:absolute;
 			bottom:10px;
-			left:50%;
-			transform:translateX(-50%);
+			left:10px;
+			//left:50%;transform:translateX(-50%);
 			background:rgba(0, 0, 0, 0.7);
 			padding:8px 16px;
 			border-radius:20px;
@@ -883,6 +887,39 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		padding-bottom:5px;
 		border-bottom:#CCCCCC 1px dotted;
 
+		&.floating {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			z-index: 999;
+			margin-bottom: 0;
+			padding: 10px 15px 8px 15px;
+			@include bg-gradient( #2D4A69, to bottom );
+			backdrop-filter: blur(8px);
+			border-bottom: 1px solid rgba(#CCCCCC, 0.3);
+			box-shadow: 0 2px 20px 10px rgba(0, 0, 0, 0.5);
+			transform: translateY(-100%);
+			transition: transform 0.3s ease-in-out;
+
+			&.show {
+				transform: translateY(0);
+			}
+
+			.left > button {
+				margin-top: 0;
+			}
+		}
+
+	}
+
+	.tab-acts-placeholder {
+		height: 0;
+		transition: height 0.3s ease-in-out;
+
+		&.active {
+			height: 60px;
+		}
 	}
 
 	.tab-content {
@@ -1178,20 +1215,29 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 		position:relative;
 
-		.floatL {
+		.LT {
+			position:absolute;
+			top:5px;
+			left:5px;
+			display:flex;
+			justify-content:start;
+		}
+		.RT {
+			position:absolute;
+			top:5px;
+			right:5px;
+			display:flex;
+			justify-content:end;
+			width:100%;
+		}
+		.LB {
 			position:absolute;
 			bottom:5px;
 			left:5px;
 			display:flex;
 			justify-content:start;
-
-			&.top {
-				bottom:auto;
-				top:5px;
-			}
 		}
-
-		.floatR {
+		.RB {
 			position:absolute;
 			bottom:5px;
 			right:5px;
@@ -1319,8 +1365,15 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			}
 		}
 
-		//floating on img left-bottom
-		> div.TR {
+		//floating on img
+		> div.LT {
+			position:absolute;
+			top:5px;
+			left:5px;
+			display:flex;
+			justify-content:start;
+		}
+		> div.RT {
 			position:absolute;
 			top:5px;
 			right:5px;
@@ -1328,15 +1381,14 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			flex-direction:column;
 			align-items:flex-end;
 		}
-		> div.L {
+		> div.LB {
 			position:absolute;
 			bottom:5px;
 			left:5px;
 			display:flex;
 			justify-content:start;
 		}
-
-		> div.R {
+		> div.RB {
 			position:absolute;
 			bottom:5px;
 			right:5px;
@@ -1373,20 +1425,23 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 
 	.exif {
+      width: 90%;
+      margin: 0 auto 0 auto;
 
-		margin:5px 15px 5px 15px;
+      tr {
+          td {
+              font-size:12px;
+              text-wrap: balance;
+              overflow: hidden;
+              text-overflow: ellipsis;
 
-		tr {
-			td {
-				font-size:12px;
-
-				&:first-child {
-					color:#36CCFF;
-					font-size:10px;
-					width:30%;
-				}
-			}
-		}
+              &:first-child {
+                  color:#36CCFF;
+                  font-size:10px;
+                  width:32%;
+              }
+          }
+      }
 	}
 }
 
