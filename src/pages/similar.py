@@ -856,7 +856,7 @@ def queueNext(sto: tskSvc.ITaskStore):
         sto.tsk.nexts.append(ntsk)
 
         sto.tsk = tsk
-        nfy.success([f"Auto-Find next: #{ass.autoId}"])
+        # nfy.success([f"Auto-Find next: #{ass.autoId}"])
 
 
 def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
@@ -948,7 +948,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 msg.append(f"Reached maximum search limit ({maxItems} items).")
 
         # Auto-select assets if enabled
-        lg.info(f"[sim:fnd] Starting auto-selection check, enable={db.dto.auSelEnable}")
+        lg.info(f"[sim:fnd] Starting auto-selection check, enable={db.dto.auSel_Enable}")
         autoSelectedIds = sim.getAutoSelectAuids(now.sim.assCur) if now.sim.assCur else []
         if autoSelectedIds:
             lg.info(f"[sim:fnd] Auto-selected {len(autoSelectedIds)} assets: {autoSelectedIds}")

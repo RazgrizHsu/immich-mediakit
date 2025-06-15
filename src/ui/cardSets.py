@@ -18,6 +18,9 @@ class k:
     simMaxDepths = "simMaxDepths"
     simMaxItems = "simMaxItems"
 
+    exclEnable = "exclEnable"
+    exclFndLess = "exclFndLess"
+
     cndGrpEnable = "cndGrpEnable"
     cndGrpSameDate = "cndGrpSameDate"
     cndGrpSameWidth = "cndGrpSameWidth"
@@ -48,36 +51,25 @@ class k:
     def id(name): return {"type": "sets", "id": f"{name}"}
 
 
+optThresholdMin = 0.5
+optThresholdMarks = { "0.5":0.5, "0.6":0.6, "0.7": 0.7, "0.8": 0.8, "0.9": 0.9, "1": 1 }
+
 optMaxDepths = []
 for i in range(6): optMaxDepths.append({"label": f"{i}", "value": i})
 
-optMaxItems = [
-    {"label": "100", "value": 100},
-    {"label": "200", "value": 200},
-    {"label": "300", "value": 300},
-    {"label": "500", "value": 500},
-    {"label": "1000", "value": 1000},
-]
+optMaxItems = []
+for i in [100, 200, 300, 500, 1000]: optMaxItems.append({"label": f"{i}", "value": i})
 
-optMaxGroups = [
-    {"label": "2", "value": 2},
-    {"label": "5", "value": 5},
-    {"label": "10", "value": 10},
-    {"label": "20", "value": 20},
-    {"label": "25", "value": 25},
-    {"label": "50", "value": 50},
-    {"label": "100", "value": 100},
-]
+optMaxGroups = []
+for i in [2, 5, 10, 20, 25, 50, 100]: optMaxGroups.append({"label": f"{i}", "value": i})
 
-optWeights = [
-    {"label": "0", "value": 0},
-    {"label": "1", "value": 1},
-    {"label": "2", "value": 2},
-    {"label": "3", "value": 3},
-]
+optWeights = []
+for i in range(4): optWeights.append({"label": f"{i}", "value": i})
 
-optThresholdMin = 0.5
-optThresholdMarks = { "0.5":0.5, "0.6":0.6, "0.7": 0.7, "0.8": 0.8, "0.9": 0.9, "1": 1 }
+optExclLess = [
+    {"label": "--", "value": 0},
+]
+for i in range(1,6): optExclLess.append({"label": f" < {i}", "value": i})
 
 def renderThreshold():
     return dbc.Card([
@@ -107,52 +99,52 @@ def renderAutoSelect():
         dbc.CardBody([
             htm.Div([
                 # Main enable switch
-                dbc.Checkbox(id=k.id(k.auSelEnable), label="Enable", value=db.dto.auSelEnable), htm.Br(),
+                dbc.Checkbox(id=k.id(k.auSelEnable), label="Enable", value=db.dto.auSel_Enable), htm.Br(),
 
-                dbc.Checkbox(id=k.id(k.auSelSkipLowSim), label="Skip has sim(<0.96) group", value=db.dto.auSel_SkipLowSim, disabled=not db.dto.auSelEnable),
+                dbc.Checkbox(id=k.id(k.auSelSkipLowSim), label="Skip has sim(<0.96) group", value=db.dto.auSel_SkipLowSim, disabled=not db.dto.auSel_Enable),
 
-                dbc.Checkbox(id=k.id(k.auSelAllLivePhoto), label="All LivePhotos (ignore criteria)", value=db.dto.auSel_AllLivePhoto, disabled=not db.dto.auSelEnable), htm.Br(),
+                dbc.Checkbox(id=k.id(k.auSelAllLivePhoto), label="All LivePhotos (ignore criteria)", value=db.dto.auSel_AllLivePhoto, disabled=not db.dto.auSel_Enable), htm.Br(),
 
                 htm.Hr(),
 
                 htm.Div([
                     htm.Span( htm.Span("DateTime", className="tag txt-smx me-1")),
                     htm.Label("Earlier", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelEarlier), options=optWeights, value=db.dto.auSel_Earlier, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelEarlier), options=optWeights, value=db.dto.auSel_Earlier, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
                     htm.Label("Later", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelLater), options=optWeights, value=db.dto.auSel_Later, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelLater), options=optWeights, value=db.dto.auSel_Later, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Div([
                     htm.Span(htm.Span("Exif", className="tag txt-smx me-1")),
                     htm.Label("Richer", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelExifRicher), options=optWeights, value=db.dto.auSel_ExifRicher, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelExifRicher), options=optWeights, value=db.dto.auSel_ExifRicher, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
                     htm.Label("Poorer", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelExifPoorer), options=optWeights, value=db.dto.auSel_ExifPoorer, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelExifPoorer), options=optWeights, value=db.dto.auSel_ExifPoorer, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Div([
                     htm.Span(htm.Span("Name Length", className="tag txt-smx me-1")),
                     htm.Label("Longer", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelNameLonger), options=optWeights, value=db.dto.auSel_NameLonger, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelNameLonger), options=optWeights, value=db.dto.auSel_NameLonger, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
                     htm.Label("Shorter", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelNameShorter), options=optWeights, value=db.dto.auSel_NameShorter, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelNameShorter), options=optWeights, value=db.dto.auSel_NameShorter, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Div([
                     htm.Span(htm.Span("FileSize", className="tag txt-smx me-1")),
                     htm.Label("Bigger", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelBiggerSize), options=optWeights, value=db.dto.auSel_BiggerSize, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelBiggerSize), options=optWeights, value=db.dto.auSel_BiggerSize, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
                     htm.Label("Smaller", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelSmallerSize), options=optWeights, value=db.dto.auSel_SmallerSize, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelSmallerSize), options=optWeights, value=db.dto.auSel_SmallerSize, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Div([
                     htm.Span(htm.Span("Dimensions", className="tag txt-smx me-1")),
                     htm.Label("Bigger", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelBiggerDimensions), options=optWeights, value=db.dto.auSel_BiggerDimensions, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelBiggerDimensions), options=optWeights, value=db.dto.auSel_BiggerDimensions, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
                     htm.Label("Smaller", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelSmallerDimensions), options=optWeights, value=db.dto.auSel_SmallerDimensions, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelSmallerDimensions), options=optWeights, value=db.dto.auSel_SmallerDimensions, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Hr(),
@@ -233,6 +225,28 @@ def renderCard():
                 ])
             ], className="irow"),
 
+            htm.Div([
+                htm.Label([
+                    "Exclude Settings",
+                    htm.Span("", className="txt-smx text-muted ms-3")
+                ], className="txt-sm"),
+                htm.Div([
+                    dbc.Checkbox(id=k.id(k.exclEnable), label="Enable", value=db.dto.excl_Enable),
+
+                    htm.Div([
+                        htm.Label("Similar Less: "),
+                        dbc.Select(id=k.id(k.exclFndLess), options=optExclLess, value=db.dto.excl_FndLess, className="", disabled=not db.dto.excl_Enable) #type:ignore
+                    ]),
+
+                    # htm.Br(),
+                    # dbc.Checkbox(id=k.id(k.cndGrpSameDate), label="Same Date", value=db.dto.simCondSameDate, disabled=db.dto.simCondGrpMode),
+
+                ], className="icbxs"),
+                htm.Ul([
+                    htm.Li([htm.B("Similar Less: "), "Auto-mark groups with fewer than N similar photos (excluding main photo) and continue searching"]),
+                    htm.Li("Example: '< 2' means skip groups with 1 or 0 similar photos (requires at least 3 total photos)"),
+                ])
+            ], className="irow"),
         ])
     ], className="mb-0")
 
@@ -337,7 +351,7 @@ def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpE
     prevent_initial_call=True
 )
 def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig, szSml, dimBig, dimSml, namLong, namShor):
-    db.dto.auSelEnable = enable
+    db.dto.auSel_Enable = enable
     db.dto.auSel_SkipLowSim = skipLo
     db.dto.auSel_AllLivePhoto = onlyLive
     db.dto.auSel_Earlier = earl
@@ -357,3 +371,21 @@ def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig
     dis = not enable
 
     return [dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis]
+
+
+@cbk(
+    [
+        out(k.id(k.exclFndLess), "disabled"),
+    ],
+    inp(k.id(k.exclEnable), "value"),
+    inp(k.id(k.exclFndLess), "value"),
+    prevent_initial_call=True
+)
+def excludeSettings_OnUpd(enable, fndLess):
+    db.dto.excl_Enable = enable
+    db.dto.excl_FndLess = fndLess
+
+    lg.info(f"[exclSets:OnUpd] Enable[{enable}] FndLess[{fndLess}]")
+
+    dis = not enable
+    return [dis]

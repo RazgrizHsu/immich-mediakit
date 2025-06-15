@@ -164,12 +164,12 @@ def search(
 
         # Check if vector exists
         if not bseInfos:
-            lg.warn(f"[sim:fnd] asset #{ass.autoId} not found any similar, may not store vector")
+            lg.warn(f"[sim:fnd] #{ass.autoId} not found any similar, may not store vector")
             db.pics.setVectoredBy(ass, 0)
             rst.hasVector = False
 
             if isFromUrl:
-                msg = f"[sim:fnd] Asset #{ass.autoId} has no vector stored"
+                msg = f"[sim:fnd] #{ass.autoId} has no vector stored"
                 doReport(100, msg)
                 return rst
 
@@ -237,6 +237,29 @@ def search(
                     continue
                 else:
                     msg = f"[sim:fnd] Asset #{ass.autoId} group conditions not met"
+                    doReport(100, msg)
+                    return rst
+
+        # Check exclude settings before processing
+        lg.info(f"[sim:fnd] DEBUG excl_Enable[{db.dto.excl_Enable}] excl_FndLess[{db.dto.excl_FndLess}] simAids_count[{len(simAids)}]")
+        if db.dto.excl_Enable and db.dto.excl_FndLess > 0:
+            if len(simAids) < db.dto.excl_FndLess:
+                lg.info(f"[sim:fnd] Excluding #{ass.autoId}, similar count({len(simAids)}) < threshold({db.dto.excl_FndLess})")
+                db.pics.setSimInfos(ass.autoId, bseInfos, isOk=1)
+
+                if not isFromUrl:
+                    nextAss = db.pics.getAnyNonSim()
+                    if not nextAss:
+                        msg = f"[sim:fnd] No more images to continue searching"
+                        doReport(100, msg)
+                        return rst
+                    lg.info(f"[sim:fnd] Excluded #{ass.autoId}, continuing to #{nextAss.autoId}")
+                    autoReport(f"Excluded #{ass.autoId} (only {len(simAids)} similar), continuing to #{nextAss.autoId}...")
+                    ass = nextAss
+                    rst.asset = ass
+                    continue
+                else:
+                    msg = f"Asset #{ass.autoId} excluded: only {len(simAids)} similar photos (< {db.dto.excl_FndLess})"
                     doReport(100, msg)
                     return rst
 
@@ -335,6 +358,14 @@ def searchCondGroups( currentAssets: List[models.Asset], maxGroups: int, thMin: 
                 db.pics.setSimInfos(nextAss.autoId, nextInfos, isOk=1)
                 continue
 
+            # Check exclude settings for additional groups
+            lg.info(f"[sim:fnd] Group {result.groupCount + 1} DEBUG excl_Enable[{db.dto.excl_Enable}] excl_FndLess[{db.dto.excl_FndLess}] simAids_count[{len(nextSimAids)}]")
+            if db.dto.excl_Enable and db.dto.excl_FndLess > 0:
+                if len(nextSimAids) < db.dto.excl_FndLess:
+                    lg.info(f"[sim:fnd] Excluding group candidate #{nextAss.autoId}, similar count({len(nextSimAids)}) < threshold({db.dto.excl_FndLess})")
+                    db.pics.setSimInfos(nextAss.autoId, nextInfos, isOk=1)
+                    continue
+
             # Check group conditions
             nextSimilarAssets = [nextAss] + [db.pics.getByAutoId(aid) for aid in nextSimAids if db.pics.getByAutoId(aid)]
             if not checkGroupConds(nextSimilarAssets):
@@ -362,10 +393,10 @@ def searchCondGroups( currentAssets: List[models.Asset], maxGroups: int, thMin: 
 
 
 def getAutoSelectAuids(assets: List[models.Asset]) -> List[int]:
-    lg.info(f"[autoSel] Starting auto-selection, auSelEnable[{db.dto.auSelEnable}], assets count={len(assets) if assets else 0}")
+    lg.info(f"[autoSel] Starting auto-selection, auSelEnable[{db.dto.auSel_Enable}], assets count={len(assets) if assets else 0}")
     lg.info(f"[autoSel] Weights: Earlier={db.dto.auSel_Earlier}, Later={db.dto.auSel_Later}, ExifRich={db.dto.auSel_ExifRicher}, ExifPoor={db.dto.auSel_ExifPoorer}, BigSize={db.dto.auSel_BiggerSize}, SmallSize={db.dto.auSel_SmallerSize}, BigDim={db.dto.auSel_BiggerDimensions}, SmallDim={db.dto.auSel_SmallerDimensions}, HighSim={db.dto.auSel_SkipLowSim}, AlwaysPickLivePhoto={db.dto.auSel_AllLivePhoto}")
 
-    if not db.dto.auSelEnable or not assets: return []
+    if not db.dto.auSel_Enable or not assets: return []
 
     active = any([
         db.dto.auSel_Earlier > 0, db.dto.auSel_Later > 0,
@@ -409,12 +440,12 @@ def getAutoSelectAuids(assets: List[models.Asset]) -> List[int]:
 def _shouldSkipGroupBy(grpAssets: List[models.Asset], grpId: int) -> bool:
     lg.info(f"[autoSel] ------ Group[ {grpId} ] assets[ {len(grpAssets)} ]------")
 
-    for ass in grpAssets:
-        if hasattr(ass, 'view') and hasattr(ass.view, 'score'):
-            scr = ass.view.score
-            lg.info(f"[autoSel] Group {grpId}: Asset {ass.autoId} has view.score = {scr}")
-        else:
-            lg.warn(f"[autoSel] Group {grpId}: Asset {ass.autoId} missing view.score attribute")
+    # for ass in grpAssets:
+    #     if hasattr(ass, 'view') and hasattr(ass.view, 'score'):
+    #         scr = ass.view.score
+    #         lg.info(f"[autoSel] Group {grpId}: Asset {ass.autoId} has view.score = {scr}")
+    #     else:
+    #         lg.warn(f"[autoSel] Group {grpId}: Asset {ass.autoId} missing view.score attribute")
 
     if not db.dto.auSel_SkipLowSim: return False
 
@@ -427,7 +458,7 @@ def _shouldSkipGroupBy(grpAssets: List[models.Asset], grpId: int) -> bool:
             if scr != 0.0 and scr <= 0.96:
                 hasLow = True
                 lowAssets.append(f"{ass.autoId}(score={scr})")
-                lg.info(f"[autoSel] Group {grpId}: Asset {ass.autoId} has LOW similarity (score={scr} <= 0.96)")
+                #lg.info(f"[autoSel] Group {grpId}: Asset {ass.autoId} has LOW similarity (score={scr} <= 0.96)")
         else:
             hasLow = True
             lowAssets.append(f"{ass.autoId}(no score)")
@@ -436,7 +467,7 @@ def _shouldSkipGroupBy(grpAssets: List[models.Asset], grpId: int) -> bool:
         lg.info(f"[autoSel] Group {grpId}: SKIPPING group due to low similarity assets: {lowAssets}")
         return True
 
-    lg.info(f"[autoSel] Group {grpId}: All assets have high similarity, processing group")
+    #lg.info(f"[autoSel] Group {grpId}: All assets have high similarity, processing group")
     return False
 
 
@@ -526,16 +557,16 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
 
     met = collectMetrics(grpAssets)
 
-    lg.info(f"[autoSel] Group comparison data:")
+    lg.info(f"[autoSel] Group comparison:")
     for m in met:
-        lg.info(f"[autoSel]   Asset {m.aid}: date={m.dt}, exifCount={m.exfCnt}, fileSize={m.fileSz}, dimensions={m.dim}, nameLen={m.nameLen}")
+        lg.info(f"[autoSel]   #{m.aid}: date[{m.dt}] exif[{m.exfCnt}] fsize[{m.fileSz}] dimensions[{m.dim}] nameLen[{m.nameLen}]")
 
     bestAss = None
     bestScr = -1
 
     for i, ass in enumerate(grpAssets):
         scr, det = calcScore(i, met)
-        lg.info(f"[autoSel] Asset {ass.autoId}: score={scr} ({', '.join(det) if det else 'no matches'})")
+        lg.info(f"[autoSel] #{ass.autoId}: score={scr} ({', '.join(det) if det else 'no matches'})")
 
         if scr > bestScr:
             bestScr = scr
