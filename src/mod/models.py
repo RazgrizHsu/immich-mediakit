@@ -220,7 +220,7 @@ class Asset(BaseDictModel):
     id: str = ""
     ownerId: Optional[str] = None
     deviceId: Optional[str] = None
-    livePhotoVideoId: Optional[str] = None
+    vdoId: Optional[str] = None
     type: Optional[str] = None
     originalFileName: Optional[str] = None
     fileCreatedAt: Optional[str] = None

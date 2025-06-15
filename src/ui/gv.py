@@ -34,7 +34,7 @@ def createPhotoCard(ass: models.Asset):
     assId = ass.id
     hasEx = ass.jsonExif is not None
     cantFind = ( ass.simOk == 1 ) or ass.simGIDs
-    isLvPh = ass.livePhotoVideoId is not None
+    isLvPh = ass.vdoId is not None
 
     image_src = f"/api/img/{ass.autoId}" if ass.autoId else "assets/noimg.png"
 

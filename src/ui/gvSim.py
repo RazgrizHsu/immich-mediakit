@@ -129,7 +129,7 @@ def mkCard(ass: models.Asset):
 
     isMain = ass.view.isMain
     isRels = ass.view.isRelats
-    isLvPh = ass.livePhotoVideoId
+    isLvPh = ass.vdoId
 
     cssClass = f"h-100 sim {cssIds}"
     if isMain: cssClass += " main"
@@ -204,7 +204,7 @@ def mkCard(ass: models.Asset):
                 htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="tag second"),
 
                 *([ htm.Span("livePhoto"), htm.Span(f"{ass.pathVdo}", className="tag blue"), ] if isLvPh else []),
-                *([ htm.Span("live VdoId"), htm.Span(f"{ass.livePhotoVideoId}", className="tag blue"), ] if isLvPh else []),
+                *([ htm.Span("live VdoId"), htm.Span(f"{ass.vdoId}", className="tag blue"), ] if isLvPh else []),
 
             ], class_name="grid"
             ) if db.dto.showGridInfo else None,

@@ -1,5 +1,7 @@
 import time
 from typing import List, Tuple, Set, Callable, Optional
+from dataclasses import dataclass, field
+from enum import Enum
 
 import db
 from mod import models
@@ -8,22 +10,63 @@ from util import log
 
 lg = log.get(__name__)
 
+def normalizeDate(dt) -> str:
+    if not dt: return ''
+    try:
+        # Check if it's a datetime object (has microsecond attribute)
+        if hasattr(dt, 'microsecond'):
+            return str(dt.replace(microsecond=0))
+        else:
+            dtStr = str(dt)
+            if '.' in dtStr and ('+' in dtStr or dtStr.endswith('Z')):
+                beforeDot = dtStr.split('.')[0]
+                if '+' in dtStr:
+                    timezone = '+' + dtStr.split('+')[-1]
+                    return beforeDot + timezone
+                elif dtStr.endswith('Z'):
+                    return beforeDot + 'Z'
+            return dtStr
+    except Exception as e:
+        return str(dt) if dt else ''
 
+@dataclass
 class SearchInfo:
-    def __init__(self):
-        self.asset: models.Asset
-        self.bseVec: List[float] = []
-        self.bseInfos: List[models.SimInfo] = []
-        self.simAids: List[int] = []
-        self.foundSimilar: bool = False
-        self.hasVector: bool = False
+    asset: Optional[models.Asset] = None
+    bseVec: List[float] = field(default_factory=list)
+    bseInfos: List[models.SimInfo] = field(default_factory=list)
+    simAids: List[int] = field(default_factory=list)
+    foundSimilar: bool = False
+    hasVector: bool = False
 
 
+@dataclass
 class GroupSearchInfo:
-    def __init__(self):
-        self.allGroupAssets: List[models.Asset] = []
-        self.groupCount: int = 0
-        self.maxGroups: int = 1
+    allGroupAssets: List[models.Asset] = field(default_factory=list)
+    groupCount: int = 0
+    maxGroups: int = 1
+
+
+class ScoreType(Enum):
+    EARLIER = "Earlier"
+    LATER = "Later"
+    EXIF_RICH = "ExifRich"
+    EXIF_POOR = "ExifPoor"
+    BIG_SIZE = "BigSize"
+    SMALL_SIZE = "SmallSize"
+    BIG_DIM = "BigDim"
+    SMALL_DIM = "SmallDim"
+    LONG_NAME = "LongName"
+    SHORT_NAME = "ShortName"
+
+
+@dataclass
+class AssetMetrics:
+    aid: int
+    dt: str
+    exfCnt: int
+    fileSz: int
+    dim: int
+    nameLen: int
 
 
 def createReporter(doReport: IFnProg) -> Callable[[str], Tuple[int, int]]:
@@ -56,24 +99,18 @@ def checkGroupConds(assets: List[models.Asset]) -> bool:
         if not exif: return False
 
         if doDate:
-            baseDate = str(getattr(baseExif, 'fileCreatedAt', ''))[:10] if hasattr(baseExif, 'fileCreatedAt') else ''
-            assetDate = str(getattr(exif, 'fileCreatedAt', ''))[:10] if hasattr(exif, 'fileCreatedAt') else ''
+            baseDate = str(baseAsset.fileCreatedAt)[:10] if baseAsset.fileCreatedAt else ''
+            assetDate = str(asset.fileCreatedAt)[:10] if asset.fileCreatedAt else ''
             if baseDate != assetDate: return False
 
         if doWidth:
-            baseWidth = getattr(baseExif, 'exifImageWidth', None)
-            assetWidth = getattr(exif, 'exifImageWidth', None)
-            if baseWidth != assetWidth: return False
+            if baseExif.exifImageWidth != exif.exifImageWidth: return False
 
         if doHeight:
-            baseHeight = getattr(baseExif, 'exifImageHeight', None)
-            assetHeight = getattr(exif, 'exifImageHeight', None)
-            if baseHeight != assetHeight: return False
+            if baseExif.exifImageHeight != exif.exifImageHeight: return False
 
         if doSize:
-            baseSize = getattr(baseExif, 'fileSizeInByte', None)
-            assetSize = getattr(exif, 'fileSizeInByte', None)
-            if baseSize != assetSize: return False
+            if baseExif.fileSizeInByte != exif.fileSizeInByte: return False
 
     return True
 
@@ -325,290 +362,216 @@ def searchCondGroups( currentAssets: List[models.Asset], maxGroups: int, thMin: 
 
 
 def getAutoSelectAuids(assets: List[models.Asset]) -> List[int]:
-    lg.info(f"[autoSel] Starting auto-selection, auSelEnable={db.dto.auSelEnable}, assets count={len(assets) if assets else 0}")
+    lg.info(f"[autoSel] Starting auto-selection, auSelEnable[{db.dto.auSelEnable}], assets count={len(assets) if assets else 0}")
     lg.info(f"[autoSel] Weights: Earlier={db.dto.auSel_Earlier}, Later={db.dto.auSel_Later}, ExifRich={db.dto.auSel_ExifRicher}, ExifPoor={db.dto.auSel_ExifPoorer}, BigSize={db.dto.auSel_BiggerSize}, SmallSize={db.dto.auSel_SmallerSize}, BigDim={db.dto.auSel_BiggerDimensions}, SmallDim={db.dto.auSel_SmallerDimensions}, HighSim={db.dto.auSel_SkipLowSim}, AlwaysPickLivePhoto={db.dto.auSel_AllLivePhoto}")
 
-    if not db.dto.auSelEnable or not assets:
-        lg.info(f"[autoSel] Auto-selection disabled or no assets, returning empty")
-        return []
+    if not db.dto.auSelEnable or not assets: return []
 
-    # Check if any weight is enabled
-    hasActiveWeights = any([
+    active = any([
         db.dto.auSel_Earlier > 0, db.dto.auSel_Later > 0,
         db.dto.auSel_ExifRicher > 0, db.dto.auSel_ExifPoorer > 0,
         db.dto.auSel_BiggerSize > 0, db.dto.auSel_SmallerSize > 0,
-        db.dto.auSel_BiggerDimensions > 0, db.dto.auSel_SmallerDimensions > 0
+        db.dto.auSel_BiggerDimensions > 0, db.dto.auSel_SmallerDimensions > 0,
+        db.dto.auSel_NameLonger > 0, db.dto.auSel_NameShorter > 0,
     ])
 
-    if not hasActiveWeights:
-        lg.info(f"[autoSel] No active weights, returning empty")
-        return []
+    if not active: return []
 
-    # Step 1: Group assets by similarity group first
-    groupedAssets = _groupAssetsByCondGroup(assets)
-    lg.info(f"[autoSel] Grouped {len(assets)} assets into {len(groupedAssets)} groups")
+    grpAssets = _groupAssetsByCondGroup(assets)
+    lg.info(f"[autoSel] Grouped {len(assets)} assets into {len(grpAssets)} groups")
 
-    selectedIds = []
+    selIds = []
 
-    # Step 2: Process each group independently
-    for groupId, groupAssets in groupedAssets.items():
-        lg.info(f"[autoSel] Processing group {groupId} with {len(groupAssets)} assets: {[a.autoId for a in groupAssets]}")
+    for grpId, grpAss in grpAssets.items():
+        lg.info(f"[autoSel] Processing group {grpId} with {len(grpAss)} assets: {[a.autoId for a in grpAss]}")
 
-        # Step 3: Check for LivePhoto preference
-        livePhotoIds = _checkAlwaysPickLivePhoto(groupAssets, groupId)
-        if livePhotoIds:
-            selectedIds.extend(livePhotoIds)
-            lg.info(f"[autoSel] Group {groupId}: Selected ALL LivePhoto assets {livePhotoIds}")
+        liveIds = _checkAlwaysPickLivePhoto(grpAss, grpId)
+        if liveIds:
+            selIds.extend(liveIds)
+            lg.info(f"[autoSel] Group {grpId}: Selected ALL LivePhoto assets {liveIds}")
             continue
 
-        # Step 4: Check if group should be skipped due to low similarity
-        shouldSkip = _shouldSkipGroupBy(groupAssets, groupId)
-
-        if shouldSkip:
-            lg.info(f"[autoSel] Group {groupId}: Skipping group due to low similarity photos")
+        if _shouldSkipGroupBy(grpAss, grpId):
+            lg.info(f"[autoSel] Group {grpId}: Skipping group due to low similarity photos")
             continue
 
-        # Step 5: Apply weight-based selection within the group
-        bestAssetId = _selectBestAssetByWeights(groupAssets)
-        if bestAssetId:
-            selectedIds.append(bestAssetId)
-            lg.info(f"[autoSel] Group {groupId}: Selected best weighted asset {bestAssetId}")
+        bestId = _selectBestAsset(grpAss)
+        if bestId:
+            selIds.append(bestId)
+            lg.info(f"[autoSel] Group {grpId}: Selected best weighted asset {bestId}")
         else:
-            lg.warn(f"[autoSel] Group {groupId}: No best asset found despite having {len(groupAssets)} assets")
+            lg.warn(f"[autoSel] Group {grpId}: No best asset found despite having {len(grpAss)} assets")
 
-    lg.info(f"[autoSel] Final selection: {len(selectedIds)} assets: {selectedIds}")
-    return selectedIds
+    lg.info(f"[autoSel] Final selection: {len(selIds)} assets: {selIds}")
+    return selIds
 
 
-def _shouldSkipGroupBy(groupAssets: List[models.Asset], groupId: int) -> bool:
-    lg.info(f"[autoSel] Group {groupId}: Checking similarity for {len(groupAssets)} assets")
+def _shouldSkipGroupBy(grpAssets: List[models.Asset], grpId: int) -> bool:
+    lg.info(f"[autoSel] ------ Group[ {grpId} ] assets[ {len(grpAssets)} ]------")
 
-    for asset in groupAssets:
-        if hasattr(asset, 'view') and hasattr(asset.view, 'score'):
-            score = asset.view.score
-            lg.info(f"[autoSel] Group {groupId}: Asset {asset.autoId} has view.score = {score}")
+    for ass in grpAssets:
+        if hasattr(ass, 'view') and hasattr(ass.view, 'score'):
+            scr = ass.view.score
+            lg.info(f"[autoSel] Group {grpId}: Asset {ass.autoId} has view.score = {scr}")
         else:
-            lg.warn(f"[autoSel] Group {groupId}: Asset {asset.autoId} missing view.score attribute")
+            lg.warn(f"[autoSel] Group {grpId}: Asset {ass.autoId} missing view.score attribute")
 
-    if not db.dto.auSel_SkipLowSim:
-        lg.info(f"[autoSel] Group {groupId}: Similarity check disabled, processing group")
-        return False
+    if not db.dto.auSel_SkipLowSim: return False
 
-    hasLowSimilarity = False
-    lowSimilarityAssets = []
+    hasLow = False
+    lowAssets = []
 
-    for asset in groupAssets:
-        if hasattr(asset, 'view') and hasattr(asset.view, 'score'):
-            score = asset.view.score
-
-            if score != 0.0 and score <= 0.96:
-                hasLowSimilarity = True
-                lowSimilarityAssets.append(f"{asset.autoId}(score={score})")
-                lg.info(f"[autoSel] Group {groupId}: Asset {asset.autoId} has LOW similarity (score={score} <= 0.96)")
-            else:
-                if score == 0.0:
-                    lg.info(f"[autoSel] Group {groupId}: Asset {asset.autoId} is MAIN image (score={score})")
-                else:
-                    lg.info(f"[autoSel] Group {groupId}: Asset {asset.autoId} has HIGH similarity (score={score} > 0.96)")
+    for ass in grpAssets:
+        if hasattr(ass, 'view') and hasattr(ass.view, 'score'):
+            scr = ass.view.score
+            if scr != 0.0 and scr <= 0.96:
+                hasLow = True
+                lowAssets.append(f"{ass.autoId}(score={scr})")
+                lg.info(f"[autoSel] Group {grpId}: Asset {ass.autoId} has LOW similarity (score={scr} <= 0.96)")
         else:
-            lg.warn(f"[autoSel] Group {groupId}: Asset {asset.autoId} missing view.score, treating as low similarity")
-            hasLowSimilarity = True
-            lowSimilarityAssets.append(f"{asset.autoId}(no score)")
+            hasLow = True
+            lowAssets.append(f"{ass.autoId}(no score)")
 
-    if hasLowSimilarity:
-        lg.info(f"[autoSel] Group {groupId}: SKIPPING group due to low similarity assets: {lowSimilarityAssets}")
+    if hasLow:
+        lg.info(f"[autoSel] Group {grpId}: SKIPPING group due to low similarity assets: {lowAssets}")
         return True
-    else:
-        lg.info(f"[autoSel] Group {groupId}: All assets have high similarity, processing group")
-        return False
+
+    lg.info(f"[autoSel] Group {grpId}: All assets have high similarity, processing group")
+    return False
 
 
 def _groupAssetsByCondGroup(assets: List[models.Asset]) -> dict:
     lg.info(f"[autoSel] Starting grouping for {len(assets)} assets")
-    groupedAssets = {}
+    grpAssets = {}
 
-    for asset in assets:
-        # Use condGrpId if available, otherwise group by autoId (each asset in its own group)
-        groupId = getattr(asset.view, 'condGrpId', None) if hasattr(asset, 'view') and hasattr(asset.view, 'condGrpId') else None
-        if groupId is None:
-            groupId = asset.autoId  # Each asset becomes its own group
-            lg.debug(f"[autoSel] Asset {asset.autoId}: No condGrpId, using autoId as groupId")
+    for ass in assets:
+        grpId = ass.view.condGrpId if hasattr(ass, 'view') and hasattr(ass.view, 'condGrpId') else None
+        if grpId is None:
+            grpId = ass.autoId
+            lg.debug(f"[autoSel] Asset {ass.autoId}: No condGrpId, using autoId as groupId")
         else:
-            lg.debug(f"[autoSel] Asset {asset.autoId}: Using condGrpId {groupId}")
+            lg.debug(f"[autoSel] Asset {ass.autoId}: Using condGrpId {grpId}")
 
-        if groupId not in groupedAssets:
-            groupedAssets[groupId] = []
-        groupedAssets[groupId].append(asset)
+        if grpId not in grpAssets: grpAssets[grpId] = []
+        grpAssets[grpId].append(ass)
 
-    # Log the final grouping results
-    for groupId, groupAssets in groupedAssets.items():
-        assetIds = [a.autoId for a in groupAssets]
-        lg.info(f"[autoSel] Group {groupId}: Contains {len(groupAssets)} assets: {assetIds}")
+    for grpId, grpAss in grpAssets.items():
+        assIds = [a.autoId for a in grpAss]
+        lg.info(f"[autoSel] Group {grpId}: Contains {len(grpAss)} assets: {assIds}")
 
-    return groupedAssets
+    return grpAssets
 
 
-def _selectBestAssetByWeights(groupAssets: List[models.Asset]) -> int:
-    if not groupAssets: raise RuntimeError("No Group")
+def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
+    if not grpAssets: raise RuntimeError("No Group")
 
-    bestAsset:models.Optional[models.Asset] = None
-    bestScore = -1
+    def collectMetrics(assets: List[models.Asset]) -> List[AssetMetrics]:
+        metrics = []
+        for ass in assets:
+            dt = None
+            if ass.jsonExif:
+                dt = ass.jsonExif.dateTimeOriginal or ass.fileCreatedAt
 
-    # Prepare comparison data for the group
-    groupDates = []
-    groupExifCounts = []
-    groupFileSizes = []
-    groupDimensions = []
+            exfCnt = _countExifFields(ass.jsonExif) if ass.jsonExif else 0
+            fileSz = ass.jsonExif.fileSizeInByte if ass.jsonExif and ass.jsonExif.fileSizeInByte else 0
 
-    def normalizeDateForComparison(dt):
-        if dt is None: return None
-        try:
-            if hasattr(dt, 'replace'):
-                return dt.replace(microsecond=0)
-            else:
-                dtStr = str(dt)
-                if '.' in dtStr and ('+' in dtStr or 'Z' in dtStr):
-                    beforeDot = dtStr.split('.')[0]
-                    afterDot = dtStr.split('.')[1]
-                    if '+' in afterDot:
-                        timezone = '+' + afterDot.split('+')[1]
-                        return beforeDot + timezone
-                    elif 'Z' in afterDot:
-                        return beforeDot + 'Z'
-                return dtStr
-        except: return dt
+            dim = 0
+            if ass.jsonExif:
+                w = ass.jsonExif.exifImageWidth or 0
+                h = ass.jsonExif.exifImageHeight or 0
+                dim = w + h
 
-    for asset in groupAssets:
-        # Date
-        dateTime = None
-        if asset.jsonExif:
-            dateTime = getattr(asset.jsonExif, 'dateTimeOriginal', None) or getattr(asset.jsonExif, 'fileCreatedAt', None)
-        groupDates.append(normalizeDateForComparison(dateTime))
+            nameLen = len(ass.originalFileName) if ass.originalFileName else 0
 
-        # EXIF count
-        exifCount = _countExifFields(asset.jsonExif) if asset.jsonExif else 0
-        groupExifCounts.append(exifCount)
+            ndt = normalizeDate(dt)
+            metrics.append(AssetMetrics( aid=ass.autoId, dt=ndt, exfCnt=exfCnt, fileSz=fileSz, dim=dim, nameLen=nameLen))
+        return metrics
 
-        # File size
-        fileSize = getattr(asset.jsonExif, 'fileSizeInByte', 0) if asset.jsonExif else 0
-        groupFileSizes.append(fileSize)
-
-        # Dimensions (width + height)
-        dimensions = 0
-        if asset.jsonExif:
-            width = getattr(asset.jsonExif, 'exifImageWidth', 0) or 0
-            height = getattr(asset.jsonExif, 'exifImageHeight', 0) or 0
-            dimensions = width + height
-        groupDimensions.append(dimensions)
-
-    # Debug: Log the comparison data
-    lg.info(f"[autoSel] Group comparison data:")
-    for i, asset in enumerate(groupAssets):
-        lg.info(f"[autoSel]   Asset {asset.autoId}: date={groupDates[i]}, exifCount={groupExifCounts[i]}, fileSize={groupFileSizes[i]}, dimensions={groupDimensions[i]}")
-
-    # Calculate score for each asset
-    for i, asset in enumerate(groupAssets):
+    def calcScore(idx: int, met: List[AssetMetrics]) -> Tuple[int, List[str]]:
         score = 0
-        scoreDetails = []
+        details = []
 
-        # Earlier photos weight
-        if db.dto.auSel_Earlier > 0 and groupDates[i]:
-            validDates = [d for d in groupDates if d is not None]
-            if validDates and len(set(validDates)) > 1 and groupDates[i] == min(validDates):
-                score += db.dto.auSel_Earlier * 10
-                scoreDetails.append(f"Earlier+{db.dto.auSel_Earlier * 10}")
+        def addScore(weight: int, vals: List, isMax: bool, label: str):
+            nonlocal score, details
+            if weight > 0 and len(set(vals)) > 1:
+                target = max(vals) if isMax else min(vals)
+                if vals[idx] == target:
+                    pts = weight * 10
+                    score += pts
+                    details.append(f"{label}+{pts}")
 
-        # Later photos weight
-        if db.dto.auSel_Later > 0 and groupDates[i]:
-            validDates = [d for d in groupDates if d is not None]
-            if validDates and len(set(validDates)) > 1 and groupDates[i] == max(validDates):
-                score += db.dto.auSel_Later * 10
-                scoreDetails.append(f"Later+{db.dto.auSel_Later * 10}")
+        dates = [m.dt for m in met]
+        validDates = [d for d in dates if d]
 
-        # Richer EXIF weight
-        if db.dto.auSel_ExifRicher > 0:
-            if len(set(groupExifCounts)) > 1 and groupExifCounts[i] == max(groupExifCounts):
-                score += db.dto.auSel_ExifRicher * 10
-                scoreDetails.append(f"ExifRich+{db.dto.auSel_ExifRicher * 10}")
+        if dates[idx] and validDates and len(set(validDates)) > 1:
+            if db.dto.auSel_Earlier > 0 and dates[idx] == min(validDates):
+                pts = db.dto.auSel_Earlier * 10
+                score += pts
+                details.append(f"Earlier+{pts}")
+            if db.dto.auSel_Later > 0 and dates[idx] == max(validDates):
+                pts = db.dto.auSel_Later * 10
+                score += pts
+                details.append(f"Later+{pts}")
 
-        # Poorer EXIF weight
-        if db.dto.auSel_ExifPoorer > 0:
-            if len(set(groupExifCounts)) > 1 and groupExifCounts[i] == min(groupExifCounts):
-                score += db.dto.auSel_ExifPoorer * 10
-                scoreDetails.append(f"ExifPoor+{db.dto.auSel_ExifPoorer * 10}")
+        addScore(db.dto.auSel_ExifRicher, [m.exfCnt for m in met], True, "ExifRich")
+        addScore(db.dto.auSel_ExifPoorer, [m.exfCnt for m in met], False, "ExifPoor")
+        addScore(db.dto.auSel_BiggerSize, [m.fileSz for m in met], True, "BigSize")
+        addScore(db.dto.auSel_SmallerSize, [m.fileSz for m in met], False, "SmallSize")
+        addScore(db.dto.auSel_BiggerDimensions, [m.dim for m in met], True, "BigDim")
+        addScore(db.dto.auSel_SmallerDimensions, [m.dim for m in met], False, "SmallDim")
+        addScore(db.dto.auSel_NameLonger, [m.nameLen for m in met], True, "LongName")
+        addScore(db.dto.auSel_NameShorter, [m.nameLen for m in met], False, "ShortName")
 
-        # Bigger file size weight
-        if db.dto.auSel_BiggerSize > 0:
-            if len(set(groupFileSizes)) > 1 and groupFileSizes[i] == max(groupFileSizes):
-                score += db.dto.auSel_BiggerSize * 10
-                scoreDetails.append(f"BigSize+{db.dto.auSel_BiggerSize * 10}")
+        return score, details
 
-        # Smaller file size weight
-        if db.dto.auSel_SmallerSize > 0:
-            if len(set(groupFileSizes)) > 1 and groupFileSizes[i] == min(groupFileSizes):
-                score += db.dto.auSel_SmallerSize * 10
-                scoreDetails.append(f"SmallSize+{db.dto.auSel_SmallerSize * 10}")
+    met = collectMetrics(grpAssets)
 
-        # Bigger dimensions weight
-        if db.dto.auSel_BiggerDimensions > 0:
-            if len(set(groupDimensions)) > 1 and groupDimensions[i] == max(groupDimensions):
-                score += db.dto.auSel_BiggerDimensions * 10
-                scoreDetails.append(f"BigDim+{db.dto.auSel_BiggerDimensions * 10}")
+    lg.info(f"[autoSel] Group comparison data:")
+    for m in met:
+        lg.info(f"[autoSel]   Asset {m.aid}: date={m.dt}, exifCount={m.exfCnt}, fileSize={m.fileSz}, dimensions={m.dim}, nameLen={m.nameLen}")
 
-        # Smaller dimensions weight
-        if db.dto.auSel_SmallerDimensions > 0:
-            if len(set(groupDimensions)) > 1 and groupDimensions[i] == min(groupDimensions):
-                score += db.dto.auSel_SmallerDimensions * 10
-                scoreDetails.append(f"SmallDim+{db.dto.auSel_SmallerDimensions * 10}")
+    bestAss = None
+    bestScr = -1
 
-        lg.info(f"[autoSel] Asset {asset.autoId}: score={score} ({', '.join(scoreDetails) if scoreDetails else 'no matches'})")
+    for i, ass in enumerate(grpAssets):
+        scr, det = calcScore(i, met)
+        lg.info(f"[autoSel] Asset {ass.autoId}: score={scr} ({', '.join(det) if det else 'no matches'})")
 
-        if score > bestScore:
-            bestScore = score
-            bestAsset = asset
+        if scr > bestScr:
+            bestScr = scr
+            bestAss = ass
 
-    if not bestAsset: raise RuntimeError("NotFound best Asset")
-
-    return bestAsset.autoId
+    if not bestAss: raise RuntimeError("NotFound best Asset")
+    return bestAss.autoId
 
 
 
-def _checkAlwaysPickLivePhoto(groupAssets: List[models.Asset], groupId: int) -> List[int]:
-    if not db.dto.auSel_AllLivePhoto:
-        lg.info(f"[autoSel] Group {groupId}: AlwaysPickLivePhoto disabled")
-        return []
+def _checkAlwaysPickLivePhoto(grpAssets: List[models.Asset], grpId: int) -> List[int]:
+    if not db.dto.auSel_AllLivePhoto: return []
 
-    livePhotoIds = []
-    for asset in groupAssets:
-        # hasCID = asset.jsonExif and hasattr(asset.jsonExif, 'livePhotoCID') and asset.jsonExif.livePhotoCID
-        hasCID = asset.livePhotoVideoId is not None
-        hasPath = asset.pathVdo
+    liveIds = []
+    for ass in grpAssets:
+        hasCID = ass.vdoId is not None
+        hasPath = ass.pathVdo
 
         if hasCID or hasPath:
-            livePhotoIds.append(asset.autoId)
-            lg.info(f"[autoSel] Group {groupId}: Found LivePhoto asset {asset.autoId} (CID={hasCID}, Path={bool(hasPath)})")
+            liveIds.append(ass.autoId)
+            lg.info(f"[autoSel] Group {grpId}: Found LivePhoto asset {ass.autoId} (CID={hasCID}, Path={bool(hasPath)})")
 
-    if not livePhotoIds:
-        lg.info(f"[autoSel] Group {groupId}: No LivePhoto assets found")
-        return []
+    if not liveIds: return []
 
-    lg.info(f"[autoSel] Group {groupId}: Selecting ALL {len(livePhotoIds)} LivePhoto assets: {livePhotoIds}")
-    return livePhotoIds
+    lg.info(f"[autoSel] Group {grpId}: Selecting ALL {len(liveIds)} LivePhoto assets: {liveIds}")
+    return liveIds
 
 
 def _countExifFields(exif) -> int:
     if not exif: return 0
 
-    importantFields = [
+    fields = [
         'dateTimeOriginal', 'modifyDate', 'make', 'model', 'lensModel',
         'fNumber', 'focalLength', 'exposureTime', 'iso',
         'latitude', 'longitude', 'city', 'state', 'country', 'description',
         'exifImageWidth', 'exifImageHeight', 'fileSizeInByte'
     ]
 
-    count = 0
-    for field in importantFields:
-        if hasattr(exif, field) and getattr(exif, field) is not None:
-            count += 1
-
-    return count
+    return sum(1 for f in fields if hasattr(exif, f) and getattr(exif, f, None) is not None)

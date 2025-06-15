@@ -89,7 +89,10 @@ select {
 .btn {
 	position:relative;
 	border-radius:6px;
-	font-weight:400;
+	font-size: min(2vw, 1.3vw); font-weight:400; white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+
 	transition:all 0.3s ease, background-image 0.8s ease, background-color 0.8s ease;
 	border:var(--btn-borderW) solid 1px;
 	z-index:1;

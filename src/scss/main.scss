@@ -127,11 +127,11 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	height:0;
 
 	> div:first-child {
-		margin-top:29px;
+		margin-top:23px;
 	}
 
 	> div {
-		margin-top:18px;
+		margin-top:12px;
 		margin-left:$pad;
 		width:250px;
 
@@ -141,9 +141,6 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	}
 }
 
-.txt-sm {
-	font-size:0.75rem !important;
-}
 
 .footer {
 	margin-top:auto;
@@ -1140,6 +1137,13 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 				}
 			}
 		}
+
+		.icriteria {
+			display: grid;
+			grid-template-columns: 28% repeat(auto-fit, minmax(0, 1fr)); // 第一个列30%，其余平均分配
+
+			span { overflow:hidden; text-wrap:balance; }
+		}
 	}
 
 	.irow {
@@ -1494,5 +1498,15 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	&:hover .livephoto-overlay .livephoto-video {
 		opacity: 1;
 	}
+}
+
+
+
+
+
+
+.txt {
+	&-sm { font-size:0.75rem !important }
+	&-smx { font-size:0.6rem !important }
 }
 

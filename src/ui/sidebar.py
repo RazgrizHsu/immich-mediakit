@@ -151,7 +151,7 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
         ]),
         dbc.Row([
             dbc.Col(htm.Small("Pending", className="d-inline-block me-2"), width=sizeL),
-            dbc.Col(dbc.Alert(f"{cnt.simPnd}", color="info", className="py-1 px-2 mb-2 text-center")),
+            dbc.Col(htm.Span(f"{cnt.simPnd}", className="tag lg blue py-1 px-2 mb-2 text-center")),
         ]),
     ]
 

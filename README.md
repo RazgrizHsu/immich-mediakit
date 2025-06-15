@@ -48,20 +48,52 @@ enabling advanced management capabilities through AI-powered similarity detectio
 
 ## Usage Suggestions
 
-### Finding Duplicate Photos
+### Main Functions
 
-- **Start with High Threshold (0.97-1.00)**: Begin by searching with a similarity threshold of 0.97-1.00 to find photos that are nearly identical. This helps you quickly identify exact duplicates first.
+- `Find Similar`
+  - Starts searching for the next photo that matches your `Threshold Min & Max` settings and shows it in the `current` tab
+  - When photo groups appear in the `current` tab, you can click on a photo's header to select it. This lights up the four action buttons on the top right. After using one of these actions, the kept photos in that group will be marked as resolved
+  - If you don't do anything with a searched group, it'll show up in the `pending` tab waiting for you to handle it later
 
-- **Rescan with Different Thresholds**: After processing all photos with one threshold, you can clear the similarity search history and rescan with a new threshold value. This allows you to:
-  - First remove exact duplicates (0.97-1.00)
-  - Then find near-duplicates (0.90-0.97)
-  - Finally identify similar shots (0.80-0.90)
+- `Clear records & Keep resolved`
+  - Clears out search records that haven't been resolved yet
+  - This keeps all the records you've already marked as resolved
 
-### Workflow Tips
+- `Reset records`
+  - Resets all search records, including the ones you've marked as resolved
 
-1. **Progressive Cleaning**: Start with the highest similarity threshold and work your way down
-2. **Clear and Rescan**: Use the "Clear All" function in the Similar page to reset similarity data before rescanning with a new threshold
-3. **Review Before Deletion**: Always review the detected similar photos before deleting, as lower thresholds may include photos that are similar but distinct
+
+### Usage Tips & Settings
+
+- Make the most of `Auto Selection`
+  - When you enable auto selection, it'll automatically choose which photos to keep or delete after you run `Find Similar`. Just scroll through to review, then hit one of the four action buttons at the top
+
+- `Multiple Group` search feature
+  - By default (when `Multiple Group` is off), it only searches for one group of photos at a time
+  - Turn this on and set the `Max Group` number when you've got tons of photos to filter through - super handy for big cleanups
+
+- Related Settings
+  - When `Include Related` is off, `Find Similar` only shows photos directly related to the main photo. Turn it on and it'll also search for photos related to those related photos, and keep going down the chain until it finds all connected photos (based on your `Threshold` settings)
+  - `MaxItems` limits how deep the search goes. Say you set the threshold to `(0.5, 1)` - that might trigger endless searching if you have 100k photos, so this cap keeps things under control
+  - Note: The number of photos directly related to the main photo isn't limited by `MaxItems`
+
+### Advanced Strategies
+
+- **Progressive cleaning approach**
+  - Start with the highest similarity threshold and work your way down:
+    - First, get rid of exact duplicates `(0.97-1.00)`
+    - Then find near-duplicates `(0.90-0.97)`
+    - Finally, catch similar but different shots `(0.80-0.90)`
+  - This way you tackle the obvious duplicates first, then deal with the photos that need more careful judgment
+
+- **Clear and rescan strategy**
+  - Before changing your threshold settings, use `Reset Records` to wipe all similarity data
+  - This lets you rescan all photos with new thresholds and avoid missing anything or getting false matches
+
+- **Double-check before deleting**
+  - Lower thresholds might include photos that look similar but are actually different - always review before hitting delete
+  - Consider using `Keep All` to mark them as resolved first, then decide later if you really want to delete them
+
 
 
 ## Installation & Setup
@@ -142,6 +174,19 @@ If you prefer to run without Docker:
    ```bash
    python -m src.app
    ```
+
+
+## Developer Notes
+
+Initially, I was planning to build this with Electron + React frontend + Node.js backend, but given how much easier it is to integrate machine learning stuff with Python, I ended up going the Python route.
+
+I usually use Gradio for quick AI demos, but it gets pretty limiting when you want more customization. Same story with Streamlit - they're great for prototypes but not so flexible for complex UIs. After trying a bunch of different options, I settled on Dash by Plotly. Sure, it still needs a lot of custom work to get exactly what I want, but it gets the job done pretty well.
+
+What started as a simple little tool to help me clean up duplicate photos somehow turned into this whole complex system... funny how these things grow, right?
+
+Hope this tool helps anyone who's dealing with the same photo organization headaches! :)
+
+by raz
 
 
 ## Contributing
