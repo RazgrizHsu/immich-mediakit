@@ -342,7 +342,7 @@ const MdlImg = window.MdlImg = {
 		if ( mdl.isMulti && this.state.now?.sim?.assCur && mdl.curIdx < this.state.now.sim.assCur.length ){
 			const ass = this.state.now.sim.assCur[ mdl.curIdx ]
 
-			if ( ass && ass.livePhotoVideoId ){
+			if ( ass && ass.vdoId ){
 				htms.push(
 					R.mk( 'div', {className: 'livephoto'},
 						R.mk( 'video', {

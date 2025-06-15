@@ -117,6 +117,8 @@ class DtoSets:
     auSel_SmallerSize:int = AutoDbField('autoSelect_SmallerSize', int, 0 ) #type:ignore
     auSel_BiggerDimensions:int = AutoDbField('autoSelect_BiggerDimensions', int, 2 ) #type:ignore
     auSel_SmallerDimensions:int = AutoDbField('autoSelect_SmallerDimensions', int, 0 ) #type:ignore
+    auSel_NameLonger:int = AutoDbField('autoSelect_NameLonger', int, 1 ) #type:ignore
+    auSel_NameShorter:int = AutoDbField('autoSelect_NameShorter', int, 0 ) #type:ignore
 
     @classmethod
     def get(cls, key, default=None):

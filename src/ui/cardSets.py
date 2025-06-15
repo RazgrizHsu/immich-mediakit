@@ -39,6 +39,8 @@ class k:
     auSelSmallerSize = "autoSelSmallerSize"
     auSelBiggerDimensions = "autoSelBiggerDimensions"
     auSelSmallerDimensions = "autoSelSmallerDimensions"
+    auSelNameLonger = "autoSelNameLonger"
+    auSelNameShorter = "autoSelNameShorter"
 
 
 
@@ -74,7 +76,8 @@ optWeights = [
     {"label": "3", "value": 3},
 ]
 
-optThresholdMarks = { "0.6":0.6, "0.7": 0.7, "0.8": 0.8, "0.9": 0.9, "1": 1 }
+optThresholdMin = 0.5
+optThresholdMarks = { "0.5":0.5, "0.6":0.6, "0.7": 0.7, "0.8": 0.8, "0.9": 0.9, "1": 1 }
 
 def renderThreshold():
     return dbc.Card([
@@ -83,7 +86,7 @@ def renderThreshold():
             htm.Div([
                 htm.Div([
                     dcc.RangeSlider(
-                        id=k.id(k.threshold), min=0.6, max=1, step=0.01, marks=optThresholdMarks, #type: ignore
+                        id=k.id(k.threshold), min=optThresholdMin, max=1, step=0.01, marks=optThresholdMarks, #type: ignore
                         value=[db.dto.simMin, db.dto.simMax],
                         tooltip={
                             "placement": "top", "always_visible": True,
@@ -100,7 +103,7 @@ def renderThreshold():
 
 def renderAutoSelect():
     return dbc.Card([
-        dbc.CardHeader("Auto Select"),
+        dbc.CardHeader("Auto Selection"),
         dbc.CardBody([
             htm.Div([
                 # Main enable switch
@@ -108,65 +111,54 @@ def renderAutoSelect():
 
                 dbc.Checkbox(id=k.id(k.auSelSkipLowSim), label="Skip has sim(<0.96) group", value=db.dto.auSel_SkipLowSim, disabled=not db.dto.auSelEnable),
 
-                dbc.Checkbox(id=k.id(k.auSelAllLivePhoto), label="Select ALL LivePhotos", value=db.dto.auSel_AllLivePhoto, disabled=not db.dto.auSelEnable), htm.Br(),
+                dbc.Checkbox(id=k.id(k.auSelAllLivePhoto), label="All LivePhotos (ignore criteria)", value=db.dto.auSel_AllLivePhoto, disabled=not db.dto.auSelEnable), htm.Br(),
 
                 htm.Hr(),
 
-                htm.Small("DateTime:", className="text-muted mb-2"),
+                htm.Div([
+                    htm.Span( htm.Span("DateTime", className="tag txt-smx me-1")),
+                    htm.Label("Earlier", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelEarlier), options=optWeights, value=db.dto.auSel_Earlier, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    htm.Label("Later", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelLater), options=optWeights, value=db.dto.auSel_Later, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                ], className="icriteria"),
 
-                dbc.Row([
-                    dbc.Col([
-                        htm.Label("Earlier", className="me-2"),
-                        dbc.Select(id=k.id(k.auSelEarlier), options=optWeights, value=db.dto.auSel_Earlier, disabled=not db.dto.auSelEnable, size="sm") #type:ignore
-                    ], width=6),
-                    dbc.Col([
-                        htm.Label("Later", className="me-2"),
-                        dbc.Select(id=k.id(k.auSelLater), options=optWeights, value=db.dto.auSel_Later, disabled=not db.dto.auSelEnable, size="sm") #type:ignore
-                    ], width=6),
-                ], className="mb-2"),
+                htm.Div([
+                    htm.Span(htm.Span("Exif", className="tag txt-smx me-1")),
+                    htm.Label("Richer", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelExifRicher), options=optWeights, value=db.dto.auSel_ExifRicher, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    htm.Label("Poorer", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelExifPoorer), options=optWeights, value=db.dto.auSel_ExifPoorer, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                ], className="icriteria"),
 
-                htm.Small("Exif:", className="text-muted mb-2"),
-                dbc.Row([
-                    dbc.Col([
-                        htm.Label("Richer", className="me-2"),
-                        dbc.Select(id=k.id(k.auSelExifRicher), options=optWeights, value=db.dto.auSel_ExifRicher, disabled=not db.dto.auSelEnable, size="sm") #type:ignore
-                    ], width=6),
-                    dbc.Col([
-                        htm.Label("Poorer", className="me-2"),
-                        dbc.Select(id=k.id(k.auSelExifPoorer), options=optWeights, value=db.dto.auSel_ExifPoorer, disabled=not db.dto.auSelEnable, size="sm") #type:ignore
-                    ], width=6),
-                ], className="mb-2"),
+                htm.Div([
+                    htm.Span(htm.Span("Name Length", className="tag txt-smx me-1")),
+                    htm.Label("Longer", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelNameLonger), options=optWeights, value=db.dto.auSel_NameLonger, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    htm.Label("Shorter", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelNameShorter), options=optWeights, value=db.dto.auSel_NameShorter, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                ], className="icriteria"),
 
-                htm.Small("FileSize:", className="text-muted mb-2"),
-                dbc.Row([
-                    dbc.Col([
-                        htm.Label("Bigger", className="me-2"),
-                        dbc.Select(id=k.id(k.auSelBiggerSize), options=optWeights, value=db.dto.auSel_BiggerSize, disabled=not db.dto.auSelEnable, size="sm") #type:ignore
-                    ], width=6),
-                    dbc.Col([
-                        htm.Label("Smaller", className="me-2"),
-                        dbc.Select(id=k.id(k.auSelSmallerSize), options=optWeights, value=db.dto.auSel_SmallerSize, disabled=not db.dto.auSelEnable, size="sm") #type:ignore
-                    ], width=6),
-                ], className="mb-2"),
+                htm.Div([
+                    htm.Span(htm.Span("FileSize", className="tag txt-smx me-1")),
+                    htm.Label("Bigger", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelBiggerSize), options=optWeights, value=db.dto.auSel_BiggerSize, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    htm.Label("Smaller", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelSmallerSize), options=optWeights, value=db.dto.auSel_SmallerSize, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                ], className="icriteria"),
 
-                htm.Small("Dimensions (Width+Height):", className="text-muted mb-2"),
-                dbc.Row([
-                    dbc.Col([
-                        htm.Label("Bigger", className="me-2"),
-                        dbc.Select(id=k.id(k.auSelBiggerDimensions), options=optWeights, value=db.dto.auSel_BiggerDimensions, disabled=not db.dto.auSelEnable, size="sm") #type:ignore
-                    ], width=6),
-                    dbc.Col([
-                        htm.Label("Smaller", className="me-2"),
-                        dbc.Select(id=k.id(k.auSelSmallerDimensions), options=optWeights, value=db.dto.auSel_SmallerDimensions, disabled=not db.dto.auSelEnable, size="sm") #type:ignore
-                    ], width=6),
-                ], className="mb-2"),
+                htm.Div([
+                    htm.Span(htm.Span("Dimensions", className="tag txt-smx me-1")),
+                    htm.Label("Bigger", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelBiggerDimensions), options=optWeights, value=db.dto.auSel_BiggerDimensions, disabled=not db.dto.auSelEnable, size="sm", className="me-1"), #type:ignore
+                    htm.Label("Smaller", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelSmallerDimensions), options=optWeights, value=db.dto.auSel_SmallerDimensions, disabled=not db.dto.auSelEnable, size="sm"), #type:ignore
+                ], className="icriteria"),
 
                 htm.Hr(),
                 htm.Ul([
-                    htm.Li("'Always Pick ALL LivePhotos' selects all LivePhoto files in a group, ignoring other criteria"),
-                    htm.Li("System calculates points for each photo based on criteria"),
-                    htm.Li("Photo with highest total points gets auto-selected"),
-                    htm.Li("Points: 0=Not considered, 1=Low priority, 2=High priority")
+                    htm.Li("System auto-selects photo with highest total points based on criteria"),
+                    htm.Li([htm.B("Points: "),"0=Ignore, 1=Low, 2=High priority"])
                 ], className="text-muted small")
             ], className="mb-2 igrid txt-sm"),
         ])
@@ -204,14 +196,17 @@ def renderCard():
                     ]),
                 ], className="icbxs"),
                 htm.Ul([
-                    htm.Li([htm.B("Include Related: "), "Display all images in the similarity group (not just direct matches). All displayed images will be affected by Keep/Delete operations"]),
-                    htm.Li([htm.B("Max Depths: "), "During Find Similar, how many levels of hierarchical relationships to include in the same group (0 = direct matches only)"]),
-                    htm.Li([htm.B("Max Items: "), "Maximum number of images to process during similarity search to prevent UI slowdown"])
+                    htm.Li([htm.B("Include Related: "), "Show all images in similarity group. Keep/Delete affects all displayed images"]),
+                    htm.Li([htm.B("Max Depths: "), "Hierarchy levels to include in similarity search (0 = direct matches only)"]),
+                    htm.Li([htm.B("Max Items: "), "Max images to process in similarity search to prevent UI slowdown"])
                 ])
             ], className="irow"),
 
             htm.Div([
-                htm.Label("Condition Group", className="txt-sm"),
+                htm.Label([
+                    "Multiple Group",
+                    htm.Span("Find groups of similar photos based on metadata", className="txt-smx text-muted ms-3")
+                ], className="txt-sm"),
                 htm.Div([
                     dbc.Checkbox(id=k.id(k.cndGrpEnable), label="Enable", value=db.dto.simCondGrpMode),
 
@@ -230,12 +225,10 @@ def renderCard():
 
                 ], className="icbxs"),
                 htm.Ul([
-                    htm.Li([htm.B("Condition Group: "), "Search for multiple groups of similar photos that meet specific metadata conditions"]),
                     htm.Li([htm.B("Max Groups: "), "Maximum number of groups to return when grouping is enabled"]),
                     htm.Li([
                         htm.Span("⚠️ ", style={"color": "orange"}),
-                        htm.B("Important: ", style={"color": "red"}),
-                        "When enabled, any photos that don't meet group conditions will be automatically marked as resolved to prevent re-searching. Use Clear All Records to reset if needed."
+                        "Auto-mark unmatched photos as resolved to prevent re-searching. Use Clear Records to reset."
                     ])
                 ])
             ], className="irow"),
@@ -325,6 +318,8 @@ def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpE
         out(k.id(k.auSelSmallerSize), "disabled"),
         out(k.id(k.auSelBiggerDimensions), "disabled"),
         out(k.id(k.auSelSmallerDimensions), "disabled"),
+        out(k.id(k.auSelNameLonger), "disabled"),
+        out(k.id(k.auSelNameShorter), "disabled"),
     ],
     inp(k.id(k.auSelEnable), "value"),
     inp(k.id(k.auSelSkipLowSim), "value"),
@@ -337,24 +332,28 @@ def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpE
     inp(k.id(k.auSelSmallerSize), "value"),
     inp(k.id(k.auSelBiggerDimensions), "value"),
     inp(k.id(k.auSelSmallerDimensions), "value"),
+    inp(k.id(k.auSelNameLonger), "value"),
+    inp(k.id(k.auSelNameShorter), "value"),
     prevent_initial_call=True
 )
-def autoSelect_OnUpd(auSelEnable, auSelHighSimilarity, auSelAlwaysPickLivePhoto, auSelEarlier, auSelLater, auSelExifRicher, auSelExifPoorer, auSelBiggerSize, auSelSmallerSize, auSelBiggerDimensions, auSelSmallerDimensions):
-    db.dto.auSelEnable = auSelEnable
-    db.dto.auSel_SkipLowSim = auSelHighSimilarity
-    db.dto.auSel_AllLivePhoto = auSelAlwaysPickLivePhoto
-    db.dto.auSel_Earlier = auSelEarlier
-    db.dto.auSel_Later = auSelLater
-    db.dto.auSel_ExifRicher = auSelExifRicher
-    db.dto.auSel_ExifPoorer = auSelExifPoorer
-    db.dto.auSel_BiggerSize = auSelBiggerSize
-    db.dto.auSel_SmallerSize = auSelSmallerSize
-    db.dto.auSel_BiggerDimensions = auSelBiggerDimensions
-    db.dto.auSel_SmallerDimensions = auSelSmallerDimensions
+def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig, szSml, dimBig, dimSml, namLong, namShor):
+    db.dto.auSelEnable = enable
+    db.dto.auSel_SkipLowSim = skipLo
+    db.dto.auSel_AllLivePhoto = onlyLive
+    db.dto.auSel_Earlier = earl
+    db.dto.auSel_Later = late
+    db.dto.auSel_ExifRicher = exRich
+    db.dto.auSel_ExifPoorer = exPoor
+    db.dto.auSel_BiggerSize = szBig
+    db.dto.auSel_SmallerSize = szSml
+    db.dto.auSel_BiggerDimensions = dimBig
+    db.dto.auSel_SmallerDimensions = dimSml
+    db.dto.auSel_NameLonger = namLong
+    db.dto.auSel_NameShorter = namShor
 
-    lg.info(f"[autoSel:OnUpd] Enable[{auSelEnable}] HighSim[{auSelHighSimilarity}] AlwaysPickLivePhoto[{auSelAlwaysPickLivePhoto}] Earlier[{auSelEarlier}] Later[{auSelLater}] ExifRich[{auSelExifRicher}] ExifPoor[{auSelExifPoorer}] BigSize[{auSelBiggerSize}] SmallSize[{auSelSmallerSize}] BigDim[{auSelBiggerDimensions}] SmallDim[{auSelSmallerDimensions}]")
+    lg.info(f"[autoSel:OnUpd] Enable[{enable}] HighSim[{skipLo}] AlwaysPickLivePhoto[{onlyLive}] Earlier[{earl}] Later[{late}] ExifRich[{exRich}] ExifPoor[{exPoor}] BigSize[{szBig}] SmallSize[{szSml}] BigDim[{dimBig}] SmallDim[{dimSml}] NameLong[{namLong}] NameShort[{namShor}]")
 
     # Control enable/disable states
-    subOptionsDisabled = not auSelEnable
+    dis = not enable
 
-    return [subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled, subOptionsDisabled]
+    return [dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis]

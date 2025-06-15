@@ -226,13 +226,11 @@ h3 { font-size: 1.68rem; }
 
 .sidebar { position: relative; width: 0; height: 0; }
 
-.sidebar > div:first-child { margin-top: 29px; }
+.sidebar > div:first-child { margin-top: 23px; }
 
-.sidebar > div { margin-top: 18px; margin-left: 12px; width: 250px; }
+.sidebar > div { margin-top: 12px; margin-left: 12px; width: 250px; }
 
 .sidebar > div small { font-size: 12px; }
-
-.txt-sm { font-size: 0.75rem !important; }
 
 .footer { margin-top: auto; border-top: 1px solid #333333; background-color: #212121; padding: 15px 0; text-align: center; width: 100%; color: #A0A0A0; margin-bottom: 0; box-sizing: border-box; position: relative; }
 
@@ -521,6 +519,10 @@ h3 { font-size: 1.68rem; }
 
 .card .igrid.divRows > div > *:nth-child(2n) { justify-self: start; }
 
+.card .igrid .icriteria { display: grid; grid-template-columns: 28% repeat(auto-fit, minmax(0, 1fr)); }
+
+.card .igrid .icriteria span { overflow: hidden; text-wrap: balance; }
+
 .card .irow { font-size: 14px; margin: 0; }
 
 .card .irow:not(:last-child) { border-bottom: 1px solid #888888AA; padding-bottom: 5px; }
@@ -618,3 +620,7 @@ h3 { font-size: 1.68rem; }
 .livephoto-overlay .livephoto-video.playing { opacity: 1; }
 
 .card:hover .livephoto-overlay .livephoto-video { opacity: 1; }
+
+.txt-sm { font-size: 0.75rem !important; }
+
+.txt-smx { font-size: 0.6rem !important; }

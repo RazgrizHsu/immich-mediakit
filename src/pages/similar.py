@@ -113,8 +113,8 @@ def layout(autoId=None):
                     ], width=6),
 
                     dbc.Col([
-                        dbc.Button("Clear Search record but keep resloved", id=k.btnClear, color="danger me-1", className="w-100 mb-1", disabled=True),
-                        dbc.Button("Reset Search records", id=k.btnReset, color="danger", className="w-58", disabled=True),
+                        dbc.Button("Clear record & Keep resloved", id=k.btnClear, color="danger me-1", className="w-100 mb-1", disabled=True),
+                        dbc.Button("Reset records", id=k.btnReset, color="danger", className="w-58", disabled=True),
                     ], width=6, className="text-end"),
                 ], className="mt-3"),
 
@@ -686,8 +686,9 @@ def sim_RunModal(
 
     #------------------------------------------------------------------------
     elif trgId == k.btnRmSel:
-        ass = ste.getSelected(now.sim.assCur)
-        cnt = len(ass)
+        assSel = ste.getSelected(now.sim.assCur)
+        assAll = now.sim.assCur
+        cnt = len(assSel)
 
         lg.info(f"[sim:delSels] {cnt} assets selected")
 
@@ -696,7 +697,7 @@ def sim_RunModal(
             mdl.id = ks.pg.similar
             mdl.cmd = ks.cmd.sim.selRm
             mdl.msg = [
-                f"Are you sure you want to Delete select images( {cnt} )?", htm.Br(),
+                f"Are you sure you want to Delete select images( {cnt} ) and Keep others( {len(assAll)-cnt} )?", htm.Br(),
                 htm.B("This operation cannot be undone"),
             ]
 
@@ -727,8 +728,8 @@ def sim_RunModal(
 
     #------------------------------------------------------------------------
     elif trgId == k.btnRmAll:
-        ass = now.sim.assCur
-        cnt = len(ass)
+        assSel = now.sim.assCur
+        cnt = len(assSel)
 
         lg.info(f"[sim:delAll] {cnt} assets to delete")
 
@@ -747,8 +748,8 @@ def sim_RunModal(
 
     #------------------------------------------------------------------------
     elif trgId == k.btnOkAll:
-        ass = now.sim.assCur
-        cnt = len(ass)
+        assSel = now.sim.assCur
+        cnt = len(assSel)
 
         lg.info(f"[sim:reslove] {cnt} assets")
 
@@ -779,14 +780,14 @@ def sim_RunModal(
         # asset from url
         isFromUrl = False
         if now.sim.assFromUrl:
-            ass = now.sim.assFromUrl  #consider read from db again?
-            if ass:
-                if ass.simOk != 1:
-                    lg.info(f"[sim] use selected asset id[{ass.id}]")
-                    asset = ass
+            assSel = now.sim.assFromUrl  #consider read from db again?
+            if assSel:
+                if assSel.simOk != 1:
+                    lg.info(f"[sim] use selected asset id[{assSel.id}]")
+                    asset = assSel
                     isFromUrl = True
                 else:
-                    nfy.info(f"[sim] the asset #{ass.autoId} already resolved")
+                    nfy.info(f"[sim] the asset #{assSel.autoId} already resolved")
                     now.sim.assFromUrl = None
                     return noUpd.by(4).updFr( 0, [nfy, now] )
             else:
@@ -796,10 +797,10 @@ def sim_RunModal(
 
         # find from db
         if not asset:
-            ass = db.pics.getAnyNonSim()
-            if ass:
-                asset = ass
-                lg.info(f"[sim] found non-simOk #{ass.autoId} assetId[{ass.id}]")
+            assSel = db.pics.getAnyNonSim()
+            if assSel:
+                asset = assSel
+                lg.info(f"[sim] found non-simOk #{assSel.autoId} assetId[{assSel.id}]")
 
         if not isFromUrl:
             now.sim.clearAll()
