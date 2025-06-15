@@ -351,11 +351,11 @@ def tsk_OnData(wmsg, dta_tsk):
             tsk = models.Tsk.fromDict(dta_tsk)
 
             if msgType == 'start':
-                lg.info(f"[tws:dta] Received start message for reconnection sync")
+                #lg.info(f"[tws:dta] Received start message for reconnection sync")
                 taskName = data.get('name', '')
                 tsn = data.get('tsn')
             else:
-                lg.info(f"[tws:dta] Received progress message for reconnection sync")
+                #lg.info(f"[tws:dta] Received progress message for reconnection sync")
                 # For progress messages, we need to derive task name from existing tasks
                 tsn = data.get('tsn')
                 taskName = None
@@ -370,7 +370,7 @@ def tsk_OnData(wmsg, dta_tsk):
                     lg.warning(f"[tws:dta] Could not determine task name from progress message")
                     return noUpd.by(5)
 
-            lg.info(f"[tws:dta] Current tsk.name: '{tsk.name}', incoming taskName: '{taskName}', tsn: '{tsn}'")
+            #lg.info(f"[tws:dta] Current tsk.name: '{tsk.name}', incoming taskName: '{taskName}', tsn: '{tsn}'")
 
             # If no current task or different task, sync with running task info
             if not tsk.name or (taskName and tsk.name != taskName):
@@ -380,8 +380,6 @@ def tsk_OnData(wmsg, dta_tsk):
                 tsk.id = f"reconnect-{tsn}" if tsn else f"reconnect-{taskName}"
                 # Don't set cmd to avoid triggering new task
                 return noUpd, noUpd, noUpd, tsk.toDict(), noUpd
-            else:
-                lg.info(f"[tws:dta] Task already synced, no update needed")
 
             return noUpd.by(5)
 

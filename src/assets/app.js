@@ -1121,6 +1121,82 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 //------------------------------------------------------------------------
+// Tab Acts Floating Bar
+//------------------------------------------------------------------------
+function initTabActsFloating() {
+	const tabActs = document.querySelector('.tab-acts');
+	if (!tabActs) return;
+
+	let placeholder = document.createElement('div');
+	placeholder.className = 'tab-acts-placeholder';
+	tabActs.parentNode.insertBefore(placeholder, tabActs.nextSibling);
+
+	let originalTop = null;
+	let isFloating = false;
+
+	function updateOriginalTop() {
+		if (!isFloating) {
+			const rect = tabActs.getBoundingClientRect();
+			originalTop = rect.top + window.scrollY;
+		}
+	}
+
+	function toggleFloatingBar() {
+		const currentTab = document.querySelector('.nav-tabs .nav-link.active');
+		const isCurrentTab = currentTab && currentTab.textContent.trim() == 'current';
+		const scrollY = window.scrollY;
+
+		if (!isCurrentTab) {
+			if (isFloating) {
+				tabActs.classList.remove('floating', 'show');
+				placeholder.classList.remove('active');
+				isFloating = false;
+			}
+			return;
+		}
+
+		if (originalTop === null) updateOriginalTop();
+
+		const shouldFloat = scrollY > originalTop + 50;
+
+		if (shouldFloat !== isFloating) {
+			if (shouldFloat) {
+				tabActs.classList.add('floating');
+				placeholder.classList.add('active');
+				setTimeout(() => tabActs.classList.add('show'), 10);
+				isFloating = true;
+			} else {
+				tabActs.classList.remove('show');
+				setTimeout(() => {
+					tabActs.classList.remove('floating');
+					placeholder.classList.remove('active');
+				}, 300);
+				isFloating = false;
+			}
+		}
+	}
+
+	window.addEventListener('scroll', toggleFloatingBar);
+	window.addEventListener('resize', () => {
+		originalTop = null;
+		updateOriginalTop();
+	});
+
+	document.addEventListener('click', function(e) {
+		if (e.target && e.target.matches('.nav-link')) {
+			setTimeout(() => {
+				originalTop = null;
+				updateOriginalTop();
+				toggleFloatingBar();
+			}, 100);
+		}
+	});
+
+	updateOriginalTop();
+	setTimeout(toggleFloatingBar, 100);
+}
+
+//------------------------------------------------------------------------
 // Goto Top Button
 //------------------------------------------------------------------------
 function initBtnTop(btn) {
@@ -1163,7 +1239,24 @@ function initBtnTop(btn) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+	// Initialize floating tab-acts
+	const tabActs = document.querySelector('.tab-acts');
+	if (tabActs) {
+		console.log('[TabActs] Found tab-acts element, initializing floating behavior');
+		initTabActsFloating();
+	} else {
+		const tabActsObserver = new MutationObserver(function(mutations) {
+			const tabActsEl = document.querySelector('.tab-acts');
+			if (tabActsEl) {
+				console.log('[TabActs] Tab-acts found via observer:', tabActsEl);
+				tabActsObserver.disconnect();
+				initTabActsFloating();
+			}
+		});
+		tabActsObserver.observe(document.body, { childList: true, subtree: true });
+	}
 
+	// Initialize goto top button
 	const gotoTopBtn = document.getElementById('sim-goto-top-btn');
 	if (!gotoTopBtn) {
 
