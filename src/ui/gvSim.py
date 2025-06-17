@@ -86,7 +86,7 @@ def mkGroupGrid(assets: List[models.Asset], minW=250, maxW=300, onEmpty=None):
 
     groups = {}
     for asset in assets:
-        grpId = asset.view.condGrpId or 0
+        grpId = asset.view.muodId or 0
         if grpId not in groups: groups[grpId] = []
         groups[grpId].append(asset)
 
@@ -183,6 +183,7 @@ def mkCard(ass: models.Asset):
             htm.Div([
                 htm.Span(f"LivePhoto", className="tag blue") if isLvPh else None,
                 htm.Span(f"SimOK!", className="tag blue") if ass.simOk else None,
+                htm.Span(f"GrpId: {ass.view.muodId}", className="tag Lg info")
             ], className="RT"),
 
             htm.Div([

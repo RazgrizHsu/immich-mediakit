@@ -68,14 +68,24 @@ enabling advanced management capabilities through AI-powered similarity detectio
 - Make the most of `Auto Selection`
   - When you enable auto selection, it'll automatically choose which photos to keep or delete after you run `Find Similar`. Just scroll through to review, then hit one of the four action buttons at the top
 
-- `Multiple Group` search feature
-  - By default (when `Multiple Group` is off), it only searches for one group of photos at a time
+- `Multi Mode (Muod)` search feature
+  - By default (when `Multi Mode` is off), it only searches for one group of photos at a time
   - Turn this on and set the `Max Group` number when you've got tons of photos to filter through - super handy for big cleanups
+  - **Note: Multi Mode and Related Tree are mutually exclusive**
 
-- Related Settings
-  - When `Include Related` is off, `Find Similar` only shows photos directly related to the main photo. Turn it on and it'll also search for photos related to those related photos, and keep going down the chain until it finds all connected photos (based on your `Threshold` settings)
+- Related Tree (rtree)
+  - **Only available in single group mode (when Multi Mode is off)**
+  - When `Related Tree` is off, `Find Similar` only shows photos directly related to the main photo
+  - Turn it on and it'll also search for photos related to those related photos, creating a comprehensive similarity tree
+  - **Cannot be used together with Multi Mode for performance and clarity reasons**
   - `MaxItems` limits how deep the search goes. Say you set the threshold to `(0.5, 1)` - that might trigger endless searching if you have 100k photos, so this cap keeps things under control
   - Note: The number of photos directly related to the main photo isn't limited by `MaxItems`
+
+### Search Modes
+
+- **Single Mode + Related Tree**: Find one comprehensive similarity tree including all related photos
+- **Multi Mode**: Find multiple separate groups quickly (no tree expansion)
+- These modes are mutually exclusive for performance and clarity reasons
 
 ### Advanced Strategies
 

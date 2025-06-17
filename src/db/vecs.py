@@ -229,17 +229,11 @@ def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100, l
 
         vector = getBy(aid)
 
-        rst = conn.count(collection_name=keyColl)
-
-        lg.info(f"[vecs:find] #{aid}, threshold[{thMin}-{thMax}] limit[{limit}] total[{rst.count}]")
-
-        # distance = qmod.Distance.COSINE if method == ks.use.mth.cosine else qmod.Distance.EUCLID
-
         rep = conn.query_points(collection_name=keyColl, query=vector, limit=limit, score_threshold=thMin, with_payload=True)
         rst = rep.points
         infos: list[models.SimInfo] = []
 
-        lg.info(f"[vecs:find] search results( {len(rst)} ):")
+        lg.info(f"[vecs:find] #{aid}, threshold[{thMin}-{thMax}] limit[{limit}] found[{len(rst)}]")
         for i, hit in enumerate(rst):
             hit_aid = int(hit.id)
             if logRow: lg.info(f"\tno.{i + 1}: AID[{hit_aid}], score[{hit.score:.6f}] self[{int(hit.id) == aid}]")

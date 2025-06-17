@@ -35,7 +35,6 @@ Start → Select Asset → Vector Similarity Search → Set Group Relations → 
    - Child assets: `setSimInfos(assId, cInfos, GID=rootAuid)`
 
 4. **Recursive Processing**:
-   - Maximum depth: `db.dto.simMaxDepths` (default 1)
    - Queue processing for similar assets of child assets
 
 ### 2. User Decision Process
