@@ -278,7 +278,7 @@ def processChildren( asset: models.Asset, bseInfos: List[models.SimInfo], simAid
 
 def getAutoSelectAuids(src: List[models.Asset]) -> List[int]:
     lg.info(f"[ausl] Starting auto-selection, auSelEnable[{db.dto.ausl}], assets count={len(src) if src else 0}")
-    lg.info(f"[ausl] Weights: Earlier={db.dto.ausl_Earlier}, Later={db.dto.ausl_Later}, ExifRich={db.dto.ausl_ExRich}, ExifPoor={db.dto.ausl_ExPoor}, BigSize={db.dto.ausl_OfsBig}, SmallSize={db.dto.ausl_OfsSml}, BigDim={db.dto.ausl_DimBig}, SmallDim={db.dto.ausl_DimSml}, HighSim={db.dto.ausl_SkipLow}, AlwaysPickLivePhoto={db.dto.ausl_AllLive}")
+    lg.info(f"[ausl] Weights: Earlier[{db.dto.ausl_Earlier}] Later[{db.dto.ausl_Later}] ExifRich[{db.dto.ausl_ExRich}] ExifPoor[{db.dto.ausl_ExPoor}] BigSize[{db.dto.ausl_OfsBig}] SmallSize[{db.dto.ausl_OfsSml}] BigDim[{db.dto.ausl_DimBig}] SmallDim[{db.dto.ausl_DimSml}] HighSim[{db.dto.ausl_SkipLow}] AlwaysPickLivePhoto[{db.dto.ausl_AllLive}] jpg[{db.dto.ausl_TypJpg}] png[{db.dto.ausl_TypPng}]")
 
     if not db.dto.ausl or not src: return []
 
@@ -288,6 +288,7 @@ def getAutoSelectAuids(src: List[models.Asset]) -> List[int]:
         db.dto.ausl_OfsBig > 0, db.dto.ausl_OfsSml > 0,
         db.dto.ausl_DimBig > 0, db.dto.ausl_DimSml > 0,
         db.dto.ausl_NamLon > 0, db.dto.ausl_NamSht > 0,
+        db.dto.ausl_TypJpg > 0, db.dto.ausl_TypPng > 0,
     ])
 
     if not active: return []
@@ -376,6 +377,7 @@ class IMetrics:
     fileSz: int
     dim: int
     nameLen: int
+    fileType: str
 
 
 def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
@@ -411,9 +413,13 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
                 dim = w + h
 
             nameLen = len(ass.originalFileName) if ass.originalFileName else 0
+            
+            fileType = ''
+            if ass.originalFileName:
+                fileType = ass.originalFileName.lower().split('.')[-1] if '.' in ass.originalFileName else ''
 
             ndt = normalizeDate(dt)
-            metrics.append(IMetrics( aid=ass.autoId, dt=ndt, exfCnt=exfCnt, fileSz=fileSz, dim=dim, nameLen=nameLen))
+            metrics.append(IMetrics( aid=ass.autoId, dt=ndt, exfCnt=exfCnt, fileSz=fileSz, dim=dim, nameLen=nameLen, fileType=fileType))
         return metrics
 
     def calcScore(idx: int, met: List[IMetrics]) -> Tuple[int, List[str]]:
@@ -450,6 +456,15 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
         addScore(db.dto.ausl_DimSml, [m.dim for m in met], False, "SmallDim")
         addScore(db.dto.ausl_NamLon, [m.nameLen for m in met], True, "LongName")
         addScore(db.dto.ausl_NamSht, [m.nameLen for m in met], False, "ShortName")
+        
+        if db.dto.ausl_TypJpg > 0 and met[idx].fileType in ['jpg', 'jpeg']:
+            pts = db.dto.ausl_TypJpg * 10
+            score += pts
+            details.append(f"JPG+{pts}")
+        if db.dto.ausl_TypPng > 0 and met[idx].fileType == 'png':
+            pts = db.dto.ausl_TypPng * 10
+            score += pts
+            details.append(f"PNG+{pts}")
 
         return score, details
 
