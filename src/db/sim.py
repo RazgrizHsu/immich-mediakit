@@ -127,7 +127,7 @@ def searchBy( src: Optional[models.Asset], doRep: IFnProg, fromUrl: bool = False
         doRep(prog, f"Searching group {len(gis) + 1}/{sizeMax} - Asset #{ass.autoId}")
 
         try:
-            gi = searchSingle(ass, doRep, grpIdx, fromUrl)
+            gi = findGroupBy(ass, doRep, grpIdx, fromUrl)
 
             if gi.assets:  # 如果群組有資產就算成功
                 gis.append(gi)
@@ -148,7 +148,7 @@ def searchBy( src: Optional[models.Asset], doRep: IFnProg, fromUrl: bool = False
     return gis
 
 
-def searchSingle( asset: models.Asset, doReport: IFnProg, groupId: int, fromUrl = False) -> SearchInfo:
+def findGroupBy( asset: models.Asset, doReport: IFnProg, grpId: int, fromUrl = False) -> SearchInfo:
     result = SearchInfo()
     result.asset = asset
 
@@ -173,8 +173,8 @@ def searchSingle( asset: models.Asset, doReport: IFnProg, groupId: int, fromUrl 
         return result
 
     if db.dto.muod:
-        similarAssets = [asset] + [db.pics.getByAutoId(aid) for aid in simAids if db.pics.getByAutoId(aid)]
-        if not checkMuodConds(similarAssets):
+        assets = [asset] + [db.pics.getByAutoId(aid) for aid in simAids if db.pics.getByAutoId(aid)]
+        if not checkMuodConds(assets):
             lg.info(f"[sim:ss] Group conditions not met for #{asset.autoId}")
             db.pics.setSimInfos(asset.autoId, bseInfos, isOk=1)
             return result
@@ -193,7 +193,13 @@ def searchSingle( asset: models.Asset, doReport: IFnProg, groupId: int, fromUrl 
 
     if not fromUrl and db.dto.muod:
         #not fromUrl and enable muod
-        result.assets = processMuodGroup(asset, groupId)
+        assets = db.pics.getSimAssets(asset.autoId, False) # muod group ignore rtree
+        for i, ass in enumerate(assets):
+            ass.view.muodId = grpId
+            ass.view.isMain = (i == 0)
+
+        lg.info(f"[sim:fnd] Found group {grpId} with {len(assets)} assets")
+        result.assets = assets
     else:
         result.assets = db.pics.getSimAssets(asset.autoId, db.dto.rtree)
 
@@ -245,18 +251,6 @@ def processChildren( asset: models.Asset, bseInfos: List[models.SimInfo], simAid
             break
 
     return doneIds
-
-
-def processMuodGroup(asset: models.Asset, grpId: int) -> List[models.Asset]:
-    groupAssets = db.pics.getSimAssets(asset.autoId, False) # muod group ignore rtree
-
-    for i, ass in enumerate(groupAssets):
-        ass.view.muodId = grpId
-        ass.view.isMain = (i == 0)
-
-    lg.info(f"[sim:fnd] Found group {grpId} with {len(groupAssets)} assets")
-    return groupAssets
-
 
 
 
@@ -314,15 +308,11 @@ def _shouldSkipGroupBy(src: List[models.Asset], grpId: int) -> bool:
     ats = []
 
     for ass in src:
-        if ass.view.score:
-            scr = ass.view.score
-            if scr != 0.0 and scr <= 0.96:
-                hasLow = True
-                ats.append(f"{ass.autoId}(score={scr})")
-                #lg.info(f"[ausl] Group {grpId}: Asset {ass.autoId} has LOW similarity (score={scr} <= 0.96)")
-        else:
+        scr = ass.view.score
+        if scr != 0 and scr <= 0.96:
             hasLow = True
-            ats.append(f"{ass.autoId}(no score)")
+            ats.append(f"#{ass.autoId}({scr})")
+            #lg.info(f"[ausl] Group {grpId}: Asset {ass.autoId} has LOW similarity (score={scr} <= 0.96)")
 
     if hasLow:
         lg.info(f"[ausl] Group {grpId}: SKIPPING group due to low similarity assets: {ats}")
