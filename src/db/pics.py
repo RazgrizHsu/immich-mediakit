@@ -667,7 +667,8 @@ def getAssetsByGID(gid: int) -> list[models.Asset]:
         return []
 
 
-# If incGroup, include assets with same simGIDs, else only simInfos
+# if incGroup, include assets with same simGIDs, else only simInfos
+# fetched rows will be set the asset.view props
 def getSimAssets(autoId: int, incGroup=False) -> List[models.Asset]:
     import numpy as np
     from db import vecs
