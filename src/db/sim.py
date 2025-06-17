@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 import db
 from mod import models
-from mod.models import IFnProg
+from mod.models import IFnProg, IFnCancel
 from util import log
 
 lg = log.get(__name__)
@@ -108,20 +108,28 @@ def findCandidate(autoId: int, taskArgs: dict) -> models.Asset:
 
 
 
-def searchBy( src: Optional[models.Asset], doRep: IFnProg, fromUrl: bool = False) -> List[SearchInfo]:
+def searchBy( src: Optional[models.Asset], doRep: IFnProg, isCancel: IFnCancel, fromUrl: bool = False) -> List[SearchInfo]:
     gis = []
     ass = src
     grpIdx = 1
 
+    skipAids = []
+
     sizeMax = db.dto.muod_Size
 
     while len(gis) < sizeMax:
+
+        if isCancel():
+            lg.info(f"[sim:sh] user cancelled")
+            break
+
         if not ass:
-            nextAss = db.pics.getAnyNonSim()
+            nextAss = db.pics.getAnyNonSim(skipAids)
             if not nextAss:
                 lg.info(f"[sim:sh] No more assets to search")
                 break
             ass = nextAss
+            lg.info(f"[sim:sh] while by search NonSim #{ass.autoId}, skips[{skipAids}]")
 
         prog = int((len(gis) / sizeMax) * 100) if sizeMax > 0 else 0
         doRep(prog, f"Searching group {len(gis) + 1}/{sizeMax} - Asset #{ass.autoId}")
@@ -129,10 +137,22 @@ def searchBy( src: Optional[models.Asset], doRep: IFnProg, fromUrl: bool = False
         try:
             gi = findGroupBy(ass, doRep, grpIdx, fromUrl)
 
-            if gi.assets:  # 如果群組有資產就算成功
-                gis.append(gi)
-                lg.info(f"[sim:sh] Found group {len(gis)} with {len(gi.assets)} assets")
-                grpIdx += 1
+            if not gi.assets:
+                lg.info(f"[sim:sh] group not have any assets..")
+                ass = None
+                continue
+
+            existingIds = {ast.autoId for grp in gis for ast in grp.assets}
+            hasDup = any(ast.autoId in existingIds for ast in gi.assets)
+            if hasDup:
+                lg.info(f"[sim:sh] group has duplicate autoId, skip to avoid UI confusion")
+                skipAids.append(ass.autoId)
+                ass = None
+                continue
+
+            gis.append(gi)
+            lg.info(f"[sim:sh] Found group {len(gis)} with {len(gi.assets)} assets")
+            grpIdx += 1
 
             ass = None
 
@@ -149,6 +169,8 @@ def searchBy( src: Optional[models.Asset], doRep: IFnProg, fromUrl: bool = False
 
 
 def findGroupBy( asset: models.Asset, doReport: IFnProg, grpId: int, fromUrl = False) -> SearchInfo:
+
+    lg.info(f"[sim:fg] grpId[{grpId}] #{asset.autoId}")
     result = SearchInfo()
     result.asset = asset
 
