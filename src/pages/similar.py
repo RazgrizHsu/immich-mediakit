@@ -892,7 +892,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
             raise e
 
         # search
-        grps = sim.searchBy(asset, doReport, isFromUrl)
+        grps = sim.searchBy(asset, doReport, sto.isCancelled, isFromUrl)
 
         if not grps:
             nfy.info(f"No similar groups found for asset #{asset.autoId}")

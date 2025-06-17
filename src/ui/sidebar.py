@@ -130,20 +130,20 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
 
     cacheRows = [
         dbc.Row([
-            dbc.Col(htm.Small("Photo Count", className="d-inline-block me-2"), width=sizeL),
-            dbc.Col(dbc.Alert(f"{cnt.ass}", color="info", className="py-0 px-2 mb-2 text-center")),
+            dbc.Col(htm.Small("Assets", className="d-inline-block me-2"), width=sizeL),
+            dbc.Col(htm.Span(f"{cnt.ass}", className="py-0 px-2 mb-2 txt-c")),
         ]),
         dbc.Row([
-            dbc.Col(htm.Small("Vector Count", className="d-inline-block me-2"), width=sizeL),
-            dbc.Col(dbc.Alert(f"{cnt.vec}", color="info", className="py-0 px-2 mb-2 text-center")),
+            dbc.Col(htm.Small("Vectors", className="d-inline-block me-2"), width=sizeL),
+            dbc.Col(htm.Span(f"{cnt.vec}", className="py-0 px-2 mb-2 txt-c")),
         ]),
 
         dbc.Row([
-            dbc.Col(htm.Small("NotSearch", className="d-inline-block me-2"), width=sizeL),
+            dbc.Col(htm.Small("Search", className="d-inline-block me-2"), width=sizeL),
             dbc.Col(
                 htm.Div([
-                    htm.Span(f"{cnt.simOk}", className="tag lg second txt-c"),
-                    htm.Span(f"{cnt.simNo}", className="tag lg info txt-c")
+                    htm.Span(f"{cnt.simOk}", className="tag lg info txt-c"),
+                    htm.Span(f"{cnt.simNo}", className="tag lg second txt-c")
                 ],
                     style={ "display":"grid", "gridTemplateColumns":"1fr 1fr" }
                 )
@@ -151,7 +151,7 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
         ]),
         dbc.Row([
             dbc.Col(htm.Small("Pending", className="d-inline-block me-2"), width=sizeL),
-            dbc.Col(htm.Span(f"{cnt.simPnd}", className="tag lg blue py-1 px-2 mb-2 text-center")),
+            dbc.Col(htm.Span(f"{cnt.simPnd}", className="tag blue py-1 px-2 mb-2 text-center")),
         ]),
     ]
 

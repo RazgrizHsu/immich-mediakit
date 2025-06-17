@@ -383,11 +383,19 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
 # sim
 #========================================================================
 
-def getAnyNonSim() -> Optional[models.Asset]:
+def getAnyNonSim(exclAids=[]) -> Optional[models.Asset]:
     try:
         with mkConn() as conn:
             c = conn.cursor()
-            c.execute("Select * From assets Where isVectored = 1 AND simOk!=1 AND json_array_length(simINfos) = 0")
+            sql = "Select * From assets Where isVectored = 1 AND simOk!=1 AND json_array_length(simINfos) = 0"
+            params = []
+
+            if exclAids:
+                qargs = ','.join(['?' for _ in exclAids])
+                sql += f" AND autoId NOT IN ({qargs})"
+                params.extend(exclAids)
+
+            c.execute(sql, params)
             row = c.fetchone()
             if row is None: return None
             asset = models.Asset.fromDB(c, row)
@@ -673,7 +681,7 @@ def getSimAssets(autoId: int, incGroup=False) -> List[models.Asset]:
     import numpy as np
     from db import vecs
 
-    lg.info( f"[getSimAssets] loading #{autoId} inclGroup[ {incGroup} ]" )
+    # lg.info( f"[getSimAssets] loading #{autoId} inclGroup[ {incGroup} ]" )
     rst = []
 
     try:
@@ -814,7 +822,7 @@ def getSimAssets(autoId: int, incGroup=False) -> List[models.Asset]:
                     lg.error(f"[pics] Error processing vectors: {str(e)}")
                     rst.extend(assets)
 
-            lg.info( f"[getSimAssets] fetched[ {len(rst)} ] inclGroup[ {incGroup} ]" )
+            # lg.info( f"[getSimAssets] fetched[ {len(rst)} ] inclGroup[ {incGroup} ]" )
             return rst
     except Exception as e:
         raise mkErr(f"Failed to get similar group for root #{autoId}", e)
