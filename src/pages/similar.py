@@ -381,8 +381,8 @@ def sim_Load(dta_now, dta_nfy, dta_cnt):
         nfy.info("Not have any vectors, please do generate vectors first")
 
 
-    # Check condition group mode from dto settings
-    if db.dto.simCondGrpMode:
+    # Check multi mode from dto settings
+    if db.dto.muod:
         gvSim = gvs.mkGroupGrid(now.sim.assCur, onEmpty=[
             dbc.Alert("No grouped results found..", color="secondary", className="text-center m-5"),
         ])
@@ -410,7 +410,7 @@ def sim_Load(dta_now, dta_nfy, dta_cnt):
         if oldPn != cntPn: pagerData = pgr
 
     lg.info(f"--------------------------------------------------------------------------------")
-    lg.info(f"[sim:load] trig[{trgId}] condGrp[{db.dto.simCondGrpMode}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) assCur[{len(now.sim.assCur)}] assAid[{now.sim.assAid}]")
+    lg.info(f"[sim:load] trig[{trgId}] muod[{db.dto.muod}] cntNo[{cntNo}] cntOk[{cntOk}] cntPn[{cntPn}]({oldPn}) assCur[{len(now.sim.assCur)}] assAid[{now.sim.assAid}]")
 
     # Load pending data - reload if count changed or no data
     needReload = False
@@ -568,7 +568,7 @@ def sim_OnSwitchViewGroup(clks, dta_now):
     if not asset: return noUpd.by(2)
 
     now.sim.assAid = asset.autoId
-    now.sim.assCur = db.pics.getSimAssets(asset.autoId, db.dto.simIncRelGrp)
+    now.sim.assCur = db.pics.getSimAssets(asset.autoId, db.dto.rtree)
 
     if DEBUG: lg.info(f"[sim:vgrp] Loaded {len(now.sim.assCur)} assets for group")
 
@@ -770,8 +770,8 @@ def sim_RunModal(
             now.sim.clearAll()
             return noUpd.by(4).updFr( 0, [nfy, now] )
 
-        thMin = db.dto.simMin
-        thMax = db.dto.simMax
+        thMin = db.dto.thMin
+        thMax = db.dto.thMax
 
         lg.info(f"[thMin/thMax] min[{thMin}] max[{thMax}]")
 
@@ -848,7 +848,7 @@ def queueNext(sto: tskSvc.ITaskStore):
         mdl = models.Mdl()
         mdl.id = ks.pg.similar
         mdl.cmd = ks.cmd.sim.fnd
-        mdl.args = {'thMin': db.dto.simMin, 'thMax': db.dto.simMax}
+        mdl.args = {'thMin': db.dto.thMin, 'thMax': db.dto.thMax}
 
         ntsk = mdl.mkTsk()
         ntsk.args['assetId'] = ass.id
@@ -864,27 +864,23 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
     nfy, now, tsk = sto.nfy, sto.now, sto.tsk
 
-    maxDepth = db.dto.simMaxDepths
-    maxItems = db.dto.simMaxItems
-    thMin, thMax = db.dto.simMin, db.dto.simMax
+    maxItems = db.dto.rtreeMax
+    thMin, thMax = db.dto.thMin, db.dto.thMax
 
     thMin = co.vad.float(thMin, 0.9)
     thMax = co.vad.float(thMax, 1.0)
 
     isFromUrl = now.sim.assFromUrl is not None and now.sim.assFromUrl.autoId is not None
 
-    lg.info(f"[sim:fnd] config maxDepths[{maxDepth}] maxItems[{maxItems}]")
+    lg.info(f"[sim:fs] config maxItems[{maxItems}]")
 
     # Clear URL guidance to avoid duplicate searches
     if now.sim.assFromUrl:
         now.sim.assFromUrl = None
 
     try:
-        lg.info(f"[sim:fnd] now.sim.assAid[{now.sim.assAid}]")
+        lg.info(f"[sim:fs] now.sim.assAid[{now.sim.assAid}]")
         doReport(1, f"prepare..")
-
-        # Create progress reporter
-        autoReport = sim.createReporter(doReport)
 
         # Find asset candidate
         try:
@@ -895,74 +891,68 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
                 return sto, [str(e)]
             raise e
 
-        # Search for similar assets
-        sch = sim.search(asset, thMin, thMax, autoReport, isFromUrl, doReport)
+        # search
+        grps = sim.searchBy(asset, doReport, isFromUrl)
 
-        if not sch.hasVector:
-            nfy.info(f"Asset #{sch.asset.autoId} has no vector stored")
-            return sto, f"Asset #{sch.asset.autoId} has no vector stored"
+        if not grps:
+            nfy.info(f"No similar groups found for asset #{asset.autoId}")
+            return sto, f"No similar groups found for asset #{asset.autoId}"
 
-        if not sch.foundSimilar:
-            nfy.info(f"Asset #{sch.asset.autoId} no similar found")
-            return sto, f"Asset #{sch.asset.autoId} no similar found"
-
-        # Process children assets in similarity tree
-        asset = sch.asset
-        doneIds = sim.processChildren(asset, sch.bseInfos, sch.simAids, thMin, thMax, maxDepth, maxItems, doReport)
+        if not grps[0].assets:
+            nfy.info(f"Asset #{asset.autoId} no similar found")
+            return sto, f"Asset #{asset.autoId} no similar found"
 
         # Auto mark single items as resolved
         db.pics.setSimAutoMark()
 
-        # Process groups and mark assets
-        maxGroups = db.dto.simCondMaxGroups if db.dto.simCondGrpMode else 1
-        condAssets = sim.processCondGroup(asset, 1)
+        assets = []
+        for g in grps: assets.extend(g.assets)
 
-        # Search for additional groups if in group mode
-        grps = sim.searchCondGroups(condAssets, maxGroups, thMin, thMax, maxDepth, maxItems, doReport)
-
-        doReport(95, f"Finalizing {grps.groupCount} group(s) with {len(grps.allGroupAssets)} total assets")
+        doReport(95, f"Finalizing {len(grps)} group(s) with {len(assets)} total assets")
         time.sleep(0.5)
 
         # Update state
         now.sim.assAid = asset.autoId
-        now.sim.assCur = grps.allGroupAssets
+        now.sim.assCur = assets
         now.sim.activeTab = k.tabCur
 
-        lg.info(f"[sim:fnd] done, found {grps.groupCount} group(s) with {len(grps.allGroupAssets)} assets")
+        lg.info(f"[sim:fs] done, found {len(grps)} group(s) with {len(assets)} assets")
 
         if not now.sim.assCur: raise RuntimeError(f"No groups found")
 
-        doReport(100, f"Completed finding {grps.groupCount} similar photo group(s)")
+        doReport(100, f"Completed finding {len(grps)} similar photo group(s)")
 
         # Generate completion message
-        if db.dto.simCondGrpMode:
-            msg = [f"Found {grps.groupCount} similar photo group(s) with {len(grps.allGroupAssets)} total photos"]
-            if grps.groupCount >= maxGroups: msg.append(f"Reached maximum group limit ({maxGroups} groups).")
+        if db.dto.muod:
+            mxGrp = db.dto.muod_Size
+
+            msg = [f"Found {len(grps)} similar photo group(s) with {len(assets)} total photos"]
+            if len(grps) >= mxGrp: msg.append(f"Reached maximum group limit ({mxGrp} groups).")
         else:
-            cntInfos = len(sch.bseInfos)
-            msg = [f"Found {len(sch.bseInfos)} similar photos for #{asset.autoId}"]
-            cntAll = len(doneIds)
+            cntInfos = len(grps[0].bseInfos)
+            msg = [f"Found {len(grps[0].bseInfos)} similar photos for #{asset.autoId}"]
+            cntAll = len(assets)
             if cntAll > cntInfos:
                 msg.append(f"include ({cntAll - cntInfos}) asset extra tree in similar tree.")
             if cntAll >= maxItems:
                 msg.append(f"Reached maximum search limit ({maxItems} items).")
 
         # Auto-select assets if enabled
-        lg.info(f"[sim:fnd] Starting auto-selection check, enable={db.dto.auSel_Enable}")
+        lg.info(f"[sim:fs] Starting auto-selection check, enable={db.dto.ausl}")
         autoSelectedIds = sim.getAutoSelectAuids(now.sim.assCur) if now.sim.assCur else []
         if autoSelectedIds:
-            lg.info(f"[sim:fnd] Auto-selected {len(autoSelectedIds)} assets: {autoSelectedIds}")
+            lg.info(f"[sim:fs] Auto-selected {len(autoSelectedIds)} assets: {autoSelectedIds}")
             sto.ste.selectedIds = autoSelectedIds
             sto.ste.cntTotal = len(now.sim.assCur)
-            lg.info(f"[sim:fnd] Updated ste store: selectedIds={sto.ste.selectedIds}, cntTotal={sto.ste.cntTotal}")
+            lg.info(f"[sim:fs] Updated ste store: selectedIds={sto.ste.selectedIds}, cntTotal={sto.ste.cntTotal}")
         else:
-            lg.info(f"[sim:fnd] No assets auto-selected")
+            lg.info(f"[sim:fs] No assets auto-selected")
 
         nfy.success(msg)
         return sto, msg
 
     except Exception as e:
-        msg = f"[sim:fnd] Similar search failed: {str(e)}"
+        msg = f"[sim:fs] Similar search failed: {str(e)}"
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.sim.clearAll()

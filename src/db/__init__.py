@@ -88,40 +88,39 @@ class DtoSets:
     usrId:Optional[str] = AutoDbField('usrId', str, '') #type:ignore
 
     photoQ:str = AutoDbField('photoQ', str, ks.db.thumbnail) #type:ignore
-    simMin:float = AutoDbField('simMin', float, 0.93) #type:ignore
-    simMax:float = AutoDbField('simMax', float, 1.00) #type:ignore
+    thMin:float = AutoDbField('simMin', float, 0.93) #type:ignore
+    thMax:float = AutoDbField('simMax', float, 1.00) #type:ignore
 
     autoNext:bool = AutoDbField('autoNext', bool, True) #type:ignore
     showGridInfo:bool = AutoDbField('showGridInfo', bool, True) #type:ignore
 
-    simIncRelGrp:bool = AutoDbField('simIncRelGrp', bool, False) #type:ignore
-    simMaxDepths:int = AutoDbField('simMaxDepths', int, 1) #type:ignore
-    simMaxItems:int = AutoDbField('simMaxItems', int, 200) #type:ignore
+    rtree:bool = AutoDbField('simRtree', bool, False) #type:ignore
+    rtreeMax:int = AutoDbField('simMaxItems', int, 200) #type:ignore
 
-    simCondGrpMode:bool = AutoDbField('simCondGrpMode', bool, False) #type:ignore
-    simCondMaxGroups:int = AutoDbField('simCondMaxGroups', int, 10) #type:ignore
-    simCondSameDate:bool = AutoDbField('simCondSameDate', bool, False) #type:ignore
-    simCondSameWidth:bool = AutoDbField('simCondSameWidth', bool, False) #type:ignore
-    simCondSameHeight:bool = AutoDbField('simCondSameHeight', bool, False) #type:ignore
-    simCondSameSize:bool = AutoDbField('simCondSameSize', bool, False) #type:ignore
+    muod:bool = AutoDbField('muod', bool, False) #type:ignore
+    muod_Size:int = AutoDbField('muod_Size', int, 10) #type:ignore
+    muod_EqDt:bool = AutoDbField('muod_EqDt', bool, False) #type:ignore
+    muod_EqW:bool = AutoDbField('muod_EqW', bool, False) #type:ignore
+    muod_EqH:bool = AutoDbField('muod_EqH', bool, False) #type:ignore
+    muod_EqFs:bool = AutoDbField('muod_EqFs', bool, False) #type:ignore
 
-    auSel_Enable:bool = AutoDbField('autoSelectEnable', bool, True ) #type:ignore
-    auSel_SkipLowSim:bool = AutoDbField('autoSelect_SkipLowSim', bool, True ) #type:ignore
-    auSel_AllLivePhoto:bool = AutoDbField('autoSelect_AllLivePhoto', bool, False ) #type:ignore
+    ausl:bool = AutoDbField('ausl', bool, True ) #type:ignore
+    ausl_SkipLow:bool = AutoDbField('ausl_SkpLow', bool, True ) #type:ignore
+    ausl_AllLive:bool = AutoDbField('ausl_AllLive', bool, False ) #type:ignore
 
-    auSel_Earlier:int = AutoDbField('autoSelect_Earlier', int, 2 ) #type:ignore
-    auSel_Later:int = AutoDbField('autoSelect_Later', int, 0 ) #type:ignore
-    auSel_ExifRicher:int = AutoDbField('autoSelect_ExifRicher', int, 1 ) #type:ignore
-    auSel_ExifPoorer:int = AutoDbField('autoSelect_ExifPoorer', int, 0 ) #type:ignore
-    auSel_BiggerSize:int = AutoDbField('autoSelect_BiggerSize', int, 2 ) #type:ignore
-    auSel_SmallerSize:int = AutoDbField('autoSelect_SmallerSize', int, 0 ) #type:ignore
-    auSel_BiggerDimensions:int = AutoDbField('autoSelect_BiggerDimensions', int, 2 ) #type:ignore
-    auSel_SmallerDimensions:int = AutoDbField('autoSelect_SmallerDimensions', int, 0 ) #type:ignore
-    auSel_NameLonger:int = AutoDbField('autoSelect_NameLonger', int, 1 ) #type:ignore
-    auSel_NameShorter:int = AutoDbField('autoSelect_NameShorter', int, 0 ) #type:ignore
+    ausl_Earlier:int = AutoDbField('ausl_Earlier', int, 2 ) #type:ignore
+    ausl_Later:int = AutoDbField('ausl_Later', int, 0 ) #type:ignore
+    ausl_ExRich:int = AutoDbField('ausl_ExRich', int, 1 ) #type:ignore
+    ausl_ExPoor:int = AutoDbField('ausl_ExPoor', int, 0 ) #type:ignore
+    ausl_OfsBig:int = AutoDbField('ausl_OfsBig', int, 2 ) #type:ignore
+    ausl_OfsSml:int = AutoDbField('ausl_OfsSml', int, 0 ) #type:ignore
+    ausl_DimBig:int = AutoDbField('ausl_DimBig', int, 2 ) #type:ignore
+    ausl_DimSml:int = AutoDbField('ausl_DimSml', int, 0 ) #type:ignore
+    ausl_NamLon:int = AutoDbField('ausl_NmLon', int, 1 ) #type:ignore
+    ausl_NamSht:int = AutoDbField('ausl_NmSht', int, 0 ) #type:ignore
 
-    excl_Enable:bool = AutoDbField('exclude_Enable', bool, True ) #type:ignore
-    excl_FndLess:int = AutoDbField('exclude_FindSizeLess', int, 0) #type:ignore
+    excl:bool = AutoDbField('excl', bool, True ) #type:ignore
+    excl_FndLes:int = AutoDbField('excl_FndLes', int, 0) #type:ignore
 
 
     @classmethod

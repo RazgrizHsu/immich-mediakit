@@ -1,7 +1,6 @@
 import time
 from typing import List, Tuple, Set, Callable, Optional
 from dataclasses import dataclass, field
-from enum import Enum
 
 import db
 from mod import models
@@ -35,38 +34,10 @@ class SearchInfo:
     bseVec: List[float] = field(default_factory=list)
     bseInfos: List[models.SimInfo] = field(default_factory=list)
     simAids: List[int] = field(default_factory=list)
-    foundSimilar: bool = False
-    hasVector: bool = False
+    assets: List[models.Asset] = field(default_factory=list)
 
 
-@dataclass
-class GroupSearchInfo:
-    allGroupAssets: List[models.Asset] = field(default_factory=list)
-    groupCount: int = 0
-    maxGroups: int = 1
 
-
-class ScoreType(Enum):
-    EARLIER = "Earlier"
-    LATER = "Later"
-    EXIF_RICH = "ExifRich"
-    EXIF_POOR = "ExifPoor"
-    BIG_SIZE = "BigSize"
-    SMALL_SIZE = "SmallSize"
-    BIG_DIM = "BigDim"
-    SMALL_DIM = "SmallDim"
-    LONG_NAME = "LongName"
-    SHORT_NAME = "ShortName"
-
-
-@dataclass
-class AssetMetrics:
-    aid: int
-    dt: str
-    exfCnt: int
-    fileSz: int
-    dim: int
-    nameLen: int
 
 
 def createReporter(doReport: IFnProg) -> Callable[[str], Tuple[int, int]]:
@@ -79,14 +50,14 @@ def createReporter(doReport: IFnProg) -> Callable[[str], Tuple[int, int]]:
     return autoReport
 
 
-def checkGroupConds(assets: List[models.Asset]) -> bool:
+def checkMuodConds(assets: List[models.Asset]) -> bool:
     if not assets or len(assets) < 2: return False
-    if not db.dto.simCondGrpMode: return True
+    if not db.dto.muod: return True
 
-    doDate = db.dto.simCondSameDate
-    doWidth = db.dto.simCondSameWidth
-    doHeight = db.dto.simCondSameHeight
-    doSize = db.dto.simCondSameSize
+    doDate = db.dto.muod_EqDt
+    doWidth = db.dto.muod_EqW
+    doHeight = db.dto.muod_EqH
+    doSize = db.dto.muod_EqFs
 
     if not any([doDate, doWidth, doHeight, doSize]): return True
 
@@ -126,154 +97,114 @@ def findCandidate(autoId: int, taskArgs: dict) -> models.Asset:
     else:
         asset = db.pics.getByAutoId(autoId) if autoId else None
 
-    if not autoId:
-        raise RuntimeError(f"[tsk] sim.assAid is empty")
+    if not autoId: raise RuntimeError(f"[tsk] sim.assAid is empty")
 
-    if not asset:
-        raise RuntimeError(f"[sim:fnd] not found asset #{autoId}")
+    if not asset: raise RuntimeError(f"[sim:fnd] not found asset #{autoId}")
 
-    if asset.simGIDs:
-        raise RuntimeError(f"[sim:fnd] asset #{asset.autoId} already searched, please clear All Records first")
+    if asset.simGIDs: raise RuntimeError(f"[sim:fnd] asset #{asset.autoId} already searched, please clear All Records first")
 
     return asset
 
 
-def search(
-    ass: models.Asset, thMin: float, thMax: float,
-    autoReport: Callable[[str], Tuple[int, int]],
-    isFromUrl: bool, doReport: IFnProg
-) -> SearchInfo:
-    rst = SearchInfo()
-    rst.asset = ass
-    cntFnd = 0
 
-    while True:
-        if cntFnd <= 0:
-            msg = f"[sim:fnd] search #{ass.autoId}, thresholds[{thMin:.2f}-{thMax:.2f}]"
-            doReport(10, msg)
 
-        time.sleep(0.1)
-        cntFnd += 1
+def searchBy( src: Optional[models.Asset], doRep: IFnProg, fromUrl: bool = False) -> List[SearchInfo]:
+    gis = []
+    ass = src
+    grpIdx = 1
 
-        #todo: 要把bseInfos裡面已經simOk的濾掉
+    sizeMax = db.dto.muod_Size
 
-        # Search for similar assets
-        bseVec, bseInfos = db.vecs.findSimiliar(ass.autoId, thMin, thMax)
-        rst.bseVec = bseVec
-        rst.bseInfos = bseInfos
-
-        # Check if vector exists
-        if not bseInfos:
-            lg.warn(f"[sim:fnd] #{ass.autoId} not found any similar, may not store vector")
-            db.pics.setVectoredBy(ass, 0)
-            rst.hasVector = False
-
-            if isFromUrl:
-                msg = f"[sim:fnd] #{ass.autoId} has no vector stored"
-                doReport(100, msg)
-                return rst
-
-            # Try find next asset
+    while len(gis) < sizeMax:
+        if not ass:
             nextAss = db.pics.getAnyNonSim()
             if not nextAss:
-                msg = f"[sim:fnd] No more images to continue searching"
-                doReport(100, msg)
-                return rst
-
-            lg.info(f"[sim:fnd] No vector for #{ass.autoId}, next: #{nextAss.autoId}")
-            autoReport(f"No vector for #{ass.autoId}, continuing to #{nextAss.autoId}...")
-
+                lg.info(f"[sim:sh] No more assets to search")
+                break
             ass = nextAss
-            rst.asset = ass
-            continue
 
-        rst.hasVector = True
-        simAids = [i.aid for i in bseInfos if not i.isSelf]
-        rst.simAids = simAids
+        prog = int((len(gis) / sizeMax) * 100) if sizeMax > 0 else 0
+        doRep(prog, f"Searching group {len(gis) + 1}/{sizeMax} - Asset #{ass.autoId}")
 
-        # Check if only contains self
-        if not simAids:
-            lg.info(f"[sim:fnd] NoFound #{ass.autoId}")
-            db.pics.setSimInfos(ass.autoId, bseInfos, isOk=1)
-            rst.foundSimilar = False
+        try:
+            gi = searchSingle(ass, doRep, grpIdx, fromUrl)
 
-            if isFromUrl:
-                msg = f"[sim:fnd] Asset #{ass.autoId} no similar found"
-                doReport(100, msg)
-                return rst
+            if gi.assets:  # 如果群組有資產就算成功
+                gis.append(gi)
+                lg.info(f"[sim:sh] Found group {len(gis)} with {len(gi.assets)} assets")
+                grpIdx += 1
 
-            # Try find next asset
-            nextAss = db.pics.getAnyNonSim()
-            if not nextAss:
-                msg = f"[sim:fnd] No more images to continue searching"
-                doReport(100, msg)
-                return rst
+            ass = None
 
-            lg.info(f"[sim:fnd] Next: #{nextAss.autoId}")
-            autoReport(f"No similar found for #{ass.autoId}, continuing to #{nextAss.autoId}...")
-            ass = nextAss
-            rst.asset = ass
-            continue
+        except Exception as e:
+            lg.error(f"[sim:sh] Error processing asset #{ass.autoId}: {e}")
+            raise
 
-        # Found similar assets, check group conditions if enabled
-        if db.dto.simCondGrpMode:
-            similarAssets = [ass] + [db.pics.getByAutoId(aid) for aid in simAids if db.pics.getByAutoId(aid)]
+        # break for normal mode
+        if not db.dto.muod: break
 
-            if not checkGroupConds(similarAssets):
-                lg.info(f"[sim:fnd] Group conditions not met for #{ass.autoId}, marking as resolved and continuing")
-                db.pics.setSimInfos(ass.autoId, bseInfos, isOk=1)
-
-                if not isFromUrl:
-                    nextAss = db.pics.getAnyNonSim()
-                    if not nextAss:
-                        msg = f"[sim:fnd] No more images to continue searching"
-                        doReport(100, msg)
-                        return rst
-
-                    lg.info(f"[sim:fnd] Continuing to next: #{nextAss.autoId}")
-                    autoReport(f"Group conditions not met for #{ass.autoId}, continuing to #{nextAss.autoId}...")
-                    ass = nextAss
-                    rst.asset = ass
-                    continue
-                else:
-                    msg = f"[sim:fnd] Asset #{ass.autoId} group conditions not met"
-                    doReport(100, msg)
-                    return rst
-
-        # Check exclude settings before processing
-        lg.info(f"[sim:fnd] DEBUG excl_Enable[{db.dto.excl_Enable}] excl_FndLess[{db.dto.excl_FndLess}] simAids_count[{len(simAids)}]")
-        if db.dto.excl_Enable and db.dto.excl_FndLess > 0:
-            if len(simAids) < db.dto.excl_FndLess:
-                lg.info(f"[sim:fnd] Excluding #{ass.autoId}, similar count({len(simAids)}) < threshold({db.dto.excl_FndLess})")
-                db.pics.setSimInfos(ass.autoId, bseInfos, isOk=1)
-
-                if not isFromUrl:
-                    nextAss = db.pics.getAnyNonSim()
-                    if not nextAss:
-                        msg = f"[sim:fnd] No more images to continue searching"
-                        doReport(100, msg)
-                        return rst
-                    lg.info(f"[sim:fnd] Excluded #{ass.autoId}, continuing to #{nextAss.autoId}")
-                    autoReport(f"Excluded #{ass.autoId} (only {len(simAids)} similar), continuing to #{nextAss.autoId}...")
-                    ass = nextAss
-                    rst.asset = ass
-                    continue
-                else:
-                    msg = f"Asset #{ass.autoId} excluded: only {len(simAids)} similar photos (< {db.dto.excl_FndLess})"
-                    doReport(100, msg)
-                    return rst
-
-        # Group conditions met or not in group mode, found similar assets
-        rst.foundSimilar = True
-        break
-
-    return rst
+    totalAssets = sum(len(g.assets) for g in gis)
+    doRep(100, f"Found {len(gis)} groups with {totalAssets} total assets")
+    return gis
 
 
-def processChildren(
-    asset: models.Asset, bseInfos: List[models.SimInfo], simAids: List[int],
-    thMin: float, thMax: float, maxDepth: int, maxItems: int, doReport: IFnProg
-) -> Set[int]:
+def searchSingle( asset: models.Asset, doReport: IFnProg, groupId: int, fromUrl = False) -> SearchInfo:
+    result = SearchInfo()
+    result.asset = asset
+
+    time.sleep(0.1)
+    thMin, thMax = db.dto.thMin, db.dto.thMax
+
+    bseVec, bseInfos = db.vecs.findSimiliar(asset.autoId, thMin, thMax)
+    result.bseVec = bseVec
+    result.bseInfos = bseInfos
+
+    if not bseInfos:
+        lg.warn(f"[sim:ss] #{asset.autoId} not found any similar, may not store vector")
+        db.pics.setVectoredBy(asset, 0)
+        return result
+
+    simAids = [i.aid for i in bseInfos if not i.isSelf]
+    result.simAids = simAids
+
+    if not simAids:
+        lg.info(f"[sim:ss] NoFound #{asset.autoId}")
+        db.pics.setSimInfos(asset.autoId, bseInfos, isOk=1)
+        return result
+
+    if db.dto.muod:
+        similarAssets = [asset] + [db.pics.getByAutoId(aid) for aid in simAids if db.pics.getByAutoId(aid)]
+        if not checkMuodConds(similarAssets):
+            lg.info(f"[sim:ss] Group conditions not met for #{asset.autoId}")
+            db.pics.setSimInfos(asset.autoId, bseInfos, isOk=1)
+            return result
+
+    if db.dto.excl and db.dto.excl_FndLes > 0:
+        if len(simAids) < db.dto.excl_FndLes:
+            lg.info(f"[sim:ss] Excluding #{asset.autoId}, similar count({len(simAids)}) < threshold({db.dto.excl_FndLes})")
+            db.pics.setSimInfos(asset.autoId, bseInfos, isOk=1)
+            return result
+
+    rootGID = asset.autoId
+    db.pics.setSimGIDs(asset.autoId, rootGID)
+    db.pics.setSimInfos(asset.autoId, bseInfos)
+
+    processChildren(asset, bseInfos, simAids, doReport)
+
+    if not fromUrl and db.dto.muod:
+        #not fromUrl and enable muod
+        result.assets = processMuodGroup(asset, groupId)
+    else:
+        result.assets = db.pics.getSimAssets(asset.autoId, db.dto.rtree)
+
+    return result
+
+
+def processChildren( asset: models.Asset, bseInfos: List[models.SimInfo], simAids: List[int], doReport: IFnProg) -> Set[int]:
+
+    thMin, thMax = db.dto.thMin, db.dto.thMax
+    maxItems = db.dto.rtreeMax
+
 
     rootGID = asset.autoId
     db.pics.setSimGIDs(asset.autoId, rootGID)
@@ -293,14 +224,14 @@ def processChildren(
             ass = db.pics.getByAutoId(aid)
             if ass.simOk: continue  # ignore already resolved
 
-            lg.info(f"[sim:fnd] search child #{aid} depth[{depth}] mx({maxDepth}) items({len(doneIds)}/{maxItems})")
+            lg.info(f"[sim:fnd] search child #{aid} depth[{depth}]items({len(doneIds)}/{maxItems})")
             cVec, cInfos = db.vecs.findSimiliar(aid, thMin, thMax)
 
             db.pics.setSimGIDs(aid, rootGID)
             db.pics.setSimInfos(aid, cInfos)
 
             # Add children to queue if haven't reached max depth/items
-            if depth < maxDepth and len(doneIds) < maxItems:
+            if len(doneIds) < maxItems:
                 for inf in cInfos:
                     if inf.aid not in doneIds: simQ.append((inf.aid, depth + 1))
 
@@ -316,194 +247,149 @@ def processChildren(
     return doneIds
 
 
-def processCondGroup(asset: models.Asset, grpId: int) -> List[models.Asset]:
-    groupAssets = db.pics.getSimAssets(asset.autoId, False) # cond group ignore simIncRelGrp
+def processMuodGroup(asset: models.Asset, grpId: int) -> List[models.Asset]:
+    groupAssets = db.pics.getSimAssets(asset.autoId, False) # muod group ignore rtree
 
     for i, ass in enumerate(groupAssets):
-        ass.view.condGrpId = grpId
+        ass.view.muodId = grpId
         ass.view.isMain = (i == 0)
 
     lg.info(f"[sim:fnd] Found group {grpId} with {len(groupAssets)} assets")
     return groupAssets
 
 
-def searchCondGroups( currentAssets: List[models.Asset], maxGroups: int, thMin: float, thMax: float, maxDepth: int, maxItems: int, doReport: IFnProg) -> GroupSearchInfo:
-    result = GroupSearchInfo()
-    result.allGroupAssets = currentAssets[:]
-    result.groupCount = 1
-    result.maxGroups = maxGroups
-
-    if not db.dto.simCondGrpMode or result.groupCount >= maxGroups:
-        return result
-
-    doReport(80, f"Searching for additional groups ({result.groupCount}/{maxGroups})...")
-
-    while result.groupCount < maxGroups:
-        nextAss = db.pics.getAnyNonSim()
-        if not nextAss:
-            lg.info(f"[sim:fnd] No more assets to search for additional groups")
-            break
-
-        try:
-            # Quick similarity search for next group
-            doReport(85, f"Checking group {result.groupCount + 1} candidate #{nextAss.autoId}...")
-            nextVec, nextInfos = db.vecs.findSimiliar(nextAss.autoId, thMin, thMax)
-
-            if not nextInfos:
-                db.pics.setVectoredBy(nextAss, 0)
-                continue
-
-            nextSimAids = [i.aid for i in nextInfos if not i.isSelf]
-            if not nextSimAids:
-                db.pics.setSimInfos(nextAss.autoId, nextInfos, isOk=1)
-                continue
-
-            # Check exclude settings for additional groups
-            lg.info(f"[sim:fnd] Group {result.groupCount + 1} DEBUG excl_Enable[{db.dto.excl_Enable}] excl_FndLess[{db.dto.excl_FndLess}] simAids_count[{len(nextSimAids)}]")
-            if db.dto.excl_Enable and db.dto.excl_FndLess > 0:
-                if len(nextSimAids) < db.dto.excl_FndLess:
-                    lg.info(f"[sim:fnd] Excluding group candidate #{nextAss.autoId}, similar count({len(nextSimAids)}) < threshold({db.dto.excl_FndLess})")
-                    db.pics.setSimInfos(nextAss.autoId, nextInfos, isOk=1)
-                    continue
-
-            # Check group conditions
-            nextSimilarAssets = [nextAss] + [db.pics.getByAutoId(aid) for aid in nextSimAids if db.pics.getByAutoId(aid)]
-            if not checkGroupConds(nextSimilarAssets):
-                db.pics.setSimInfos(nextAss.autoId, nextInfos, isOk=1)
-                continue
-
-            # Found valid group, process it
-            result.groupCount += 1
-            nextRootGID = nextAss.autoId
-            db.pics.setSimGIDs(nextAss.autoId, nextRootGID)
-            db.pics.setSimInfos(nextAss.autoId, nextInfos)
-
-            # Process children for this group
-            processChildren(nextAss, nextInfos, nextSimAids, thMin, thMax, maxDepth, maxItems, doReport)
-
-            # Add this group's assets
-            groupAssets = processCondGroup(nextAss, result.groupCount)
-            result.allGroupAssets.extend(groupAssets)
-
-        except Exception as e:
-            lg.warn(f"Error searching for group {result.groupCount + 1}: {e}")
-            continue
-
-    return result
 
 
-def getAutoSelectAuids(assets: List[models.Asset]) -> List[int]:
-    lg.info(f"[autoSel] Starting auto-selection, auSelEnable[{db.dto.auSel_Enable}], assets count={len(assets) if assets else 0}")
-    lg.info(f"[autoSel] Weights: Earlier={db.dto.auSel_Earlier}, Later={db.dto.auSel_Later}, ExifRich={db.dto.auSel_ExifRicher}, ExifPoor={db.dto.auSel_ExifPoorer}, BigSize={db.dto.auSel_BiggerSize}, SmallSize={db.dto.auSel_SmallerSize}, BigDim={db.dto.auSel_BiggerDimensions}, SmallDim={db.dto.auSel_SmallerDimensions}, HighSim={db.dto.auSel_SkipLowSim}, AlwaysPickLivePhoto={db.dto.auSel_AllLivePhoto}")
+def getAutoSelectAuids(src: List[models.Asset]) -> List[int]:
+    lg.info(f"[ausl] Starting auto-selection, auSelEnable[{db.dto.ausl}], assets count={len(src) if src else 0}")
+    lg.info(f"[ausl] Weights: Earlier={db.dto.ausl_Earlier}, Later={db.dto.ausl_Later}, ExifRich={db.dto.ausl_ExRich}, ExifPoor={db.dto.ausl_ExPoor}, BigSize={db.dto.ausl_OfsBig}, SmallSize={db.dto.ausl_OfsSml}, BigDim={db.dto.ausl_DimBig}, SmallDim={db.dto.ausl_DimSml}, HighSim={db.dto.ausl_SkipLow}, AlwaysPickLivePhoto={db.dto.ausl_AllLive}")
 
-    if not db.dto.auSel_Enable or not assets: return []
+    if not db.dto.ausl or not src: return []
 
     active = any([
-        db.dto.auSel_Earlier > 0, db.dto.auSel_Later > 0,
-        db.dto.auSel_ExifRicher > 0, db.dto.auSel_ExifPoorer > 0,
-        db.dto.auSel_BiggerSize > 0, db.dto.auSel_SmallerSize > 0,
-        db.dto.auSel_BiggerDimensions > 0, db.dto.auSel_SmallerDimensions > 0,
-        db.dto.auSel_NameLonger > 0, db.dto.auSel_NameShorter > 0,
+        db.dto.ausl_Earlier > 0, db.dto.ausl_Later > 0,
+        db.dto.ausl_ExRich > 0, db.dto.ausl_ExPoor > 0,
+        db.dto.ausl_OfsBig > 0, db.dto.ausl_OfsSml > 0,
+        db.dto.ausl_DimBig > 0, db.dto.ausl_DimSml > 0,
+        db.dto.ausl_NamLon > 0, db.dto.ausl_NamSht > 0,
     ])
 
     if not active: return []
 
-    grpAssets = _groupAssetsByCondGroup(assets)
-    lg.info(f"[autoSel] Grouped {len(assets)} assets into {len(grpAssets)} groups")
+    assets = _groupAssetsByCondGroup(src)
+    lg.info(f"[ausl] Grouped {len(src)} assets into {len(assets)} groups")
 
     selIds = []
 
-    for grpId, grpAss in grpAssets.items():
-        lg.info(f"[autoSel] Processing group {grpId} with {len(grpAss)} assets: {[a.autoId for a in grpAss]}")
+    for grpId, grpAss in assets.items():
+        lg.info(f"[ausl] Processing group {grpId} with {len(grpAss)} assets: {[a.autoId for a in grpAss]}")
 
         liveIds = _checkAlwaysPickLivePhoto(grpAss, grpId)
         if liveIds:
             selIds.extend(liveIds)
-            lg.info(f"[autoSel] Group {grpId}: Selected ALL LivePhoto assets {liveIds}")
+            lg.info(f"[ausl] Group {grpId}: Selected ALL LivePhoto assets {liveIds}")
             continue
 
         if _shouldSkipGroupBy(grpAss, grpId):
-            lg.info(f"[autoSel] Group {grpId}: Skipping group due to low similarity photos")
+            lg.info(f"[ausl] Group {grpId}: Skipping group due to low similarity photos")
             continue
 
         bestId = _selectBestAsset(grpAss)
         if bestId:
             selIds.append(bestId)
-            lg.info(f"[autoSel] Group {grpId}: Selected best weighted asset {bestId}")
+            lg.info(f"[ausl] Group {grpId}: Selected best weighted asset {bestId}")
         else:
-            lg.warn(f"[autoSel] Group {grpId}: No best asset found despite having {len(grpAss)} assets")
+            lg.warn(f"[ausl] Group {grpId}: No best asset found despite having {len(grpAss)} assets")
 
-    lg.info(f"[autoSel] Final selection: {len(selIds)} assets: {selIds}")
+    lg.info(f"[ausl] Final selection: {len(selIds)} assets: {selIds}")
     return selIds
 
 
-def _shouldSkipGroupBy(grpAssets: List[models.Asset], grpId: int) -> bool:
-    lg.info(f"[autoSel] ------ Group[ {grpId} ] assets[ {len(grpAssets)} ]------")
+def _shouldSkipGroupBy(src: List[models.Asset], grpId: int) -> bool:
+    lg.info(f"[ausl] ------ Group[ {grpId} ] assets[ {len(src)} ]------")
 
-    # for ass in grpAssets:
-    #     if hasattr(ass, 'view') and hasattr(ass.view, 'score'):
-    #         scr = ass.view.score
-    #         lg.info(f"[autoSel] Group {grpId}: Asset {ass.autoId} has view.score = {scr}")
-    #     else:
-    #         lg.warn(f"[autoSel] Group {grpId}: Asset {ass.autoId} missing view.score attribute")
-
-    if not db.dto.auSel_SkipLowSim: return False
+    if not db.dto.ausl_SkipLow: return False
 
     hasLow = False
-    lowAssets = []
+    ats = []
 
-    for ass in grpAssets:
-        if hasattr(ass, 'view') and hasattr(ass.view, 'score'):
+    for ass in src:
+        if ass.view.score:
             scr = ass.view.score
             if scr != 0.0 and scr <= 0.96:
                 hasLow = True
-                lowAssets.append(f"{ass.autoId}(score={scr})")
-                #lg.info(f"[autoSel] Group {grpId}: Asset {ass.autoId} has LOW similarity (score={scr} <= 0.96)")
+                ats.append(f"{ass.autoId}(score={scr})")
+                #lg.info(f"[ausl] Group {grpId}: Asset {ass.autoId} has LOW similarity (score={scr} <= 0.96)")
         else:
             hasLow = True
-            lowAssets.append(f"{ass.autoId}(no score)")
+            ats.append(f"{ass.autoId}(no score)")
 
     if hasLow:
-        lg.info(f"[autoSel] Group {grpId}: SKIPPING group due to low similarity assets: {lowAssets}")
+        lg.info(f"[ausl] Group {grpId}: SKIPPING group due to low similarity assets: {ats}")
         return True
 
-    #lg.info(f"[autoSel] Group {grpId}: All assets have high similarity, processing group")
+    #lg.info(f"[ausl] Group {grpId}: All assets have high similarity, processing group")
     return False
 
 
-def _groupAssetsByCondGroup(assets: List[models.Asset]) -> dict:
-    lg.info(f"[autoSel] Starting grouping for {len(assets)} assets")
-    grpAssets = {}
+def _groupAssetsByCondGroup(src: List[models.Asset]) -> dict:
+    lg.info(f"[ausl] Starting grouping for {len(src)} assets")
+    rst = {}
 
-    for ass in assets:
-        grpId = ass.view.condGrpId if hasattr(ass, 'view') and hasattr(ass.view, 'condGrpId') else None
+    for at in src:
+        grpId = at.view.muodId
         if grpId is None:
-            grpId = ass.autoId
-            lg.debug(f"[autoSel] Asset {ass.autoId}: No condGrpId, using autoId as groupId")
+            grpId = at.autoId
+            lg.debug(f"[ausl] Asset {at.autoId}: No muodId, using autoId as groupId")
         else:
-            lg.debug(f"[autoSel] Asset {ass.autoId}: Using condGrpId {grpId}")
+            lg.debug(f"[ausl] Asset {at.autoId}: Using muodId {grpId}")
 
-        if grpId not in grpAssets: grpAssets[grpId] = []
-        grpAssets[grpId].append(ass)
+        if grpId not in rst: rst[grpId] = []
+        rst[grpId].append(at)
 
-    for grpId, grpAss in grpAssets.items():
+    for grpId, grpAss in rst.items():
         assIds = [a.autoId for a in grpAss]
-        lg.info(f"[autoSel] Group {grpId}: Contains {len(grpAss)} assets: {assIds}")
+        lg.info(f"[ausl] Group {grpId}: Contains {len(grpAss)} assets: {assIds}")
 
-    return grpAssets
+    return rst
+
+
+
+
+@dataclass
+class IMetrics:
+    aid: int
+    dt: str
+    exfCnt: int
+    fileSz: int
+    dim: int
+    nameLen: int
 
 
 def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
+
     if not grpAssets: raise RuntimeError("No Group")
 
-    def collectMetrics(assets: List[models.Asset]) -> List[AssetMetrics]:
+    def countExif(exif) -> int:
+        if not exif: return 0
+
+        fields = [
+            'dateTimeOriginal', 'modifyDate', 'make', 'model', 'lensModel',
+            'fNumber', 'focalLength', 'exposureTime', 'iso',
+            'latitude', 'longitude', 'city', 'state', 'country', 'description',
+            'exifImageWidth', 'exifImageHeight', 'fileSizeInByte'
+        ]
+
+        return sum(1 for f in fields if hasattr(exif, f) and getattr(exif, f, None) is not None)
+
+    def collectMetrics(assets: List[models.Asset]) -> List[IMetrics]:
         metrics = []
         for ass in assets:
             dt = None
             if ass.jsonExif:
                 dt = ass.jsonExif.dateTimeOriginal or ass.fileCreatedAt
 
-            exfCnt = _countExifFields(ass.jsonExif) if ass.jsonExif else 0
+            exfCnt = countExif(ass.jsonExif) if ass.jsonExif else 0
             fileSz = ass.jsonExif.fileSizeInByte if ass.jsonExif and ass.jsonExif.fileSizeInByte else 0
 
             dim = 0
@@ -515,10 +401,10 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
             nameLen = len(ass.originalFileName) if ass.originalFileName else 0
 
             ndt = normalizeDate(dt)
-            metrics.append(AssetMetrics( aid=ass.autoId, dt=ndt, exfCnt=exfCnt, fileSz=fileSz, dim=dim, nameLen=nameLen))
+            metrics.append(IMetrics( aid=ass.autoId, dt=ndt, exfCnt=exfCnt, fileSz=fileSz, dim=dim, nameLen=nameLen))
         return metrics
 
-    def calcScore(idx: int, met: List[AssetMetrics]) -> Tuple[int, List[str]]:
+    def calcScore(idx: int, met: List[IMetrics]) -> Tuple[int, List[str]]:
         score = 0
         details = []
 
@@ -535,38 +421,38 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
         validDates = [d for d in dates if d]
 
         if dates[idx] and validDates and len(set(validDates)) > 1:
-            if db.dto.auSel_Earlier > 0 and dates[idx] == min(validDates):
-                pts = db.dto.auSel_Earlier * 10
+            if db.dto.ausl_Earlier > 0 and dates[idx] == min(validDates):
+                pts = db.dto.ausl_Earlier * 10
                 score += pts
                 details.append(f"Earlier+{pts}")
-            if db.dto.auSel_Later > 0 and dates[idx] == max(validDates):
-                pts = db.dto.auSel_Later * 10
+            if db.dto.ausl_Later > 0 and dates[idx] == max(validDates):
+                pts = db.dto.ausl_Later * 10
                 score += pts
                 details.append(f"Later+{pts}")
 
-        addScore(db.dto.auSel_ExifRicher, [m.exfCnt for m in met], True, "ExifRich")
-        addScore(db.dto.auSel_ExifPoorer, [m.exfCnt for m in met], False, "ExifPoor")
-        addScore(db.dto.auSel_BiggerSize, [m.fileSz for m in met], True, "BigSize")
-        addScore(db.dto.auSel_SmallerSize, [m.fileSz for m in met], False, "SmallSize")
-        addScore(db.dto.auSel_BiggerDimensions, [m.dim for m in met], True, "BigDim")
-        addScore(db.dto.auSel_SmallerDimensions, [m.dim for m in met], False, "SmallDim")
-        addScore(db.dto.auSel_NameLonger, [m.nameLen for m in met], True, "LongName")
-        addScore(db.dto.auSel_NameShorter, [m.nameLen for m in met], False, "ShortName")
+        addScore(db.dto.ausl_ExRich, [m.exfCnt for m in met], True, "ExifRich")
+        addScore(db.dto.ausl_ExPoor, [m.exfCnt for m in met], False, "ExifPoor")
+        addScore(db.dto.ausl_OfsBig, [m.fileSz for m in met], True, "BigSize")
+        addScore(db.dto.ausl_OfsSml, [m.fileSz for m in met], False, "SmallSize")
+        addScore(db.dto.ausl_DimBig, [m.dim for m in met], True, "BigDim")
+        addScore(db.dto.ausl_DimSml, [m.dim for m in met], False, "SmallDim")
+        addScore(db.dto.ausl_NamLon, [m.nameLen for m in met], True, "LongName")
+        addScore(db.dto.ausl_NamSht, [m.nameLen for m in met], False, "ShortName")
 
         return score, details
 
     met = collectMetrics(grpAssets)
 
-    lg.info(f"[autoSel] Group comparison:")
+    lg.info(f"[ausl] Group comparison:")
     for m in met:
-        lg.info(f"[autoSel]   #{m.aid}: date[{m.dt}] exif[{m.exfCnt}] fsize[{m.fileSz}] dimensions[{m.dim}] nameLen[{m.nameLen}]")
+        lg.info(f"[ausl]   #{m.aid}: date[{m.dt}] exif[{m.exfCnt}] fsize[{m.fileSz}] dimensions[{m.dim}] nameLen[{m.nameLen}]")
 
     bestAss = None
     bestScr = -1
 
     for i, ass in enumerate(grpAssets):
         scr, det = calcScore(i, met)
-        lg.info(f"[autoSel] #{ass.autoId}: score={scr} ({', '.join(det) if det else 'no matches'})")
+        lg.info(f"[ausl] #{ass.autoId}: score[{scr}] ({', '.join(det) if det else 'no matches'})")
 
         if scr > bestScr:
             bestScr = scr
@@ -578,7 +464,7 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
 
 
 def _checkAlwaysPickLivePhoto(grpAssets: List[models.Asset], grpId: int) -> List[int]:
-    if not db.dto.auSel_AllLivePhoto: return []
+    if not db.dto.ausl_AllLive: return []
 
     liveIds = []
     for ass in grpAssets:
@@ -587,22 +473,11 @@ def _checkAlwaysPickLivePhoto(grpAssets: List[models.Asset], grpId: int) -> List
 
         if hasCID or hasPath:
             liveIds.append(ass.autoId)
-            lg.info(f"[autoSel] Group {grpId}: Found LivePhoto asset {ass.autoId} (CID={hasCID}, Path={bool(hasPath)})")
+            lg.info(f"[ausl] Group {grpId}: Found LivePhoto asset {ass.autoId} (CID={hasCID}, Path={bool(hasPath)})")
 
     if not liveIds: return []
 
-    lg.info(f"[autoSel] Group {grpId}: Selecting ALL {len(liveIds)} LivePhoto assets: {liveIds}")
+    lg.info(f"[ausl] Group {grpId}: Selecting ALL {len(liveIds)} LivePhoto assets: {liveIds}")
     return liveIds
 
 
-def _countExifFields(exif) -> int:
-    if not exif: return 0
-
-    fields = [
-        'dateTimeOriginal', 'modifyDate', 'make', 'model', 'lensModel',
-        'fNumber', 'focalLength', 'exposureTime', 'iso',
-        'latitude', 'longitude', 'city', 'state', 'country', 'description',
-        'exifImageWidth', 'exifImageHeight', 'fileSizeInByte'
-    ]
-
-    return sum(1 for f in fields if hasattr(exif, f) and getattr(exif, f, None) is not None)

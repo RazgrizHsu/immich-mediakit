@@ -14,21 +14,20 @@ class k:
     threshold = "thresholds"
     autoNext = "autoNext"
     showGridInfo = "showGridInfo"
-    simIncRelGrp = "simIncRelGrp"
-    simMaxDepths = "simMaxDepths"
+    simRtree = "simRtree"
     simMaxItems = "simMaxItems"
 
     exclEnable = "exclEnable"
     exclFndLess = "exclFndLess"
 
-    cndGrpEnable = "cndGrpEnable"
-    cndGrpSameDate = "cndGrpSameDate"
-    cndGrpSameWidth = "cndGrpSameWidth"
-    cndGrpSameHeight = "cndGrpSameHeight"
-    cndGrpSameSize = "cndGrpSameSize"
-    cndGrpMaxGroups = "cndGrpMaxGroups"
+    muodEnable = "muodEnable"
+    muodEqDate = "muodEqDate"
+    muodEqWidth = "muodEqWidth"
+    muodEqHeight = "muodEqHeight"
+    muodEqSize = "muodEqSize"
+    muodMaxGroups = "muodMaxGroups"
 
-    cndGrpAuSel = "cndGrpAuSel"
+    muodAuSel = "muodAuSel"
 
     auSelEnable = "autoSelEnable"
     auSelSkipLowSim = "autoSelSkipLowSim"
@@ -79,7 +78,7 @@ def renderThreshold():
                 htm.Div([
                     dcc.RangeSlider(
                         id=k.id(k.threshold), min=optThresholdMin, max=1, step=0.01, marks=optThresholdMarks, #type: ignore
-                        value=[db.dto.simMin, db.dto.simMax],
+                        value=[db.dto.thMin, db.dto.thMax],
                         tooltip={
                             "placement": "top", "always_visible": True,
                             "style": {"padding": "0 1px 0 1px", "fontSize": "11px"},
@@ -99,52 +98,52 @@ def renderAutoSelect():
         dbc.CardBody([
             htm.Div([
                 # Main enable switch
-                dbc.Checkbox(id=k.id(k.auSelEnable), label="Enable", value=db.dto.auSel_Enable), htm.Br(),
+                dbc.Checkbox(id=k.id(k.auSelEnable), label="Enable", value=db.dto.ausl), htm.Br(),
 
-                dbc.Checkbox(id=k.id(k.auSelSkipLowSim), label="Skip has sim(<0.96) group", value=db.dto.auSel_SkipLowSim, disabled=not db.dto.auSel_Enable),
+                dbc.Checkbox(id=k.id(k.auSelSkipLowSim), label="Skip has sim(<0.96) group", value=db.dto.ausl_SkipLow, disabled=not db.dto.ausl),
 
-                dbc.Checkbox(id=k.id(k.auSelAllLivePhoto), label="All LivePhotos (ignore criteria)", value=db.dto.auSel_AllLivePhoto, disabled=not db.dto.auSel_Enable), htm.Br(),
+                dbc.Checkbox(id=k.id(k.auSelAllLivePhoto), label="All LivePhotos (ignore criteria)", value=db.dto.ausl_AllLive, disabled=not db.dto.ausl), htm.Br(),
 
                 htm.Hr(),
 
                 htm.Div([
                     htm.Span( htm.Span("DateTime", className="tag txt-smx me-1")),
                     htm.Label("Earlier", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelEarlier), options=optWeights, value=db.dto.auSel_Earlier, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelEarlier), options=optWeights, value=db.dto.ausl_Earlier, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
                     htm.Label("Later", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelLater), options=optWeights, value=db.dto.auSel_Later, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelLater), options=optWeights, value=db.dto.ausl_Later, disabled=not db.dto.ausl, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Div([
                     htm.Span(htm.Span("Exif", className="tag txt-smx me-1")),
                     htm.Label("Richer", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelExifRicher), options=optWeights, value=db.dto.auSel_ExifRicher, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelExifRicher), options=optWeights, value=db.dto.ausl_ExRich, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
                     htm.Label("Poorer", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelExifPoorer), options=optWeights, value=db.dto.auSel_ExifPoorer, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelExifPoorer), options=optWeights, value=db.dto.ausl_ExPoor, disabled=not db.dto.ausl, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Div([
                     htm.Span(htm.Span("Name Length", className="tag txt-smx me-1")),
                     htm.Label("Longer", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelNameLonger), options=optWeights, value=db.dto.auSel_NameLonger, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelNameLonger), options=optWeights, value=db.dto.ausl_NamLon, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
                     htm.Label("Shorter", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelNameShorter), options=optWeights, value=db.dto.auSel_NameShorter, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelNameShorter), options=optWeights, value=db.dto.ausl_NamSht, disabled=not db.dto.ausl, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Div([
                     htm.Span(htm.Span("FileSize", className="tag txt-smx me-1")),
                     htm.Label("Bigger", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelBiggerSize), options=optWeights, value=db.dto.auSel_BiggerSize, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelBiggerSize), options=optWeights, value=db.dto.ausl_OfsBig, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
                     htm.Label("Smaller", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelSmallerSize), options=optWeights, value=db.dto.auSel_SmallerSize, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelSmallerSize), options=optWeights, value=db.dto.ausl_OfsSml, disabled=not db.dto.ausl, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Div([
                     htm.Span(htm.Span("Dimensions", className="tag txt-smx me-1")),
                     htm.Label("Bigger", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelBiggerDimensions), options=optWeights, value=db.dto.auSel_BiggerDimensions, disabled=not db.dto.auSel_Enable, size="sm", className="me-1"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelBiggerDimensions), options=optWeights, value=db.dto.ausl_DimBig, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
                     htm.Label("Smaller", className="me-2"),
-                    dbc.Select(id=k.id(k.auSelSmallerDimensions), options=optWeights, value=db.dto.auSel_SmallerDimensions, disabled=not db.dto.auSel_Enable, size="sm"), #type:ignore
+                    dbc.Select(id=k.id(k.auSelSmallerDimensions), options=optWeights, value=db.dto.ausl_DimSml, disabled=not db.dto.ausl, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Hr(),
@@ -173,22 +172,17 @@ def renderCard():
             ], className="irow"),
 
             htm.Div([
-                htm.Label("Related Settings", className="txt-sm"),
+                htm.Label("Related Tree", className="txt-sm"),
                 htm.Div([
-                    dbc.Checkbox(id=k.id(k.simIncRelGrp), label="Include Related", value=db.dto.simIncRelGrp),
-
-                    htm.Div([
-                        htm.Label("Max Depths: "),
-                        dbc.Select(id=k.id(k.simMaxDepths), options=optMaxDepths, value=db.dto.simMaxDepths, className="")
-                    ]),
+                    dbc.Checkbox(id=k.id(k.simRtree), label="Related Tree", value=db.dto.rtree),
 
                     htm.Div([
                         htm.Label("Max Items: "),
-                        dbc.Select(id=k.id(k.simMaxItems), options=optMaxItems, value=db.dto.simMaxItems, className="") #type:ignore
+                        dbc.Select(id=k.id(k.simMaxItems), options=optMaxItems, value=db.dto.rtreeMax, className="") #type:ignore
                     ]),
                 ], className="icbxs"),
                 htm.Ul([
-                    htm.Li([htm.B("Include Related: "), "Show all images in similarity group. Keep/Delete affects all displayed images"]),
+                    htm.Li([htm.B("Related Tree: "), "Expand similarity tree to include related photos. Keep/Delete affects all displayed images"]),
                     htm.Li([htm.B("Max Depths: "), "Hierarchy levels to include in similarity search (0 = direct matches only)"]),
                     htm.Li([htm.B("Max Items: "), "Max images to process in similarity search to prevent UI slowdown"])
                 ])
@@ -196,23 +190,23 @@ def renderCard():
 
             htm.Div([
                 htm.Label([
-                    "Multiple Group",
-                    htm.Span("Find groups of similar photos based on metadata", className="txt-smx text-muted ms-3")
+                    "Multi Mode",
+                    htm.Span("Find multiple groups of similar photos (mutually exclusive with Related Tree)", className="txt-smx text-muted ms-3")
                 ], className="txt-sm"),
                 htm.Div([
-                    dbc.Checkbox(id=k.id(k.cndGrpEnable), label="Enable", value=db.dto.simCondGrpMode),
+                    dbc.Checkbox(id=k.id(k.muodEnable), label="Enable", value=db.dto.muod),
 
                     htm.Div([
                         htm.Label("Max Groups: "),
-                        dbc.Select(id=k.id(k.cndGrpMaxGroups), options=optMaxGroups, value=db.dto.simCondMaxGroups, className="", disabled=True) #type:ignore
+                        dbc.Select(id=k.id(k.muodMaxGroups), options=optMaxGroups, value=db.dto.muod_Size, className="", disabled=True) #type:ignore
                     ]),
 
                     htm.Br(),
 
-                    dbc.Checkbox(id=k.id(k.cndGrpSameDate), label="Same Date", value=db.dto.simCondSameDate, disabled=db.dto.simCondGrpMode),
-                    dbc.Checkbox(id=k.id(k.cndGrpSameWidth), label="Same Width", value=db.dto.simCondSameWidth, disabled=db.dto.simCondGrpMode),
-                    dbc.Checkbox(id=k.id(k.cndGrpSameHeight), label="Same Height", value=db.dto.simCondSameHeight, disabled=db.dto.simCondGrpMode),
-                    dbc.Checkbox(id=k.id(k.cndGrpSameSize), label="Same File Size", value=db.dto.simCondSameSize, disabled=db.dto.simCondGrpMode),
+                    dbc.Checkbox(id=k.id(k.muodEqDate), label="Same Date", value=db.dto.muod_EqDt, disabled=db.dto.muod),
+                    dbc.Checkbox(id=k.id(k.muodEqWidth), label="Same Width", value=db.dto.muod_EqW, disabled=db.dto.muod),
+                    dbc.Checkbox(id=k.id(k.muodEqHeight), label="Same Height", value=db.dto.muod_EqH, disabled=db.dto.muod),
+                    dbc.Checkbox(id=k.id(k.muodEqSize), label="Same File Size", value=db.dto.muod_EqFs, disabled=db.dto.muod),
 
 
                 ], className="icbxs"),
@@ -231,11 +225,11 @@ def renderCard():
                     htm.Span("", className="txt-smx text-muted ms-3")
                 ], className="txt-sm"),
                 htm.Div([
-                    dbc.Checkbox(id=k.id(k.exclEnable), label="Enable", value=db.dto.excl_Enable),
+                    dbc.Checkbox(id=k.id(k.exclEnable), label="Enable", value=db.dto.excl),
 
                     htm.Div([
                         htm.Label("Similar Less: "),
-                        dbc.Select(id=k.id(k.exclFndLess), options=optExclLess, value=db.dto.excl_FndLess, className="", disabled=not db.dto.excl_Enable) #type:ignore
+                        dbc.Select(id=k.id(k.exclFndLess), options=optExclLess, value=db.dto.excl_FndLes, className="", disabled=not db.dto.excl) #type:ignore
                     ]),
 
                     # htm.Br(),
@@ -254,70 +248,68 @@ def renderCard():
 @cbk(
     [
         out(ks.sto.now, "data", allow_duplicate=True),
-        out(k.id(k.cndGrpSameDate), "disabled"),
-        out(k.id(k.cndGrpSameWidth), "disabled"),
-        out(k.id(k.cndGrpSameHeight), "disabled"),
-        out(k.id(k.cndGrpSameSize), "disabled"),
-        out(k.id(k.cndGrpMaxGroups), "disabled"),
+        out(k.id(k.muodEqDate), "disabled"),
+        out(k.id(k.muodEqWidth), "disabled"),
+        out(k.id(k.muodEqHeight), "disabled"),
+        out(k.id(k.muodEqSize), "disabled"),
+        out(k.id(k.muodMaxGroups), "disabled"),
     ],
     inp(k.id(k.threshold), "value"),
     inp(k.id(k.autoNext), "value"),
     inp(k.id(k.showGridInfo), "value"),
-    inp(k.id(k.simIncRelGrp), "value"),
-    inp(k.id(k.simMaxDepths), "value"),
+    inp(k.id(k.simRtree), "value"),
     inp(k.id(k.simMaxItems), "value"),
-    inp(k.id(k.cndGrpEnable), "value"),
-    inp(k.id(k.cndGrpSameDate), "value"),
-    inp(k.id(k.cndGrpSameWidth), "value"),
-    inp(k.id(k.cndGrpSameHeight), "value"),
-    inp(k.id(k.cndGrpSameSize), "value"),
-    inp(k.id(k.cndGrpMaxGroups), "value"),
+    inp(k.id(k.muodEnable), "value"),
+    inp(k.id(k.muodEqDate), "value"),
+    inp(k.id(k.muodEqWidth), "value"),
+    inp(k.id(k.muodEqHeight), "value"),
+    inp(k.id(k.muodEqSize), "value"),
+    inp(k.id(k.muodMaxGroups), "value"),
     ste(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpEnable, cndGrpDate, cndGrpWidth, cndGrpHeight, cndGrpSize, maxGroups, dta_now):
+def settings_OnUpd(ths, auNxt, shGdInfo, rtree,  maxItems, muodEnable, muodDate, muodWidth, muodHeight, muodSize, maxGroups, dta_now):
     retNow = noUpd
 
     now = models.Now.fromDict(dta_now)
     mi, mx = ths
 
-    db.dto.simMin = co.vad.float(mi, 0.93, 0.50, 0.99)
-    db.dto.simMax = co.vad.float(mx, 1.00, 0.51, 1.00)
+    db.dto.thMin = co.vad.float(mi, 0.93, 0.50, 0.99)
+    db.dto.thMax = co.vad.float(mx, 1.00, 0.51, 1.00)
 
     db.dto.autoNext = auNxt
-    db.dto.simMaxDepths = maxDepths
-    db.dto.simMaxItems = maxItems
+    db.dto.rtreeMax = maxItems
 
-    db.dto.simCondGrpMode = cndGrpEnable
-    db.dto.simCondSameDate = cndGrpDate
-    db.dto.simCondSameWidth = cndGrpWidth
-    db.dto.simCondSameHeight = cndGrpHeight
-    db.dto.simCondSameSize = cndGrpSize
-    db.dto.simCondMaxGroups = maxGroups
+    db.dto.muod = muodEnable
+    db.dto.muod_EqDt = muodDate
+    db.dto.muod_EqW = muodWidth
+    db.dto.muod_EqH = muodHeight
+    db.dto.muod_EqFs = muodSize
+    db.dto.muod_Size = maxGroups
 
-    # Control cndGrp enable/disable states
-    cndGrpsDisabled = not cndGrpEnable
-    maxGroupsDisabled = not cndGrpEnable
+    # Control muod enable/disable states
+    muodDisabled = not muodEnable
+    maxGroupsDisabled = not muodEnable
 
     def reloadAssets():
         nonlocal retNow, now
-        lg.info(f"[sets:OnUpd] reload, incGroup[{db.dto.simIncRelGrp}] cndMode[{db.dto.simCondGrpMode}]")
-        now.sim.assCur = db.pics.getSimAssets(now.sim.assAid, db.dto.simIncRelGrp if not db.dto.simCondGrpMode else False )
+        lg.info(f"[sets:OnUpd] reload, rtree[{db.dto.rtree}] muodMode[{db.dto.muod}]")
+        now.sim.assCur = db.pics.getSimAssets(now.sim.assAid, db.dto.rtree if not db.dto.muod else False )
         retNow = now
 
-    #now.sim.assCur = db.pics.getSimAssets(assId, db.dto.simIncRelGrp)
+    #now.sim.assCur = db.pics.getSimAssets(assId, db.dto.simRtree)
 
     if db.dto.showGridInfo != shGdInfo:
         db.dto.showGridInfo = shGdInfo
         if retNow == noUpd: reloadAssets()
 
-    if db.dto.simIncRelGrp != incRelGrp:
-        db.dto.simIncRelGrp = incRelGrp
+    if db.dto.rtree != rtree:
+        db.dto.rtree = rtree
         if retNow == noUpd: reloadAssets()
 
     # lg.info(f"[settings] changed: {ths}, {auNxt}, {shGdInfo}")
 
-    return [retNow, cndGrpsDisabled, cndGrpsDisabled, cndGrpsDisabled, cndGrpsDisabled, maxGroupsDisabled]
+    return [retNow, muodDisabled, muodDisabled, muodDisabled, muodDisabled, maxGroupsDisabled]
 
 
 @cbk(
@@ -351,19 +343,19 @@ def settings_OnUpd(ths, auNxt, shGdInfo, incRelGrp, maxDepths, maxItems, cndGrpE
     prevent_initial_call=True
 )
 def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig, szSml, dimBig, dimSml, namLong, namShor):
-    db.dto.auSel_Enable = enable
-    db.dto.auSel_SkipLowSim = skipLo
-    db.dto.auSel_AllLivePhoto = onlyLive
-    db.dto.auSel_Earlier = earl
-    db.dto.auSel_Later = late
-    db.dto.auSel_ExifRicher = exRich
-    db.dto.auSel_ExifPoorer = exPoor
-    db.dto.auSel_BiggerSize = szBig
-    db.dto.auSel_SmallerSize = szSml
-    db.dto.auSel_BiggerDimensions = dimBig
-    db.dto.auSel_SmallerDimensions = dimSml
-    db.dto.auSel_NameLonger = namLong
-    db.dto.auSel_NameShorter = namShor
+    db.dto.ausl = enable
+    db.dto.ausl_SkipLow = skipLo
+    db.dto.ausl_AllLive = onlyLive
+    db.dto.ausl_Earlier = earl
+    db.dto.ausl_Later = late
+    db.dto.ausl_ExRich = exRich
+    db.dto.ausl_ExPoor = exPoor
+    db.dto.ausl_OfsBig = szBig
+    db.dto.ausl_OfsSml = szSml
+    db.dto.ausl_DimBig = dimBig
+    db.dto.ausl_DimSml = dimSml
+    db.dto.ausl_NamLon = namLong
+    db.dto.ausl_NamSht = namShor
 
     lg.info(f"[autoSel:OnUpd] Enable[{enable}] HighSim[{skipLo}] AlwaysPickLivePhoto[{onlyLive}] Earlier[{earl}] Later[{late}] ExifRich[{exRich}] ExifPoor[{exPoor}] BigSize[{szBig}] SmallSize[{szSml}] BigDim[{dimBig}] SmallDim[{dimSml}] NameLong[{namLong}] NameShort[{namShor}]")
 
@@ -382,8 +374,8 @@ def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig
     prevent_initial_call=True
 )
 def excludeSettings_OnUpd(enable, fndLess):
-    db.dto.excl_Enable = enable
-    db.dto.excl_FndLess = fndLess
+    db.dto.excl = enable
+    db.dto.excl_FndLes = fndLess
 
     lg.info(f"[exclSets:OnUpd] Enable[{enable}] FndLess[{fndLess}]")
 

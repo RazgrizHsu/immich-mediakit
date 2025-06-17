@@ -212,7 +212,7 @@ class AssetViewOnly(BaseDictModel):
     srcAutoId: int = 0
     isRelats: bool = False
 
-    condGrpId: int = 0
+    muodId: int = 0
 
 @dataclass
 class Asset(BaseDictModel):

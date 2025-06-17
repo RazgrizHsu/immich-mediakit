@@ -41,8 +41,8 @@ def render():
         dto.photoQ = ks.db.thumbnail
 
     from conf import co
-    dto.simMin = co.vad.float(dto.simMin, 0.93, mi=0.50, mx=0.99)
-    dto.simMax = co.vad.float(dto.simMax, 1.00, mi=0.51, mx=1.00)
+    dto.thMin = co.vad.float(dto.thMin, 0.93, mi=0.50, mx=0.99)
+    dto.thMax = co.vad.float(dto.thMax, 1.00, mi=0.51, mx=1.00)
 
 
 
