@@ -43,6 +43,8 @@ class k:
     auSelSmallerDimensions = "autoSelSmallerDimensions"
     auSelNameLonger = "autoSelNameLonger"
     auSelNameShorter = "autoSelNameShorter"
+    auSelTypeJpg = "autoSelTypeJpg"
+    auSelTypePng = "autoSelTypePng"
 
 
 
@@ -63,7 +65,7 @@ optMaxGroups = []
 for i in [2, 5, 10, 20, 25, 50, 100]: optMaxGroups.append({"label": f"{i}", "value": i})
 
 optWeights = []
-for i in range(4): optWeights.append({"label": f"{i}", "value": i})
+for i in range(5): optWeights.append({"label": f"{i}", "value": i})
 
 optExclLess = [
     {"label": "--", "value": 0},
@@ -144,6 +146,14 @@ def renderAutoSelect():
                     dbc.Select(id=k.id(k.auSelBiggerDimensions), options=optWeights, value=db.dto.ausl_DimBig, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
                     htm.Label("Smaller", className="me-2"),
                     dbc.Select(id=k.id(k.auSelSmallerDimensions), options=optWeights, value=db.dto.ausl_DimSml, disabled=not db.dto.ausl, size="sm"), #type:ignore
+                ], className="icriteria"),
+
+                htm.Div([
+                    htm.Span(htm.Span("File Type", className="tag txt-smx me-1")),
+                    htm.Label("Jpg", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelTypeJpg), options=optWeights, value=db.dto.ausl_TypJpg, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
+                    htm.Label("Png", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelTypePng), options=optWeights, value=db.dto.ausl_TypPng, disabled=not db.dto.ausl, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Hr(),
@@ -326,6 +336,8 @@ def settings_OnUpd(ths, auNxt, shGdInfo, rtree,  maxItems, muodEnable, muodDate,
         out(k.id(k.auSelSmallerDimensions), "disabled"),
         out(k.id(k.auSelNameLonger), "disabled"),
         out(k.id(k.auSelNameShorter), "disabled"),
+        out(k.id(k.auSelTypeJpg), "value"),
+        out(k.id(k.auSelTypePng), "value"),
     ],
     inp(k.id(k.auSelEnable), "value"),
     inp(k.id(k.auSelSkipLowSim), "value"),
@@ -340,9 +352,11 @@ def settings_OnUpd(ths, auNxt, shGdInfo, rtree,  maxItems, muodEnable, muodDate,
     inp(k.id(k.auSelSmallerDimensions), "value"),
     inp(k.id(k.auSelNameLonger), "value"),
     inp(k.id(k.auSelNameShorter), "value"),
+    inp(k.id(k.auSelTypeJpg), "value"),
+    inp(k.id(k.auSelTypePng), "value"),
     prevent_initial_call=True
 )
-def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig, szSml, dimBig, dimSml, namLong, namShor):
+def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig, szSml, dimBig, dimSml, namLn, namSt, tJpg, tPng):
     db.dto.ausl = enable
     db.dto.ausl_SkipLow = skipLo
     db.dto.ausl_AllLive = onlyLive
@@ -354,15 +368,17 @@ def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig
     db.dto.ausl_OfsSml = szSml
     db.dto.ausl_DimBig = dimBig
     db.dto.ausl_DimSml = dimSml
-    db.dto.ausl_NamLon = namLong
-    db.dto.ausl_NamSht = namShor
+    db.dto.ausl_NamLon = namLn
+    db.dto.ausl_NamSht = namSt
+    db.dto.ausl_TypJpg = tJpg
+    db.dto.ausl_TypPng = tPng
 
-    lg.info(f"[autoSel:OnUpd] Enable[{enable}] HighSim[{skipLo}] AlwaysPickLivePhoto[{onlyLive}] Earlier[{earl}] Later[{late}] ExifRich[{exRich}] ExifPoor[{exPoor}] BigSize[{szBig}] SmallSize[{szSml}] BigDim[{dimBig}] SmallDim[{dimSml}] NameLong[{namLong}] NameShort[{namShor}]")
+    lg.info(f"[autoSel:OnUpd] Enable[{enable}] HighSim[{skipLo}] AlwaysPickLivePhoto[{onlyLive}] Earlier[{earl}] Later[{late}] ExifRich[{exRich}] ExifPoor[{exPoor}] BigSize[{szBig}] SmallSize[{szSml}] BigDim[{dimBig}] SmallDim[{dimSml}] namLn[{namLn}] namSt[{namSt}] jpg[{tJpg}] png[{tPng}]")
 
     # Control enable/disable states
     dis = not enable
 
-    return [dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis]
+    return [dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis]
 
 
 @cbk(

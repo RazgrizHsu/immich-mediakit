@@ -118,6 +118,8 @@ class DtoSets:
     ausl_DimSml:int = AutoDbField('ausl_DimSml', int, 0 ) #type:ignore
     ausl_NamLon:int = AutoDbField('ausl_NmLon', int, 1 ) #type:ignore
     ausl_NamSht:int = AutoDbField('ausl_NmSht', int, 0 ) #type:ignore
+    ausl_TypJpg:int = AutoDbField('ausl_TypJpg', int, 0 ) #type:ignore
+    ausl_TypPng:int = AutoDbField('ausl_TypPng', int, 0 ) #type:ignore
 
     excl:bool = AutoDbField('excl', bool, True ) #type:ignore
     excl_FndLes:int = AutoDbField('excl_FndLes', int, 0) #type:ignore
