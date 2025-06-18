@@ -152,27 +152,27 @@ def layout(autoId=None):
                                 htm.Div([
 
                                     htm.Div([
+                                        dbc.Checkbox(id=k.cbxNChkOkSel, label="No-Confirm", className="sm"),
+                                        htm.Br(),
                                         dbc.Button("Keep Select, Delete others", id=k.btnOkSel, color="success", size="sm", disabled=True),
-                                        htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNChkOkSel, label="No-Confirm", className="sm")
                                     ]),
 
                                     htm.Div([
-                                        dbc.Button("Del Select, Keep others", id=k.btnRmSel, color="danger", size="sm", disabled=True),
-                                        htm.Br(),
                                         dbc.Checkbox(id=k.cbxNChkRmSel, label="No-Confirm", className="sm"),
+                                        htm.Br(),
+                                        dbc.Button("Del Select, Keep others", id=k.btnRmSel, color="danger", size="sm", disabled=True),
                                     ]),
 
                                     htm.Div([
+                                        dbc.Checkbox(id=k.cbxNChkOkAll, label="No-Confirm", className="sm"),
+                                        htm.Br(),
                                         dbc.Button("✅ Keep All", id=k.btnOkAll, color="success", size="sm", disabled=True),
-                                        htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNChkOkAll, label="No-Confirm", className="sm")
                                     ]),
 
                                     htm.Div([
-                                        dbc.Button("❌ Delete All", id=k.btnRmAll, color="danger", size="sm", disabled=True),
+                                        dbc.Checkbox(id=k.cbxNChkRmAll, label="No-Confirm", className="sm"),
                                         htm.Br(),
-                                        dbc.Checkbox(id=k.cbxNChkRmAll, label="No-Confirm", className="sm")
+                                        dbc.Button("❌ Delete All", id=k.btnRmAll, color="danger", size="sm", disabled=True),
                                     ]),
 
                                 ], className="right"),
