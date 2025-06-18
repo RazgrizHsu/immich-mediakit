@@ -7,7 +7,8 @@ services:
     restart: unless-stopped
     ports:
       - ${MKIT_PORT:-8086}:8086
-      - ${MIKT_PORTWS:-8087}:8087
+    networks:
+      - immich-mediakit
     volumes:
       - ${MKIT_DATA}:/app/data
       - ${MKIT_DATA}/cache:/root/.cache/torch/
@@ -30,7 +31,11 @@ services:
     container_name: immich-mediakit-qdrant
     image: qdrant/qdrant:latest
     restart: unless-stopped
-    ports:
-      - ${QDRANT_PORT:-6333}:6333
+    networks:
+      - immich-mediakit
     volumes:
       - ${MKIT_DATA}/qdrant:/qdrant/storage
+
+networks:
+  immich-mediakit:
+    external: true
