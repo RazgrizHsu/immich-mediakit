@@ -3,6 +3,7 @@ services:
   immich-mediakit:
     container_name: immich-mediakit
     hostname: immich-mediakit
+    image: razgrizhsu/immich-mediakit:latest
     restart: unless-stopped
     ports:
       - ${MKIT_PORT:-8086}:8086
@@ -10,19 +11,12 @@ services:
     volumes:
       - ${MKIT_DATA}:/app/data
       - ${MKIT_DATA}/cache:/root/.cache/torch/
-      - ./src:/app/src:ro  # Dev Only
       - ${IMMICH_PATH}:/immich:ro  # Read-only access to Immich photos
     env_file:
       - .env
     environment:
       - DASH_DEBUG=${DASH_DEBUG:-false}
       - IMMICH_PATH=/immich  # Override path inside container
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        MKIT_PORT: ${MKIT_PORT:-8086}
-        MIKT_PORTWS: ${MIKT_PORTWS:-8087}
     depends_on:
       - qdrant
     healthcheck:
