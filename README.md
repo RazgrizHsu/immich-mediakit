@@ -129,28 +129,32 @@ Choose the installation method that suits your needs:
 - Access to an Immich installation with trash feature enabled
 - A configured `.env` file (see below)
 
+### Option 1: Docker Compose
+Using Docker Compose is the easiest installation method, automatically including the Qdrant vector database.
 
-### Connecting to Immich Database
-
-If your Immich is running with Docker Compose, you need to expose the PostgreSQL port. Add the following port mapping to your Immich's docker-compose.yml:
+#### Immich database configuration
+If your Immich is running with Docker Compose, you will need to create the network we will use to connect to it. To create the network execute the following command on the host:
+```bash
+docker network create immich-mediakit
+```
 
 ```yaml
 services:
   database:
     container_name: immich_postgres
     image: ghcr.io/immich-app/postgres:14-vectorchord0.3.0-pgvectors0.2.0
-    ports:
-      - "5432:5432"  # Add this line to expose PostgreSQL
+    networks: # Add the immich-mediakit network to the db to allow immich-mediakit access to the db
+      - immich-mediakit
+
+
+networks: # Add the immich-mediakit network to the immich docker compose
+  immich-mediakit:
+    external: true
 ```
 
-After updating, restart Immich to apply the changes. The exposed port (5432) should match the `PSQL_PORT` setting in your MediaKit `.env` file.
+After updating, restart Immich to apply the changes. The `PSQL_HOST` in your `.env` file should match the container name of the database.
 
-
-
-### Option 1: Docker Compose
-
-Using Docker Compose is the easiest installation method, automatically including the Qdrant vector database:
-
+#### Installation
 **Important Notes:**
 - ⚠️ **Docker Compose version currently cannot use GPU hardware acceleration**
 - Only CPU vectorization processing is available, which will be slower
@@ -166,13 +170,13 @@ Using Docker Compose is the easiest installation method, automatically including
    Edit the `.env` file to configure your Immich path and database connection:
    ```
    # PostgreSQL connection to Immich
-   PSQL_HOST=localhost
+   PSQL_HOST=localhost # The PSQL_HOST should match the container name of the database if you're using the docker network
    PSQL_PORT=5432
    PSQL_DB=immich
    PSQL_USER=postgres
    PSQL_PASS=postgres
    
-   # Immich connection - Change to your Immich install path
+   # Immich connection - Change to your Immich install path (UPLOAD_LOCATION env variable if you're using immich with docker compose)
    IMMICH_PATH=/path/to/your/immich
    
    # MediaKit settings
@@ -190,9 +194,23 @@ Using Docker Compose is the easiest installation method, automatically including
    - Open browser to `http://localhost:8086`
 
 ### Option 2: Source Installation (GPU Acceleration Supported)
+If you need GPU hardware acceleration or want a custom installation.
 
-If you need GPU hardware acceleration or want a custom installation:
+#### Immich database configuration
+If your Immich is running with Docker Compose, you need to expose the PostgreSQL port. Add the following port mapping to your Immich's docker-compose.yml:
 
+```yaml
+services:
+  database:
+    container_name: immich_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.3.0-pgvectors0.2.0
+    ports:
+      - "5432:5432"  # Add this line to expose PostgreSQL
+```
+
+After updating, restart Immich to apply the changes. The exposed port (5432) should match the PSQL_PORT setting in your MediaKit .env file.
+
+#### Installation
 **Use Cases:**
 - Need GPU acceleration for vectorization processing
 - Want to customize Python environment
