@@ -27,7 +27,6 @@ def init():
     port = envs.psqlPort
     db = envs.psqlDb
     uid = envs.psqlUser
-    pw = envs.psqlPass
 
     if not all([host, port, db, uid]): raise RuntimeError("PostgreSQL connection settings not initialized.")
 

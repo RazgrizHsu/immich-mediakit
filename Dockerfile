@@ -22,4 +22,4 @@ COPY src/ ./src/
 EXPOSE ${PORT} ${PORTWS}
 HEALTHCHECK CMD curl -f http://127.0.0.1:${PORT} || exit 1
 
-CMD ["python", "src/app.py"]
+CMD ["python", "-m", "src.app"]

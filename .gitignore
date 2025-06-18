@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 .idea/
 .vscode/
+data/
 
 .DS_Store
 
@@ -16,3 +17,4 @@ bak/
 temp/
 cache/
 *.db-journal
+docker/.env

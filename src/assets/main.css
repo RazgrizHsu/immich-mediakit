@@ -363,6 +363,8 @@ h3 { font-size: 1.68rem; }
 
 .tag.blue { background-image: linear-gradient(to bottom, #5cadf8, #3399F6 50%, #297ac5); }
 
+.tag.red { background-image: linear-gradient(to bottom, #ba3533, #A90200 50%, #870200); }
+
 .tag.sm { font-size: 10px !important; padding: 0 2px 2px 5px; }
 
 .tag.lg { font-size: 15px !important; padding: 0 4px 2px 4px; }

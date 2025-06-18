@@ -40,12 +40,7 @@ def layout():
                 dbc.Row([
                     dbc.Col([
                         dbc.Label("Select User"),
-                        dcc.Dropdown(
-                            id=k.selectUsr,
-                            options=[],
-                            placeholder="Select user.",
-                            clearable=False
-                        ),
+                        dbc.Select( id=k.selectUsr, options=[], placeholder="Select user."),
                     ], width=12),
                 ],
                     className="mb-2"

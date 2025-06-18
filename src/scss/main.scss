@@ -576,13 +576,14 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	}
 
 	&.info {
-		//background:;
 		@include bg-gradient(#6DAA2B);
 	}
 
 	&.blue {
-		//background:;
 		@include bg-gradient(#3399F6);
+	}
+	&.red {
+		@include bg-gradient(#A90200);
 	}
 
 	&.sm {
