@@ -5,12 +5,17 @@ from db import psql
 import immich
 import torch
 import conf
+import chk
 
 class k:
     connInfo = 'div-conn-info'
     sideState = 'div-side-state'
     cardEnv = 'env-card-body'
     cardCnt = 'cache-card-body'
+
+def getStatusIcon(ok: bool):
+    if ok: return htm.I(className="bi bi-check-circle-fill text-success")
+    return htm.I(className="bi bi-x-circle-fill text-danger")
 
 def layout():
     return htm.Div([
@@ -48,32 +53,38 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
     cnt = models.Cnt.fromDict(dta_count)
     nfy = models.Nfy.fromDict(dta_nfy)
 
-    testDA = psql.testAssetsPath()
-    testOk = testDA.startswith("OK")
+    rst = chk.checkSystem()
 
-    chkDel = immich.checkLogicDelete()
-    chkRst = immich.checkLogicRestore()
-
-    logicOk = chkDel and chkRst
-
-    if not logicOk:
-        if not chkDel:
+    if not rst.immichLogic.ok:
+        if 'Delete' in rst.immichLogic.details:
             nfy.error([
                 f"[system]", htm.Br(),
                 f" the immich source code check failed,", htm.Br(),
-                f" the Delete logic may changed, please check it before usage system"
+                f" the Delete logic may have changed.", htm.Br(),
+                f" Please **DO NOT use the system** and **check the GitHub repository** for updates immediately.", htm.Br(),
+                f" If no updates are available, please report this issue to raz."
             ])
-        if not chkRst:
+        if 'Restore' in rst.immichLogic.details:
             nfy.error([
                 f"[system]", htm.Br(),
                 f" the immich source code check failed,", htm.Br(),
-                f" the Restore logic may changed, please check it before usage system"
+                f" the Restore logic may have changed.", htm.Br(),
+                f" Please **DO NOT use the system** and **check the GitHub repository** for updates immediately.", htm.Br(),
+                f" If no updates are available, please report this issue to raz"
             ])
 
-    if testDA and not testDA.startswith("OK"):
-        nfy.error(["[system] access to IMMICH_PATH is Failed,",htm.Br(),htm.Small(f"{testDA}")])
+    if not rst.allOk:
+        errs = []
+        if not rst.psql.ok: errs.append(f"PostgreSQL: {rst.psql.msg}")
+        if not rst.immichPath.ok: errs.append(f"Immich Path: {rst.immichPath.msg}")
+        if not rst.qdrant.ok: errs.append(f"Qdrant: {rst.qdrant.msg}")
 
-    # 獲取GPU設備信息
+        if errs:
+            nfy.error([
+                f"[system errors]", htm.Br(),
+                *[htm.Div([f"• {detail}", htm.Br()]) for detail in errs]
+            ])
+
     dvcType = conf.device.type
     if dvcType == 'cuda':
         try:
@@ -103,22 +114,11 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
 
     envRows = [
         htm.Div([
-            htm.Small("Logic Check:"),
-            htm.Span(
-                f"Github checked!", className="tag info"
-            ) if logicOk else htm.Span
-                (
-                f"Fail!!", className="tag"
-            )
-        ], className="mb-2"),
-        htm.Div([
-            htm.Small("Path Test:"),
-            htm.Span(
-                f"OK", className="tag info"
-            ) if testOk else htm.Span
-                (
-                f"Failed", className="tag"
-            )
+            htm.Small("system:"),
+            htm.Span([
+                getStatusIcon(rst.allOk),
+                " all ok" if rst.allOk else " ERROR"
+            ], className="tag info" if rst.allOk else "tag red")
         ], className="mb-2"),
         htm.Div([
             htm.Small("device:"),

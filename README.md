@@ -111,10 +111,23 @@ enabling advanced management capabilities through AI-powered similarity detectio
 
 ## Installation & Setup
 
+### Installation Method Selection Guide
+
+Choose the installation method that suits your needs:
+
+| Installation Method | Use Case | Advantages | Disadvantages |
+|---------------------|----------|------------|---------------|
+| **Docker Compose** | Quick trial, simple deployment | One-click install, auto Qdrant setup | CPU only, no GPU acceleration |
+| **Source Installation** | GPU acceleration needed, custom environment | GPU acceleration support, customizable | Manual Qdrant and dependency setup |
+
+**Recommended Choice:**
+- 🚀 **First-time users or small photo collections**: Use Docker Compose
+- ⚡ **Large collections or performance requirements**: Use source installation + GPU
+
 ### Prerequisites
 
 - Access to an Immich installation with trash feature enabled
-- A configured `.env` file (see above)
+- A configured `.env` file (see below)
 
 
 ### Connecting to Immich Database
@@ -133,57 +146,85 @@ services:
 After updating, restart Immich to apply the changes. The exposed port (5432) should match the `PSQL_PORT` setting in your MediaKit `.env` file.
 
 
-### Environment Variables
 
-Create a `.env` file with the following variables:
+### Option 1: Docker Compose
 
-```
-# PostgreSQL connection to Immich
-PSQL_HOST=localhost
-PSQL_PORT=5432
-PSQL_DB=immich
-PSQL_USER=postgres
-PSQL_PASS=postgres
+Using Docker Compose is the easiest installation method, automatically including the Qdrant vector database:
 
-# Immich connection
-IMMICH_PATH=/path/to/immich/library
+**Important Notes:**
+- ⚠️ **Docker Compose version currently cannot use GPU hardware acceleration**
+- Only CPU vectorization processing is available, which will be slower
+- If you need GPU acceleration, please use Option 2 source installation
 
-# Qdrant connection (not needed for Docker Compose)
-QDRANT_URL=http://localhost:6333
-QDRANT_PORT=6333
+**Installation Steps:**
 
-# MediaKit settings
-MKIT_PORT=8086
-MIKT_PORTWS=8087       # for background tasks (optional, default: 8087)
-MKIT_WS_HOST=localhost  # for non-Docker setups (optional)
-MKIT_DATA=/path/to/data/dir
-```
+1. **Copy Docker Configuration Files**
+   [docker/docker-compose.yml](./docker/docker-compose.yml)
+   [docker/.env](./docker/.env)
 
+2. **Modify .env File**
+   Edit the `.env` file to configure your Immich path and database connection:
+   ```
+   # PostgreSQL connection to Immich
+   PSQL_HOST=localhost
+   PSQL_PORT=5432
+   PSQL_DB=immich
+   PSQL_USER=postgres
+   PSQL_PASS=postgres
+   
+   # Immich connection - Change to your Immich install path
+   IMMICH_PATH=/path/to/your/immich
+   
+   # MediaKit settings
+   MKIT_PORT=8086
+   MIKT_PORTWS=8087
+   MKIT_DATA=./data  # Data storage directory
+   ```
 
+3. **Start Services**
+   ```bash
+   docker compose up
+   ```
 
-### Option 1: Docker Compose (Recommended)
+4. **Access Application**
+   - Open browser to `http://localhost:8086`
 
-The easiest way to run Immich-MediaKit is with Docker Compose, which automatically includes the Qdrant vector database:
+### Option 2: Source Installation (GPU Acceleration Supported)
 
-1. Ensure you have created the `.env` file
-2. Run:
+If you need GPU hardware acceleration or want a custom installation:
 
-```bash
-# Build and start containers
-docker compose up -d --build
-```
+**Use Cases:**
+- Need GPU acceleration for vectorization processing
+- Want to customize Python environment
+- Need to modify source code
 
-### Option 2: Direct Installation
+**Installation Steps:**
 
-If you prefer to run without Docker:
+1. **Install Qdrant Server**
+   ```bash
+   # Install Qdrant using Docker
+   docker run -p 6333:6333 qdrant/qdrant
+   ```
 
-1. Install Qdrant server separately
-2. Ensure you have created the `.env` file
-3. Install Python dependencies:
+2. **Clone Source Code**
+   ```bash
+   git clone https://github.com/RazgrizHsu/immich-mediakit.git
+   cd immich-mediakit
+   ```
+
+3. **Configure Environment Variables**
+   Create `.env` file and set connection information (refer to the example above)
+
+4. **Install Python Dependencies**
    ```bash
    pip install -r requirements.txt
    ```
-4. Run the application:
+   
+   **Linux System Notes:**
+   - For GPU acceleration, install CUDA and corresponding PyTorch version first
+   - May need additional system packages: `sudo apt-get install python3-dev libffi-dev`
+
+5. **Start Application**
    ```bash
    python -m src.app
    ```

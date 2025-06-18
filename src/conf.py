@@ -223,7 +223,7 @@ def pathFromRoot(path):
 class envs:
     isDev = False if isDock else bool(os.getenv('IsDev', False))
     isDock = False if not isDock else True
-    immichPath:str = os.getenv('IMMICH_PATH', '')
+    immichPath:str = '/immich' if isDock else os.getenv('IMMICH_PATH', '')
     qdrantUrl:str = 'http://immich-mediakit-qdrant:6333' if isDock else os.getenv('QDRANT_URL','')
     psqlHost:str = os.getenv('PSQL_HOST','')
     psqlPort:str = os.getenv('PSQL_PORT','')
