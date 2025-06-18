@@ -59,7 +59,7 @@ optMaxDepths = []
 for i in range(6): optMaxDepths.append({"label": f"{i}", "value": i})
 
 optMaxItems = []
-for i in [100, 200, 300, 500, 1000]: optMaxItems.append({"label": f"{i}", "value": i})
+for i in [10, 50, 100, 200, 300, 500, 1000]: optMaxItems.append({"label": f"{i}", "value": i})
 
 optMaxGroups = []
 for i in [2, 5, 10, 20, 25, 50, 100]: optMaxGroups.append({"label": f"{i}", "value": i})
@@ -74,13 +74,13 @@ for i in range(1,6): optExclLess.append({"label": f" < {i}", "value": i})
 
 def renderThreshold():
     return dbc.Card([
-        dbc.CardHeader("Threshold Min & Max"),
+        dbc.CardHeader("Threshold Min"),
         dbc.CardBody([
             htm.Div([
                 htm.Div([
-                    dcc.RangeSlider(
+                    dcc.Slider(
                         id=k.id(k.threshold), min=optThresholdMin, max=1, step=0.01, marks=optThresholdMarks, #type: ignore
-                        value=[db.dto.thMin, db.dto.thMax],
+                        value=db.dto.thMin, included=False,
                         tooltip={
                             "placement": "top", "always_visible": True,
                             "style": {"padding": "0 1px 0 1px", "fontSize": "11px"},
@@ -88,7 +88,7 @@ def renderThreshold():
                     ),
                 ], className=""),
                 htm.Ul([
-                    htm.Li("Thresholds set min/max similarity for image matching")
+                    htm.Li("Threshold sets minimum similarity for image matching")
                 ])
             ], className="irow mb-2"),
         ])
@@ -158,7 +158,7 @@ def renderAutoSelect():
 
                 htm.Hr(),
                 htm.Ul([
-                    htm.Li("System auto-selects photo with highest total points based on criteria"),
+                    htm.Li("Automatically selects top assets in group"),
                     htm.Li([htm.B("Points: "),"0=Ignore, 1=Low, 2=High priority"])
                 ], className="text-muted small")
             ], className="mb-2 igrid txt-sm"),
@@ -168,16 +168,21 @@ def renderAutoSelect():
 
 def renderCard():
     return dbc.Card([
-        dbc.CardHeader("Similar Settings"),
+        dbc.CardHeader("Search Settings"),
         dbc.CardBody([
             htm.Div([
                 htm.Label("Find Settings", className="txt-sm"),
                 htm.Div([
                     dbc.Checkbox(id=k.id(k.autoNext), label="Auto Find Next", value=db.dto.autoNext),
                     dbc.Checkbox(id=k.id(k.showGridInfo), label="Show Grid Info", value=db.dto.showGridInfo),
+
+                    htm.Div([
+                        htm.Label("Max Items: "),
+                        dbc.Select(id=k.id(k.simMaxItems), options=optMaxItems, value=db.dto.rtreeMax, className="") #type:ignore
+                    ]),
                 ], className="icbxs"),
                 htm.Ul([
-                    # htm.Li([htm.B(" "), ""])
+                    htm.Li([htm.B("Max Items: "), "Max images to process in similarity search to prevent UI slowdown"])
                 ])
             ], className="irow"),
 
@@ -186,15 +191,9 @@ def renderCard():
                 htm.Div([
                     dbc.Checkbox(id=k.id(k.simRtree), label="Related Tree", value=db.dto.rtree),
 
-                    htm.Div([
-                        htm.Label("Max Items: "),
-                        dbc.Select(id=k.id(k.simMaxItems), options=optMaxItems, value=db.dto.rtreeMax, className="") #type:ignore
-                    ]),
                 ], className="icbxs"),
                 htm.Ul([
-                    htm.Li([htm.B("Related Tree: "), "Expand similarity tree to include related photos. Keep/Delete affects all displayed images"]),
-                    htm.Li([htm.B("Max Depths: "), "Hierarchy levels to include in similarity search (0 = direct matches only)"]),
-                    htm.Li([htm.B("Max Items: "), "Max images to process in similarity search to prevent UI slowdown"])
+                    htm.Li([htm.B("Related Tree: "), "Expand similar-tree to include relateds. Keep/Delete affects all displayed images"]),
                 ])
             ], className="irow"),
 
@@ -224,7 +223,7 @@ def renderCard():
                     htm.Li([htm.B("Max Groups: "), "Maximum number of groups to return when grouping is enabled"]),
                     htm.Li([
                         htm.Span("⚠️ ", style={"color": "orange"}),
-                        "Auto-mark unmatched photos as resolved to prevent re-searching. Use Clear Records to reset."
+                        "Auto-Resolve unmatched photos as resolved to prevent re-searching. Use Reset records to reset."
                     ])
                 ])
             ], className="irow"),
@@ -247,7 +246,7 @@ def renderCard():
 
                 ], className="icbxs"),
                 htm.Ul([
-                    htm.Li([htm.B("Similar Less: "), "Auto-mark groups with fewer than N similar photos (excluding main photo) and continue searching"]),
+                    htm.Li([htm.B("Similar Less: "), "Auto-Resolve groups with fewer than N similar photos (exclud main) and continue search"]),
                     htm.Li("Example: '< 2' means skip groups with 1 or 0 similar photos (requires at least 3 total photos)"),
                 ])
             ], className="irow"),
@@ -278,14 +277,12 @@ def renderCard():
     ste(ks.sto.now, "data"),
     prevent_initial_call=True
 )
-def settings_OnUpd(ths, auNxt, shGdInfo, rtree,  maxItems, muodEnable, muodDate, muodWidth, muodHeight, muodSize, maxGroups, dta_now):
+def settings_OnUpd(th, auNxt, shGdInfo, rtree,  maxItems, muodEnable, muodDate, muodWidth, muodHeight, muodSize, maxGroups, dta_now):
     retNow = noUpd
 
     now = models.Now.fromDict(dta_now)
-    mi, mx = ths
 
-    db.dto.thMin = co.vad.float(mi, 0.93, 0.50, 0.99)
-    db.dto.thMax = co.vad.float(mx, 1.00, 0.51, 1.00)
+    db.dto.thMin = co.vad.float(th, 0.93, 0.50, 0.99)
 
     db.dto.autoNext = auNxt
     db.dto.rtreeMax = maxItems

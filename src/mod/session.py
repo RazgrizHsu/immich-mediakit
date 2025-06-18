@@ -42,7 +42,6 @@ def render():
 
     from conf import co
     dto.thMin = co.vad.float(dto.thMin, 0.93, mi=0.50, mx=0.99)
-    dto.thMax = co.vad.float(dto.thMax, 1.00, mi=0.51, mx=1.00)
 
 
 

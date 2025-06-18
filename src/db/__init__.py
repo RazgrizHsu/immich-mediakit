@@ -23,7 +23,6 @@ def init():
 def close():
     try:
         sets.close()
-        pics.close()
         vecs.close()
         lg.info('All database connections closed successfully')
     except Exception as e:
@@ -89,7 +88,6 @@ class DtoSets:
 
     photoQ:str = AutoDbField('photoQ', str, ks.db.thumbnail) #type:ignore
     thMin:float = AutoDbField('simMin', float, 0.93) #type:ignore
-    thMax:float = AutoDbField('simMax', float, 1.00) #type:ignore
 
     autoNext:bool = AutoDbField('autoNext', bool, True) #type:ignore
     showGridInfo:bool = AutoDbField('showGridInfo', bool, True) #type:ignore

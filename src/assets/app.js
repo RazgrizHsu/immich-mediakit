@@ -1238,6 +1238,31 @@ function initBtnTop(btn) {
 	toggleGotoTopBtn();
 }
 
+//------------------------------------------------------------------------
+// TaskPanel Auto Hide on Scroll
+//------------------------------------------------------------------------
+function initTaskPanelAutoHide() {
+	let scrollTimer = null;
+
+	function handleScroll() {
+		const tskPanel = document.querySelector('.tskPanel.fly');
+		console.info(`[TaskPanel] tskPanel:`, tskPanel )
+
+		if (!tskPanel) return;
+
+		tskPanel.classList.remove('fly')
+
+		// if (scrollTimer) clearTimeout(scrollTimer);
+		//
+		// scrollTimer = setTimeout(() => {
+		// 	if (tskPanel) tskPanel.classList.remove('scrolling');
+		// }, 300);
+	}
+
+	window.addEventListener('scroll', handleScroll);
+	console.log('[TaskPanel] Auto-hide on scroll initialized');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
 	// Initialize floating tab-acts
 	const tabActs = document.querySelector('.tab-acts');
@@ -1270,10 +1295,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		})
 
 		observer.observe(document.body, { childList: true, subtree: true })
-
-		return
 	}
+	else initBtnTop(gotoTopBtn);
 
-	initBtnTop(gotoTopBtn);
+
+	initTaskPanelAutoHide();
 })
 

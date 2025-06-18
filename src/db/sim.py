@@ -138,6 +138,11 @@ def searchBy( src: Optional[models.Asset], doRep: IFnProg, isCancel: IFnCancel, 
             gi = findGroupBy(ass, doRep, grpIdx, fromUrl)
 
             if not gi.assets:
+
+                if fromUrl:
+                    lg.info(f"[sim:sh] not found from url #{ass.autoId}")
+                    break
+
                 lg.info(f"[sim:sh] group not have any assets..")
                 ass = None
                 continue
@@ -161,7 +166,7 @@ def searchBy( src: Optional[models.Asset], doRep: IFnProg, isCancel: IFnCancel, 
             raise
 
         # break for normal mode
-        if not db.dto.muod: break
+        if fromUrl or not db.dto.muod: break
 
     totalAssets = sum(len(g.assets) for g in gis)
     doRep(100, f"Found {len(gis)} groups with {totalAssets} total assets")
@@ -175,9 +180,9 @@ def findGroupBy( asset: models.Asset, doReport: IFnProg, grpId: int, fromUrl = F
     result.asset = asset
 
     time.sleep(0.1)
-    thMin, thMax = db.dto.thMin, db.dto.thMax
+    thMin = db.dto.thMin
 
-    bseVec, bseInfos = db.vecs.findSimiliar(asset.autoId, thMin, thMax)
+    bseVec, bseInfos = db.vecs.findSimiliar(asset.autoId, thMin)
     result.bseVec = bseVec
     result.bseInfos = bseInfos
 
@@ -230,7 +235,7 @@ def findGroupBy( asset: models.Asset, doReport: IFnProg, grpId: int, fromUrl = F
 
 def processChildren( asset: models.Asset, bseInfos: List[models.SimInfo], simAids: List[int], doReport: IFnProg) -> Set[int]:
 
-    thMin, thMax = db.dto.thMin, db.dto.thMax
+    thMin = db.dto.thMin
     maxItems = db.dto.rtreeMax
 
 
@@ -253,7 +258,7 @@ def processChildren( asset: models.Asset, bseInfos: List[models.SimInfo], simAid
             if ass.simOk: continue  # ignore already resolved
 
             lg.info(f"[sim:fnd] search child #{aid} depth[{depth}]items({len(doneIds)}/{maxItems})")
-            cVec, cInfos = db.vecs.findSimiliar(aid, thMin, thMax)
+            cVec, cInfos = db.vecs.findSimiliar(aid, thMin)
 
             db.pics.setSimGIDs(aid, rootGID)
             db.pics.setSimInfos(aid, cInfos)
@@ -413,7 +418,7 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
                 dim = w + h
 
             nameLen = len(ass.originalFileName) if ass.originalFileName else 0
-            
+
             fileType = ''
             if ass.originalFileName:
                 fileType = ass.originalFileName.lower().split('.')[-1] if '.' in ass.originalFileName else ''
@@ -456,7 +461,7 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
         addScore(db.dto.ausl_DimSml, [m.dim for m in met], False, "SmallDim")
         addScore(db.dto.ausl_NamLon, [m.nameLen for m in met], True, "LongName")
         addScore(db.dto.ausl_NamSht, [m.nameLen for m in met], False, "ShortName")
-        
+
         if db.dto.ausl_TypJpg > 0 and met[idx].fileType in ['jpg', 'jpeg']:
             pts = db.dto.ausl_TypJpg * 10
             score += pts

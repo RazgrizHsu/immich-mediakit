@@ -203,7 +203,7 @@ def getAllBy(aids: list[int]) -> dict[int, list]:
         raise mkErr(f"[vecs] Error batch getting vectors for aids{aids}", e)
 
 
-def search(vec, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[qdrant_client.http.models.ScoredPoint]:
+def search(vec, thMin: float = 0.95, limit=100) -> list[qdrant_client.http.models.ScoredPoint]:
     try:
         if conn is None: raise RuntimeError("Qdrant connection not initialized")
 
@@ -223,7 +223,7 @@ def search(vec, thMin: float = 0.95, thMax: float = 1.0, limit=100) -> list[qdra
 #------------------------------------------------------------------------
 # only return different id
 #------------------------------------------------------------------------
-def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100, logRow = False) -> Tuple[list[float], list[models.SimInfo]]:
+def findSimiliar(aid: int, thMin: float = 0.95, limit=100, logRow = False) -> Tuple[list[float], list[models.SimInfo]]:
     try:
         if conn is None: raise RuntimeError("Qdrant connection not initialized")
 
@@ -233,12 +233,12 @@ def findSimiliar(aid: int, thMin: float = 0.95, thMax: float = 1.0, limit=100, l
         rst = rep.points
         infos: list[models.SimInfo] = []
 
-        lg.info(f"[vecs:find] #{aid}, threshold[{thMin}-{thMax}] limit[{limit}] found[{len(rst)}]")
+        lg.info(f"[vecs:find] #{aid}, threshold[{thMin}-1.0] limit[{limit}] found[{len(rst)}]")
         for i, hit in enumerate(rst):
             hit_aid = int(hit.id)
             if logRow: lg.info(f"\tno.{i + 1}: AID[{hit_aid}], score[{hit.score:.6f}] self[{int(hit.id) == aid}]")
 
-            if hit.score <= thMax or hit_aid == aid:  #always add self
+            if hit.score <= 1.0 or hit_aid == aid:  #always add self
                 isSelf = hit_aid == aid
                 infos.append(models.SimInfo(hit_aid, hit.score, isSelf))
 

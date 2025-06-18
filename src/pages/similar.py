@@ -771,9 +771,8 @@ def sim_RunModal(
             return noUpd.by(4).updFr( 0, [nfy, now] )
 
         thMin = db.dto.thMin
-        thMax = db.dto.thMax
 
-        lg.info(f"[thMin/thMax] min[{thMin}] max[{thMax}]")
+        lg.info(f"[thMin] min[{thMin}] max[1.0]")
 
         asset: Optional[models.Asset] = None
 
@@ -821,10 +820,6 @@ def sim_RunModal(
             # only find auto trigger tsk
             retTsk = tsk
             retNow = now
-            # mdl.msg = [
-            #     f"Begin finding similar?", htm.Br(),
-            #     f"threshold[{thMin:.2f}-{thMax:.2f}]]",
-            # ]
 
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
@@ -848,7 +843,7 @@ def queueNext(sto: tskSvc.ITaskStore):
         mdl = models.Mdl()
         mdl.id = ks.pg.similar
         mdl.cmd = ks.cmd.sim.fnd
-        mdl.args = {'thMin': db.dto.thMin, 'thMax': db.dto.thMax}
+        mdl.args = {'thMin': db.dto.thMin}
 
         ntsk = mdl.mkTsk()
         ntsk.args['assetId'] = ass.id
@@ -865,10 +860,9 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
     nfy, now, tsk = sto.nfy, sto.now, sto.tsk
 
     maxItems = db.dto.rtreeMax
-    thMin, thMax = db.dto.thMin, db.dto.thMax
+    thMin = db.dto.thMin
 
     thMin = co.vad.float(thMin, 0.9)
-    thMax = co.vad.float(thMax, 1.0)
 
     isFromUrl = now.sim.assFromUrl is not None and now.sim.assFromUrl.autoId is not None
 
@@ -895,8 +889,8 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
         grps = sim.searchBy(asset, doReport, sto.isCancelled, isFromUrl)
 
         if not grps:
-            nfy.info(f"No similar groups found for asset #{asset.autoId}")
-            return sto, f"No similar groups found for asset #{asset.autoId}"
+            nfy.info(f"No similar Threshold[{thMin}] groups found for asset #{asset.autoId}")
+            return sto, f"No similar Threshold[{thMin}] groups found for asset #{asset.autoId}"
 
         if not grps[0].assets:
             nfy.info(f"Asset #{asset.autoId} no similar found")
