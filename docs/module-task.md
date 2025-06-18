@@ -29,15 +29,3 @@ I implemented a Task system using Threading + WebSocket to provide more stable l
 ### 4. WebSocket UI
 - Integrates Dash WebSocket component
 - Auto-updates progress bar and status
-
-
-## Testing
-
-Run test cases:
-```bash
-# Unit tests
-python tests/test_tsk.py
-
-# UI integration tests
-python tests/test_tsk_integration.py
-```

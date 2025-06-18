@@ -16,9 +16,6 @@ DEBUG = False
 
 lg = log.get(__name__)
 
-style_show = {'display': ''}
-style_none = {'display': 'none'}
-
 class k:
     wsId = 'global-task-ws'
 
@@ -46,18 +43,18 @@ def render():
         ]),
 
         dbc.Row([
-            dbc.Col(htm.Div(id=k.rst), width=8),
-            dbc.Col([
-                dbc.Button("Test Ws", id="task-test-ws-btn", className="btn-success", size="sm", style=style_show if DEBUG else style_none),
+            htm.Div(id=k.rst),
+            htm.Div([
+                dbc.Button("Test Ws", id="task-test-ws-btn", className="btn-success", size="sm", style={} if DEBUG else { "display":"none" }),
                 dbc.Button("Cancel", id=k.btnCancel, className="btn-warning", size="sm", disabled=True),
             ], className="text-end"),
-        ]),
+        ], className="msgs"),
 
         htm.Div(id="ws-state", style={'display': 'none'}),
 
     ],
         id=k.div,
-        style=style_none, className=f"tskPanel {'fly' if db.dto.tskFloat else ''}"
+        className=f"tskPanel hide {'fly' if db.dto.tskFloat else ''}"
     )
 
 
@@ -65,19 +62,37 @@ def render():
 # callbacks
 #========================================================================
 @cbk(
+    out(k.div, "className", allow_duplicate=True),
+    inp(k.btnFloat, "n_clicks"),
+    ste(k.div, "className"),
+    prevent_initial_call=True
+)
+def tsk_onBtnFloat(_nclk, curCls): #type:ignore
+    db.dto.tskFloat = not db.dto.tskFloat
+    return "tskPanel fly" if db.dto.tskFloat else "tskPanel"
+
+@cbk(
     [
-        out(k.div, "style"),
+        out(k.div, "className", allow_duplicate=True),
         out(k.txt, "children"),
         out(k.btnCancel, "disabled", allow_duplicate=True),
         out(k.btn, "disabled", allow_duplicate=True),
     ],
     inp(ks.sto.tsk, "data"),
+    ste(k.div, "className"),
     prevent_initial_call=True
 )
-def tsk_PanelStatus(dta_tsk):
+def tsk_PanelStatus(dta_tsk, css):
     tsk = models.Tsk.fromDict(dta_tsk)
 
-    style = style_show if tsk.name else style_none
+    hasTsk = tsk.name is not None
+
+    if hasTsk:
+        css = css.replace(" hide", "").strip()
+    else:
+        if "hide" not in css: css += " hide"
+
+    #style = style_show if tsk.name else style_none
 
     # Enable cancel button if task is running, close button only when task completed
     cancelDisabled = not (tsk.id and tsk.name)
@@ -85,7 +100,7 @@ def tsk_PanelStatus(dta_tsk):
 
     # lg.info(f"[tsk:panel] id[{tsk.id}] name[{tsk.name}] style[{style}] cancel_disabled[{cancelDisabled}] close_disabled[{closeDisabled}]")
 
-    return style, f"⌖ {tsk.name} ⌖", cancelDisabled, closeDisabled
+    return css, f"⌖ {tsk.name} ⌖", cancelDisabled, closeDisabled
 
 
 @cbk(
@@ -132,17 +147,6 @@ def tsk_onBtnCancel(_nclk, dta_tsk, dta_nfy):
     else:
         nfy.warn("Failed to cancel task")
         return nfy.toDict(), noUpd
-
-
-@cbk(
-    out(k.div, "className"),
-    inp(k.btnFloat, "n_clicks"),
-    ste(k.div, "className"),
-    prevent_initial_call=True
-)
-def tsk_onBtnFloat(_nclk, curCls):
-    db.dto.tskFloat = not db.dto.tskFloat
-    return "tskPanel fly" if db.dto.tskFloat else "tskPanel"
 
 
 @cbk(

@@ -126,32 +126,32 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
         ], className="mb-2"),
     ]
 
-    sizeL = 5
+    sizeL = 3
 
     cacheRows = [
         dbc.Row([
             dbc.Col(htm.Small("Assets", className="d-inline-block me-2"), width=sizeL),
-            dbc.Col(htm.Span(f"{cnt.ass}", className="py-0 px-2 mb-2 txt-c")),
+            dbc.Col(htm.Span(f"{cnt.ass}", className="tag px-3 mb-2 txt-c")),
         ]),
         dbc.Row([
             dbc.Col(htm.Small("Vectors", className="d-inline-block me-2"), width=sizeL),
-            dbc.Col(htm.Span(f"{cnt.vec}", className="py-0 px-2 mb-2 txt-c")),
-        ]),
+            dbc.Col(htm.Span(f"{cnt.vec}", className="tag px-3 mb-2 txt-c")),
+        ], className="mb-1"),
 
         dbc.Row([
-            dbc.Col(htm.Small("Search", className="d-inline-block me-2"), width=sizeL),
+            dbc.Col(htm.Small("Resolve", className="d-inline-block me-2"), width=sizeL),
             dbc.Col(
                 htm.Div([
-                    htm.Span(f"{cnt.simOk}", className="tag lg info txt-c"),
-                    htm.Span(f"{cnt.simNo}", className="tag lg second txt-c")
+                    htm.Span(f"{cnt.simOk}", className="tag info txt-c"), " / ",
+                    htm.Span(f"{cnt.simNo}", className="tag second txt-c")
                 ],
-                    style={ "display":"grid", "gridTemplateColumns":"1fr 1fr" }
+                    style={ "display":"grid", "gridTemplateColumns":"1fr auto 1fr" }
                 )
             ) ,
         ]),
         dbc.Row([
             dbc.Col(htm.Small("Pending", className="d-inline-block me-2"), width=sizeL),
-            dbc.Col(htm.Span(f"{cnt.simPnd}", className="tag blue py-1 px-2 mb-2 text-center")),
+            dbc.Col(htm.Span(f"{cnt.simPnd}", className="tag blue px-3 mb-2 text-center")),
         ]),
     ]
 

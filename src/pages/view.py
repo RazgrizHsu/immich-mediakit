@@ -28,6 +28,18 @@ class K:
         pagerMain = "vg-pager-main"
 
 
+optFileters = [
+    {"label": "All Assets", "value": "all"},
+    {"label": "With Vectors", "value": "with_vectors"},
+    {"label": "Without Vectors", "value": "without_vectors"}
+]
+optPageSize = [
+    {"label": "12", "value": 12},
+    {"label": "24", "value": 24},
+    {"label": "48", "value": 48},
+    {"label": "96", "value": 96}
+]
+
 #========================================================================
 def layout():
     import ui
@@ -52,27 +64,11 @@ def layout():
                 dbc.Row([
                     dbc.Col([
                         dbc.Label("User"),
-                        dcc.Dropdown(
-                            id=K.inp.selectUsrId,
-                            options=[{"label": "All Users", "value": ""}],
-                            value="",
-                            clearable=False,
-                            className="mb-2"
-                        ),
+                        dbc.Select(id=K.inp.selectUsrId, options=[{"label": "All Users", "value": ""}], value="", className="mb-2"),
                     ], width=4),
                     dbc.Col([
                         dbc.Label("Filter"),
-                        dcc.Dropdown(
-                            id=K.inp.selectFilter,
-                            options=[
-                                {"label": "All Assets", "value": "all"},
-                                {"label": "With Vectors", "value": "with_vectors"},
-                                {"label": "Without Vectors", "value": "without_vectors"}
-                            ],
-                            value="all",
-                            clearable=False,
-                            className="mb-2"
-                        ),
+                        dbc.Select(id=K.inp.selectFilter, options=optFileters, value="all", className="mb-2"), #type:ignore
                     ], width=4),
                 ]),
 
@@ -81,40 +77,19 @@ def layout():
 
                     dbc.Col([
                         dbc.Label("Search"),
-                        dbc.Input(
-                            id=K.inp.searchKeyword,
-                            type="text",
-                            placeholder="Search by filename...",
-                            className="mb-2"
-                        ),
+                        dbc.Input(id=K.inp.searchKeyword, type="text", placeholder="Search by filename...", className="mb-2"),
                     ], width=4),
 
                     dbc.Col([
                         dbc.Label(" "),
-                        dbc.Checkbox(
-                            id=K.inp.checkFavorites,
-                            label="Favorites Only",
-                            value=False,
-                            className="mt-2"
-                        ),
+                        dbc.Checkbox(id=K.inp.checkFavorites, label="Favorites Only", value=False, className="mt-2"),
                     ], width=4),
                 ]),
 
                 dbc.Row([
                     dbc.Col([
                         dbc.Label("Assets Per Page"),
-                        dcc.Dropdown(
-                            id=K.inp.selectPerPage,
-                            options=[
-                                {"label": "12", "value": 12},
-                                {"label": "24", "value": 24},
-                                {"label": "48", "value": 48},
-                                {"label": "96", "value": 96}
-                            ],
-                            value=24,
-                            clearable=False,
-                            className="mb-2"
-                        ),
+                        dbc.Select(id=K.inp.selectPerPage, options=optPageSize, value=24, className="mb-2"), #type:ignore
                     ], width=12),
                 ]),
             ])
@@ -125,7 +100,7 @@ def layout():
 
         htm.Div([
             # Top pager
-            *pager.createPager(pgId=K.div.pagerMain, idx=0, className="mb-3 text-center", btnSize=7 ),
+            *pager.createPager(pgId=K.div.pagerMain, idx=0, className="mb-3 text-center", btnSize=9),
 
             # Grid
             dbc.Spinner(
@@ -136,7 +111,7 @@ def layout():
             ),
 
             # Bottom pager
-            *pager.createPager(pgId=K.div.pagerMain, idx=1, className="mt-3 text-center", btnSize=7),
+            *pager.createPager(pgId=K.div.pagerMain, idx=1, className="mt-3 text-center", btnSize=9),
 
             # Main pager store
             *pager.createStore(pgId=K.div.pagerMain, page=1, size=24, total=total)

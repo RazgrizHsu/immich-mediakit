@@ -32,9 +32,6 @@ def mkConn():
             conn.close()
 
 
-def close():
-    # Deprecated - connections are now managed by context manager
-    return True
 
 
 def init():

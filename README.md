@@ -46,12 +46,12 @@ enabling advanced management capabilities through AI-powered similarity detectio
 
 
 
-## Usage Suggestions
+## Usage Guide
 
-### Main Functions
+### Basic Operations
 
 - `Find Similar`
-  - Starts searching for the next photo that matches your `Threshold Min & Max` settings and shows it in the `current` tab
+  - Starts searching for the next photo that matches your `Threshold Min` settings and shows it in the `current` tab
   - When photo groups appear in the `current` tab, you can click on a photo's header to select it. This lights up the four action buttons on the top right. After using one of these actions, the kept photos in that group will be marked as resolved
   - If you don't do anything with a searched group, it'll show up in the `pending` tab waiting for you to handle it later
 
@@ -63,7 +63,7 @@ enabling advanced management capabilities through AI-powered similarity detectio
   - Resets all search records, including the ones you've marked as resolved
 
 
-### Usage Tips & Settings
+### Search Configuration
 
 - Make the most of `Auto Selection`
   - When you enable auto selection, it'll automatically choose which photos to keep or delete after you run `Find Similar`. Just scroll through to review, then hit one of the four action buttons at the top
@@ -81,11 +81,7 @@ enabling advanced management capabilities through AI-powered similarity detectio
   - `MaxItems` limits how deep the search goes. Say you set the threshold to `(0.5, 1)` - that might trigger endless searching if you have 100k photos, so this cap keeps things under control
   - Note: The number of photos directly related to the main photo isn't limited by `MaxItems`
 
-### Search Modes
-
-- **Single Mode + Related Tree**: Find one comprehensive similarity tree including all related photos
-- **Multi Mode**: Find multiple separate groups quickly (no tree expansion)
-- These modes are mutually exclusive for performance and clarity reasons
+**Mode Selection**: Choose Single Mode + Related Tree for comprehensive similarity trees, or Multi Mode for quick processing of multiple separate groups.
 
 ### Advanced Strategies
 
@@ -100,11 +96,18 @@ enabling advanced management capabilities through AI-powered similarity detectio
   - Before changing your threshold settings, use `Reset Records` to wipe all similarity data
   - This lets you rescan all photos with new thresholds and avoid missing anything or getting false matches
 
-- **Double-check before deleting**
-  - Lower thresholds might include photos that look similar but are actually different - always review before hitting delete
-  - Consider using `Keep All` to mark them as resolved first, then decide later if you really want to delete them
+- **Auto Selection optimization**
+  - Configure selection criteria: FileSize +3 for higher quality, Name Longer +3 for descriptive filenames
+  - Review auto-selected results before batch processing
 
+- **Large collection tips**
+  - For 8000+ photos: Enable Multi Mode with appropriate Max Group settings
+  - Use batch operations for efficiency
 
+- **External library considerations**
+  - Ensure external library paths are not set to read-only if using Docker Compose
+  - Enable Immich's recycle bin feature before processing external libraries
+  - Remember that MediaKit reads from Immich thumbnails, so original file locations don't affect similarity detection
 
 ## Installation & Setup
 

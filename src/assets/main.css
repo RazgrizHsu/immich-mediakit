@@ -425,6 +425,12 @@ h3 { font-size: 1.68rem; }
 
 .tskPanel button:not(:last-child) { margin-right: auto; }
 
+.tskPanel > .msgs { display: flex; justify-content: space-between; }
+
+.tskPanel > .msgs > * { width: inherit; }
+
+.tskPanel > .msgs div:last-child { margin-left: auto; }
+
 @keyframes slideIn { from { transform: translateX(100%);
     opacity: 0; }
   to { transform: translateX(0);

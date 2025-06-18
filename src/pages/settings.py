@@ -52,7 +52,7 @@ def layout():
                                 ], className="col-md-6"),
 
                                 htm.Div([
-                                    htm.Div([htm.Small("Password", className="text-muted")], className="d-flex align-items-center"),
+                                    htm.Div([htm.Small("user", className="text-muted")], className="d-flex align-items-center"),
                                     htm.Div([htm.Span(f"{envs.psqlUser}", className="text-success")], className="fw-semibold")
                                 ], className="col-md-6"),
                             ], className="row mb-3"),
@@ -75,7 +75,10 @@ def layout():
 
             htm.Div([
 
-                cardSets.renderCard()
+                cardSets.renderThreshold(),
+
+                cardSets.renderCard(),
+
 
             ], className="border-0 shadow-sm")
 

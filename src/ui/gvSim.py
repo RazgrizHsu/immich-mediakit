@@ -200,7 +200,7 @@ def mkCard(ass: models.Asset):
 
             dbc.Row([
                 htm.Span("id"), htm.Span(f"{ass.id}", className="tag"),
-                htm.Span("GIDs"), htm.Span(f"{ass.simGIDs}", className="tag second txt-c"),
+                htm.Span("device"), htm.Span(f"{ass.deviceId}", className="tag second txt-c"),
                 htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="tag second"),
                 htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="tag second"),
 
@@ -214,11 +214,6 @@ def mkCard(ass: models.Asset):
                 htm.Table( htm.Tbody(gvExif.mkExifRows(ass)) , className="exif"),
             ]) if db.dto.showGridInfo else None,
 
-            dbc.Row(),
-
-            # htm.Div([
-            #     dbc.Button( "Details", id={"type": "details-btn", "id": assId}, color="secondary", size="sm")
-            # ], className="d-flex justify-content-between align-items-center"),
 
         ], className="p-0"),
     ], className=cssClass)

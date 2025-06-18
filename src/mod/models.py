@@ -329,7 +329,6 @@ class PgSim(BaseDictModel):
 class Sets(BaseDictModel):
     photoQ: str = ks.db.thumbnail
     thMin: float = 0.93
-    thMax: float = 1.00
 
     autoNext: bool = True
     showInfo: bool = True

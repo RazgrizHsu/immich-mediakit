@@ -797,6 +797,18 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	button:not(:last-child) {
 		margin-right:auto;
 	}
+
+	> .msgs {
+
+		> * { width: inherit }
+
+		display: flex;
+		justify-content: space-between;
+
+		div:last-child {
+			margin-left: auto;
+		}
+	}
 }
 
 @keyframes slideIn {
