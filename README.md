@@ -20,7 +20,7 @@ enabling advanced management capabilities through AI-powered similarity detectio
 - **Web-Based UI**: User-friendly dashboard for all operations
 
 
-## preivew
+## preview
 
 <p align="center">
 <img src="docs/intro.jpg" alt="preview" />
