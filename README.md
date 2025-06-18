@@ -176,7 +176,7 @@ After updating, restart Immich to apply the changes. The `PSQL_HOST` in your `.e
    PSQL_USER=postgres
    PSQL_PASS=postgres
    
-   # Immich connection - Change to your Immich install path (UPLOAD_LOCATION env variable if you're using immich with docker compose)
+   # Immich connection - Change to your Immich install path (UPLOAD_LOCATION env variable of Immich if you're using Immich with docker compose)
    IMMICH_PATH=/path/to/your/immich
    
    # MediaKit settings
