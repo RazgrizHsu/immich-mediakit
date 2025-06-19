@@ -1527,27 +1527,47 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 
 
 $notify-colors: (
-    "info": (
-        "start": #4CAF50,
-        "end": #00C853
+    "blue": (
+        "main": #1976D2,
+        "bg": #E3F2FD,
+        "border": #2196F3,
+        "text": #0D47A1
     ),
     "error": (
-        "start": #F44336,
-        "end": #D50000
+        "main": #D32F2F,
+        "bg": #FFEBEE,
+        "border": #F44336,
+        "text": #B71C1C
     ),
-	"warn": (
-		"start": #FF8503,
-		"end": #ff8503
-	)
+    "warn": (
+        "main": #F57C00,
+        "bg": #FFF3E0,
+        "border": #FF9800,
+        "text": #E65100
+    ),
+    "info": (
+        "main": #388E3C,
+        "bg": #E8F5E8,
+        "border": #4CAF50,
+        "text": #1B5E20
+    )
 );
 
 @mixin bgNfy($type) {
     @if map-has-key($notify-colors, $type) {
-        $start-color: map-get(map-get($notify-colors, $type), "start");
-        $end-color: map-get(map-get($notify-colors, $type), "end");
-        background: linear-gradient(to bottom, $start-color, $end-color);
+        $colors: map-get($notify-colors, $type);
+
+        background-color: map-get($colors, "bg");
+        border: 1px solid map-get($colors, "border");
+        color: map-get($colors, "text");
+
+        box-shadow: 0 2px 4px rgba(map-get($colors, "main"), 0.1);
+
     } @else {
-        background: linear-gradient(to bottom, #757575, #616161);
+        background-color: #F5F5F5;
+        border: 1px solid #E0E0E0;
+        color: #616161;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 }
 
@@ -1565,39 +1585,35 @@ $notify-colors: (
     height: auto;
 
     .jsnfy {
-        color: white;
-        border-radius: 4px;
-        box-shadow: 0 2px 6px 3px rgba(255,255,255,0.3);
+        border-radius: 6px;
         opacity: 0;
         transform: translateY(-20px);
         transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-
         flex-grow: 0;
         flex-shrink: 0;
         width: fit-content;
         max-width: 80vw;
-        &.info {
-            @include bgNfy("info");
-        }
 
-        &.error {
-            @include bgNfy("error");
-        }
+        &.info { @include bgNfy("info"); }
+        &.error { @include bgNfy("error"); }
+        &.warn { @include bgNfy("warn"); }
+        &.success { @include bgNfy("success"); }
     }
 
-
     .jsnfy .box {
-        padding: 10px 15px;
+        padding: 12px 16px;
         display: flex;
         align-items: center;
+        font-weight: 500;
     }
 
     .bi {
-		margin-right:3px;
+        margin-right: 8px;
+        flex-shrink: 0;
+
         &.rotating {
             display: inline-block;
             animation: spin 1.5s linear infinite;
-            margin-right: 8px;
         }
     }
 
