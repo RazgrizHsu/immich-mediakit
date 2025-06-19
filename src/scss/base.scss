@@ -122,9 +122,10 @@ button { text-decoration:none; }
 }
 
 @mixin bg-gradient($bg, $type:to bottom) {
-	$light:mix(white, $bg, 20%);
-	$dark:mix(black, $bg, 20%);
-	background-image:linear-gradient($type, $light, $bg 50%, $dark);
+	// $light:mix(black, $bg, 10%);
+	// $dark:mix(black, $bg, 20%);
+	// background-image:linear-gradient($type, $light, $bg 50%, $dark);
+	background: $bg;
 }
 
 @mixin colors-gradient($light, $bg, $dark, $color, $border: true) {

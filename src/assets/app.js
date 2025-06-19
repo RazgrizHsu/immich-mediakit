@@ -1782,11 +1782,11 @@ function onFetchedChk( data ){
 	let sp = document.querySelector( "#span-sys-chk" )
 	if( sp ) {
 		if( allOk ) {
-			sp.innerText = 'ok'
+			sp.innerText = `ok`
 			sp.classList.add('info')
 		}
 		else {
-			sp.innerText = 'Failed'
+			sp.innerText = `Failed`
 			sp.classList.add('red')
 		}
 	}
@@ -1794,7 +1794,13 @@ function onFetchedChk( data ){
 	if( !data.ver.ok ) {
 
 		let msg = data.ver.msg.join( '\n' )
-		let n = notify.load( msg, 'warn' ).run( 5000 )
+		let n = notify.load( msg, 'warn' ).run( 30000 )
+
+		if( sp ) {
+			sp.innerText = `please update`
+			sp.classList.remove('info',`second`)
+			sp.classList.add('warn')
+		}
 	}
 
 }

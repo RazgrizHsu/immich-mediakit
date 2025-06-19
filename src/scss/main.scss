@@ -571,20 +571,13 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	overflow:hidden;
 	text-overflow:ellipsis;
 
-	&.second {
-		@include bg-gradient(#4A4A4A);
-	}
+	&.second { @include bg-gradient(#4A4A4A); }
 
-	&.info {
-		@include bg-gradient(#6DAA2B);
-	}
+	&.info { @include bg-gradient(#6DAA2B); }
 
-	&.blue {
-		@include bg-gradient(#3399F6);
-	}
-	&.red {
-		@include bg-gradient(#A90200);
-	}
+	&.blue { @include bg-gradient(#3399F6); }
+	&.red { @include bg-gradient(#A90200); }
+	&.warn { @include bg-gradient(#F38C12); } //#FF8C00
 
 	&.sm {
 		font-size:10px !important;
