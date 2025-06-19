@@ -280,7 +280,7 @@ def renderCard():
 def settings_OnUpd(th, auNxt, shGdInfo, rtree,  maxItems, muodEnable, muodDate, muodWidth, muodHeight, muodSize, maxGroups, dta_now):
     retNow = noUpd
 
-    now = models.Now.fromDict(dta_now)
+    now = models.Now.fromDic(dta_now)
 
     db.dto.thMin = co.vad.float(th, 0.93, 0.50, 0.99)
 

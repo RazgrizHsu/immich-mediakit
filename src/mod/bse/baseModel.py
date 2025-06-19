@@ -103,13 +103,13 @@ class BaseDictModel:
             if cls._is_model_subclass(hint_type):
                 if isinstance(val, dict):
                     # noinspection PyUnresolvedReferences
-                    return hint_type.fromDict(val)
+                    return hint_type.fromDic(val)
                 elif isinstance(val, str):
                     try:
                         json_data = json.loads(val)
                         if isinstance(json_data, dict):
                             # noinspection PyUnresolvedReferences
-                            return hint_type.fromDict(json_data)
+                            return hint_type.fromDic(json_data)
                     except:
                         pass
             elif inspect.isclass(hint_type) and issubclass(hint_type, Enum):
@@ -126,7 +126,7 @@ class BaseDictModel:
             if isinstance(val, list):
                 item_type = get_args(hint_type)[0]
                 if cls._is_model_subclass(item_type):
-                    return [item_type.fromDict(item) for item in val]
+                    return [item_type.fromDic(item) for item in val]
                 return val
             elif isinstance(val, str):
                 try:
@@ -134,7 +134,7 @@ class BaseDictModel:
                     if isinstance(list_data, list):
                         item_type = get_args(hint_type)[0]
                         if cls._is_model_subclass(item_type):
-                            return [item_type.fromDict(item) for item in list_data]
+                            return [item_type.fromDic(item) for item in list_data]
                         return list_data
                 except:
                     pass
@@ -150,12 +150,12 @@ class BaseDictModel:
                 real_type = real_types[0]
                 if cls._is_model_subclass(real_type):
                     if isinstance(val, dict):
-                        return real_type.fromDict(val)
+                        return real_type.fromDic(val)
                     elif isinstance(val, str):
                         try:
                             json_data = json.loads(val)
                             if isinstance(json_data, dict):
-                                return real_type.fromDict(json_data)
+                                return real_type.fromDic(json_data)
                         except:
                             pass
             return val
@@ -200,7 +200,7 @@ class BaseDictModel:
             data = json.loads(src)
             if not isinstance(data, dict):
                 raise ValueError(f"Expected dict after JSON parse, got {type(data).__name__}")
-            result = cls.fromDict(data)
+            result = cls.fromDic(data)
             if result is None:
                 raise ValueError(f"Failed to create {cls.__name__} from data")
             return result
@@ -208,7 +208,21 @@ class BaseDictModel:
             raise ValueError(f"Invalid JSON string: {e}")
 
     @classmethod
-    def fromDict(cls: Type[T], src: Dict[str, Any]) -> T:
+    def fromJS(cls: Type[T], dic:Dict[str,Any]) -> T:
+        if not dic: return cls()
+
+        data = dic.get('data')
+        if not data: return cls()
+
+        try:
+            obj = json.loads(data)
+            return cls.fromDic(obj)
+
+        except Exception as e:
+            raise ValueError(f"Invalid data from JS, {e}, data[{data}]")
+
+    @classmethod
+    def fromDic(cls: Type[T], src: Dict[str, Any]) -> T:
         try:
             if not src: return cls()
 

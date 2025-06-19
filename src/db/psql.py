@@ -90,7 +90,7 @@ def fetchUser(usrId: str) -> Optional[models.Usr]:
 
                 if not row: raise RuntimeError( "no db row" )
 
-                return models.Usr.fromDict(row)
+                return models.Usr.fromDic(row)
 
     except Exception as e:
         raise mkErr(f"Failed to fetch userId[{usrId}]", e)
@@ -99,20 +99,18 @@ def fetchUsers() -> List[models.Usr]:
     try:
         with mkConn() as conn:
             sql = """
-            Select
-                u.id,
-                u.name,
-                u.email,
-                a.key
-            From users u
-            Join api_keys a On u.id = a."userId"
+            Select id, name, email From users
             """
             with conn.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(sql)
                 dics = cursor.fetchall()
-                users = [models.Usr.fromDict(d) for d in dics]
+                usrs = [models.Usr.fromDic(d) for d in dics]
 
-                return users
+                for u in usrs: u.id = str(u.id)
+
+                lg.info(f"[psql] fetch users[{len(usrs)}] {usrs}")
+
+                return usrs
     except Exception as e:
         raise mkErr(f"Failed to fetch users", e)
 
@@ -416,7 +414,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                     pathThumbnail = asset.get('thumbnail_path')
                     if not pathThumbnail:
                         cntErr += 1
-                        lg.warn(f"[psql] ignore asset: {asset}")
+                        lg.warn(f"[psql] ignore non thumbnail asset: {str(asset.get('id'))}")
                         continue
 
                     cntOk += 1
@@ -432,3 +430,228 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
     except Exception as e:
         msg = f"Failed to FetchAssets: {str(e)}"
         raise mkErr(msg, e)
+
+
+#------------------------------------------------------
+# Albums Operations
+#------------------------------------------------------
+def getUsrAlbumsBy(usrId: str) -> List[models.Album]:
+    try:
+        with mkConn() as conn:
+            sql = """
+            Select
+                a.id,
+                a."ownerId",
+                a."albumName",
+                a.description,
+                a."createdAt",
+                a."updatedAt",
+                a."albumThumbnailAssetId",
+                a."isActivityEnabled",
+                a."order"
+            From albums a
+            Where a."ownerId" = %s And a."deletedAt" Is Null
+            Order By a."createdAt" Desc
+            """
+            with conn.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(sql, (usrId,))
+                rows = cursor.fetchall()
+                return [models.Album.fromDic(row) for row in rows]
+    except Exception as e:
+        raise mkErr(f"Failed to fetch albums for userId[{usrId}]", e)
+
+
+def getAlbumAssetIds(albumId: str) -> List[str]:
+    try:
+        with mkConn() as conn:
+            sql = """
+            Select aa."assetsId"
+            From albums_assets_assets aa
+            Join albums a On a.id = aa."albumsId"
+            Where aa."albumsId" = %s And a."deletedAt" Is Null
+            Order By aa."createdAt" Desc
+            """
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (albumId,))
+                rows = cursor.fetchall()
+                return [row[0] for row in rows]
+    except Exception as e:
+        raise mkErr(f"Failed to fetch assets for albumId[{albumId}]", e)
+
+
+def getAssetAlbums(assetId: str) -> List[models.Album]:
+    try:
+        with mkConn() as conn:
+            sql = """
+            Select
+                a.id,
+                a."ownerId",
+                a."albumName",
+                a.description,
+                a."createdAt",
+                a."updatedAt",
+                a."albumThumbnailAssetId",
+                a."isActivityEnabled",
+                a."order"
+            From albums a
+            Join albums_assets_assets aa On a.id = aa."albumsId"
+            Where aa."assetsId" = %s And a."deletedAt" Is Null
+            Order By a."createdAt" Desc
+            """
+            with conn.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(sql, (assetId,))
+                rows = cursor.fetchall()
+                return [models.Album.fromDic(row) for row in rows]
+    except Exception as e:
+        raise mkErr(f"Failed to fetch albums for assetId[{assetId}]", e)
+
+
+def addToAlbum(albumId: str, assetIds: List[str]) -> int:
+    if not assetIds: return 0
+
+    try:
+        with mkConn() as conn:
+            with conn.cursor() as cursor:
+                checkSql = "Select 1 From albums Where id = %s And \"deletedAt\" Is Null"
+                cursor.execute(checkSql, (albumId,))
+                if not cursor.fetchone(): raise RuntimeError(f"Album not found: {albumId}")
+
+                existingSql = """
+                Select "assetsId" From albums_assets_assets Where "albumsId" = %s And "assetsId" = ANY(%s)
+                """
+                cursor.execute(existingSql, (albumId, assetIds))
+                existing = {row[0] for row in cursor.fetchall()}
+
+                newAssetIds = [aid for aid in assetIds if aid not in existing]
+                if not newAssetIds: return 0
+
+                values = [(albumId, aid) for aid in newAssetIds]
+                insertSql = """
+                Insert Into albums_assets_assets ("albumsId", "assetsId", "createdAt")
+                Values (%s, %s, Now())
+                """
+                cursor.executemany(insertSql, values)
+                conn.commit()
+
+                return len(newAssetIds)
+    except Exception as e:
+        raise mkErr(f"Failed to add assets to album[{albumId}]", e)
+
+
+def delFromAlbumBy(albumId: str, assetIds: List[str]) -> int:
+    if not assetIds: return 0
+
+    try:
+        with mkConn() as conn:
+            sql = """
+            Delete From albums_assets_assets
+            Where "albumsId" = %s And "assetsId" = ANY(%s)
+            """
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (albumId, assetIds))
+                removedCnt = cursor.rowcount
+                conn.commit()
+                return removedCnt
+    except Exception as e:
+        raise mkErr(f"Failed to remove assets from album[{albumId}]", e)
+
+
+#------------------------------------------------------
+# Favorites Operations
+#------------------------------------------------------
+def getFavoriteIds(usrId: str) -> List[str]:
+    try:
+        with mkConn() as conn:
+            sql = """
+            Select id From assets
+            Where "ownerId" = %s And "isFavorite" = true And status = 'active'
+            Order By "updatedAt" Desc
+            """
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (usrId,))
+                rows = cursor.fetchall()
+                return [row[0] for row in rows]
+    except Exception as e:
+        raise mkErr(f"Failed to fetch favorite assets for userId[{usrId}]", e)
+
+
+def isFavorite(assetId: str) -> bool:
+    try:
+        with mkConn() as conn:
+            sql = "Select \"isFavorite\" From assets Where id = %s"
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (assetId,))
+                row = cursor.fetchone()
+                return row[0] if row else False
+    except Exception as e:
+        raise mkErr(f"Failed to check favorite status for assetId[{assetId}]", e)
+
+
+def updFavoriteBy(assetIds: List[str], isFav: bool) -> int:
+    if not assetIds: return 0
+
+    try:
+        with mkConn() as conn:
+            sql = """
+            Update assets Set "isFavorite" = %s, "updatedAt" = Now()
+            Where id = ANY(%s) And status = 'active'
+            """
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (isFav, assetIds))
+                updatedCnt = cursor.rowcount
+                conn.commit()
+                return updatedCnt
+    except Exception as e:
+        raise mkErr(f"Failed to update favorite status for assets", e)
+
+
+#------------------------------------------------------
+# Archive Operations
+#------------------------------------------------------
+def getArchivedIds(usrId: str) -> List[str]:
+    try:
+        with mkConn() as conn:
+            sql = """
+            Select id From assets
+            Where "ownerId" = %s And visibility = 'archive' And status = 'active'
+            Order By "updatedAt" Desc
+            """
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (usrId,))
+                rows = cursor.fetchall()
+                return [row[0] for row in rows]
+    except Exception as e:
+        raise mkErr(f"Failed to fetch archived assets for userId[{usrId}]", e)
+
+
+def isArchived(assetId: str) -> bool:
+    try:
+        with mkConn() as conn:
+            sql = "Select visibility From assets Where id = %s"
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (assetId,))
+                row = cursor.fetchone()
+                return row[0] == 'archive' if row else False
+    except Exception as e:
+        raise mkErr(f"Failed to check archive status for assetId[{assetId}]", e)
+
+
+def updArchiveBy(assetIds: List[str], isArchived: bool) -> int:
+    if not assetIds: return 0
+
+    try:
+        with mkConn() as conn:
+            visibility = 'archive' if isArchived else 'timeline'
+            sql = """
+            Update assets Set visibility = %s, "updatedAt" = Now()
+            Where id = ANY(%s) And status = 'active'
+            """
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (visibility, assetIds))
+                updatedCnt = cursor.rowcount
+                conn.commit()
+                return updatedCnt
+    except Exception as e:
+        raise mkErr(f"Failed to update archive status for assets", e)
+
+

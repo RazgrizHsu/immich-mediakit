@@ -137,8 +137,8 @@ pager.regCallbacks(K.div.pagerMain)
     prevent_initial_call=False
 )
 def vw_Init(dta_cnt, dta_now):
-    cnt = models.Cnt.fromDict(dta_cnt)
-    now = models.Now.fromDict(dta_now)
+    cnt = models.Cnt.fromDic(dta_cnt)
+    now = models.Now.fromDic(dta_now)
 
     opts = [{"label": "All Users", "value": ""}]
     usrs = db.psql.fetchUsers()
@@ -168,7 +168,7 @@ def vw_OnFilterChange(
     usrId, filterOption, favoritesOnly, schKey, pgSize,
     dta_pgr
 ):
-    pgr = Pager.fromDict(dta_pgr)
+    pgr = Pager.fromDic(dta_pgr)
 
     # Update total count based on filters
     total = db.pics.countFiltered(
@@ -206,8 +206,8 @@ def vw_OnFilterChange(
 def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
     if not dta_pgr: return noUpd
 
-    cnt = models.Cnt.fromDict(dta_cnt)
-    pgr = Pager.fromDict(dta_pgr)
+    cnt = models.Cnt.fromDic(dta_cnt)
+    pgr = Pager.fromDic(dta_pgr)
 
     if cnt.ass <= 0:
         return dbc.Alert("No photos available", color="secondary", className="text-center")

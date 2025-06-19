@@ -6,52 +6,73 @@ const R = {
     }
 }
 
-function notify(msg, type = 'info') {
+function notify(msg, type = 'info', timeout = 3000) {
+    let ncr = document.getElementById('notify-container');
+    if (!ncr) {
+        ncr = document.createElement('div');
+        ncr.id = 'notify-container';
+        ncr.style.position = 'fixed';
+        ncr.style.top = '50%';
+        ncr.style.left = '50%';
+        ncr.style.transform = 'translate(-50%, -50%)';
+        ncr.style.display = 'flex';
+        ncr.style.flexDirection = 'column';
+        ncr.style.gap = '10px';
+        ncr.style.zIndex = 9999;
+        document.body.appendChild(ncr);
+    }
 
     const el = document.createElement('div');
-
     el.textContent = msg;
-    el.style.position = 'fixed';
-    el.style.top = '70%';
-    el.style.left = '50%';
-    el.style.transform = 'translate(-50%, -50%)';
-    el.style.padding = '10px 15px';
-    el.style.zIndex = 9999;
-    //el.style.background = type == 'info' ? '#4CAF50' : '#F44336';
 
-	el.style.background = `linear-gradient(to bottom, ${ type == 'info' ? '#4CAF50, #00C853' : '#F44336, #D50000' })`
+    el.style.padding = '10px 15px';
     el.style.color = 'white';
     el.style.borderRadius = '4px';
     el.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
     el.style.opacity = 0;
-    el.style.transition = 'opacity 0.3s';
+    el.style.transform = 'translateY(-20px)';
+    el.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
 
-    document.body.appendChild(el);
+    el.style.background = `linear-gradient(to bottom, ${ type === 'info' ? '#4CAF50, #00C853' : '#F44336, #D50000' })`;
 
-    setTimeout(() => { el.style.opacity = 1 }, 10);
+    ncr.prepend(el);
+
+    setTimeout(() => {
+        el.style.opacity = 1;
+        el.style.transform = 'translateY(0)';
+    }, 10);
+
     setTimeout(() => {
         el.style.opacity = 0;
+        el.style.transform = 'translateY(20px)';
         el.addEventListener('transitionend', function handler() {
             el.remove();
-            el.removeEventListener('transitionend', handler); // Clean up the event listener
+            el.removeEventListener('transitionend', handler);
         });
-    }, 2000);
+    }, timeout);
 }
-
 
 const dsh = {
 
 	syncStore( key, data ){
 
-		if ( !window.dash_clientside || !window.dash_clientside.set_props )
+		if ( !window.dash_clientside || !window.dash_clientside.set_props ) {
 			console.error( `[mdlImg] error not found dash client side...` )
+			return
+		}
+		let typ = typeof data
+		let str = `data(${typeof data})`
 
-		let str = `data( ${typeof data} )`
-		const entries = Object.entries( data ).map( ( [k, v] ) => `${k}: (${typeof v})[${v}]` ).join( ', ' )
-		str += ` entries: {${entries}}`
-
+		if ( typ == 'object' ){
+			const entries = Object.entries( data ).map( ( [k, v] ) => `${k}: (${typeof v})[${v}]` ).join( ', ' )
+			str += ` entries: {${entries}}`
+		}
+		else {
+			str += data
+		}
 		console.info( `[dsh] sync store[ ${key} ] ${str}` )
-		window.dash_clientside.set_props( key, {data} )
+
+		window.dash_clientside.set_props( key, {data:data} ) //use dcc.Store need data property
 	},
 
 	syncSte( cnt, selectedIds ){
@@ -1239,10 +1260,220 @@ function initBtnTop(btn) {
 }
 
 //------------------------------------------------------------------------
+// Custom WebSocket Manager
+//------------------------------------------------------------------------
+const k = {
+	wsId: 'global-ws',
+}
+
+const TskWS = {
+    ws: null,
+    url: null,
+    recnnMs: 1000,
+	recnnMax: 10,
+    recnnMaxMs: 30000,
+	recnnCnt: 0,
+    isConnecting: false,
+    isConnected: false,
+    htbtInterval: null,
+	timeout: 2000,
+    timeoutFn: null,
+
+    init() {
+
+		let host = location.hostname
+
+		dsh.syncStore(k.wsId, {}) //init all null, let backend know conection status
+
+        fetch('/api/conf')
+            .then(rep => rep.json())
+            .then(data => {
+				let url = `ws://${host}:${data.portWs}`
+				console.info(`[ws] /api/conf => data[${JSON.stringify(data)}] url[${url}]`)
+                this.url = url
+                this.connect();
+            })
+            .catch(error => {
+                console.error('[wst] Failed to get WebSocket URL:', error);
+            });
+    },
+
+    connect() {
+        if (this.isConnecting || this.isConnected) return;
+
+        if (!this.url) {
+            console.error('[wst] No WebSocket URL available');
+            return;
+        }
+
+        this.isConnecting = true;
+
+        console.log(`[wst] Connecting to ${this.url}...`);
+
+        // Set connection timeout
+        this.timeoutFn = setTimeout(() => {
+            if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+                console.warn('[wst] Connection timeout');
+                this.ws.close();
+                this.onError('Connection timeout');
+            }
+        }, 5000); // 5 second timeout
+
+        try {
+            this.ws = new WebSocket(this.url);
+            this.ws.onopen = this.onConn.bind(this);
+            this.ws.onmessage = this.onMsg.bind(this);
+            this.ws.onclose = this.onClose.bind(this);
+            this.ws.onerror = this.onError.bind(this);
+        } catch (error) {
+            console.error('[wst] WebSocket creation failed:', error);
+            this.onError(error.message);
+        }
+    },
+
+    schedule() {
+        if (this.recnnCnt >= this.recnnMax) {
+            console.error('[wst] Max reconnect attempts reached');
+            notify('❌ WebSocket connection lost. Please refresh the page.', 'error');
+            return;
+        }
+
+        this.recnnCnt++;
+        const delay = Math.min(this.recnnMs * Math.pow(1.5, this.recnnCnt - 1), this.recnnMaxMs);
+
+        console.log(`[wst] Reconnecting in ${delay}ms (attempt ${this.recnnCnt}/${this.recnnMax})`);
+
+        setTimeout(() => {
+            this.connect();
+        }, delay);
+    },
+
+    startHeartbeat() {
+        this.htbtInterval = setInterval(() => {
+            if (this.isConnected && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 30000); // 30 seconds
+    },
+
+    clearHtbt() {
+        if (this.htbtInterval) {
+            clearInterval(this.htbtInterval);
+            this.htbtInterval = null;
+        }
+    },
+
+    clearCnnTimeout() {
+        if (this.timeoutFn) {
+            clearTimeout(this.timeoutFn);
+            this.timeoutFn = null;
+        }
+    },
+
+    onConn() {
+        this.clearCnnTimeout();
+        this.isConnecting = false;
+        this.isConnected = true;
+        this.recnnCnt = 0;
+        this.recnnMs = 1000;
+
+        this.startHeartbeat();
+
+        notify('✅ WebSocket connected. Tasks can now be executed.', 'info');
+    },
+
+    onMsg(event) {
+        try {
+            const recv = event.data
+			let data = {}
+
+			try{ data = JSON.parse(recv) }
+			catch( ex ){
+				console.error(`[wst] cannot convert recv to json: ${recv}`)
+				return
+			}
+
+			if ( !data.dtc ) {
+				console.error(`[wst] cannot id recv[${recv}]`)
+				return
+			}
+
+			if( data.type == 'connected' ) notify( `task connected` )
+
+			this.updStoreWs(data)
+
+        } catch (error) {
+            console.error('[wst] Message processing error:', error);
+        }
+    },
+
+    onClose(event) {
+        console.log(`[wst] Connection closed: ${event.code} - ${event.reason}`);
+        this.clearCnnTimeout();
+        this.clearHtbt();
+        this.isConnecting = false;
+        this.isConnected = false;
+
+		this.updStoreWs({err: event.reason || 'Connection closed'})
+
+        if (event.code !== 1000) this.schedule();
+    },
+
+    onError(error) {
+        console.error('[wst] Error:', error);
+        this.clearCnnTimeout();
+        this.isConnecting = false;
+        this.isConnected = false;
+
+		this.updStoreWs({ err: typeof error === 'string' ? error : 'Connection error'})
+
+        //notify('❌ WebSocket connection failed. Task functionality is unavailable.', 'error');
+    },
+
+    updStoreWs(state) {
+		dsh.syncStore(k.wsId, state)
+
+        // const event = new CustomEvent('ws-status-change', {
+        //     detail: { state, error }
+        // });
+        // document.dispatchEvent(event);
+    },
+
+    send(message) {
+        if (this.isConnected && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(typeof message === 'string' ? message : JSON.stringify(message));
+            return true;
+        } else {
+            console.warn('[wst] Cannot send message - not connected');
+            return false;
+        }
+    },
+
+    disconnect() {
+        this.clearHtbt();
+        this.clearCnnTimeout();
+        if (this.ws) {
+            this.ws.close(1000, 'User disconnect');
+        }
+    }
+};
+
+//------------------------------------------------------------------------
+// Tsk WS
+//------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => { TskWS.init() }, 1000);
+});
+
+window.addEventListener('beforeunload', () => {
+    TskWS.disconnect()
+});
+
+//------------------------------------------------------------------------
 // TaskPanel Auto Hide on Scroll
 //------------------------------------------------------------------------
 function initTaskPanelAutoHide() {
-	let scrollTimer = null;
+	// let scrollTimer = null;
 
 	function handleScroll() {
 		const tskPanel = document.querySelector('.tskPanel.fly');
@@ -1264,13 +1495,14 @@ function initTaskPanelAutoHide() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-	// Initialize floating tab-acts
-	const tabActs = document.querySelector('.tab-acts');
+
+	const tabActs = document.querySelector('.tab-acts')
 	if (tabActs) {
 		console.log('[TabActs] Found tab-acts element, initializing floating behavior');
 		initTabActsFloating();
-	} else {
-		const tabActsObserver = new MutationObserver(function(mutations) {
+	}
+	else {
+		const tabActsObserver = new MutationObserver(function() {
 			const tabActsEl = document.querySelector('.tab-acts');
 			if (tabActsEl) {
 				console.log('[TabActs] Tab-acts found via observer:', tabActsEl);
@@ -1285,7 +1517,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	const gotoTopBtn = document.getElementById('sim-goto-top-btn');
 	if (!gotoTopBtn) {
 
-		const observer = new MutationObserver(function(mutations) {
+		const observer = new MutationObserver(function() {
 			const btn = document.getElementById('sim-goto-top-btn');
 			if (btn) {
 				console.log('[GotoTop] Button found via observer:', btn);

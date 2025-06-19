@@ -28,23 +28,28 @@ def render():
         out(k.modal, "is_open", allow_duplicate=True),
         out(k.body, "children"),
         out(ks.sto.mdl, "data", allow_duplicate=True),
+        out(ks.sto.nfy, "data", allow_duplicate=True),
     ],
-    [
-        inp(ks.sto.mdl, "data"),
-    ],
+    inp(ks.sto.mdl, "data"),
+    ste(ks.sto.nfy, "data"),
+    ste(ks.glo.gws, "data"),
     prevent_initial_call=True
 )
-def mdl_Status(dta_mdl):
-    mdl = models.Mdl.fromDict(dta_mdl)
-    tsk = models.Tsk()
+def mdl_Status(dta_mdl, dta_nfy, gws):
 
+    nfy = models.Nfy.fromDic(dta_nfy)
+    wms = models.Gws.fromDic(gws)
+    if not wms.dtc:
+        nfy.warn(f"WebSocket not connected, please check your config, wms: {wms}")
+        return noUpd.by(4).upd(3, nfy)
+
+
+    mdl = models.Mdl.fromDic(dta_mdl)
     isOpen = mdl.id is not None
-
-    trigId = getTrgId()
 
     # lg.info(f"[modal] Trigger[{trigId}] mdl: id[{mdl.id}]")
 
-    return isOpen, mdl.msg, mdl.toDict()
+    return isOpen, mdl.msg, mdl.toDict(), nfy.toDict()
 
 
 #------------------------------------------------------------------------
@@ -55,17 +60,21 @@ def mdl_Status(dta_mdl):
         out(k.modal, "is_open", allow_duplicate=True),
         out(ks.sto.mdl, "data", allow_duplicate=True),
         out(ks.sto.tsk, "data", allow_duplicate=True),
+        out(ks.sto.nfy, "data", allow_duplicate=True),
     ],
     [
         inp(k.btnOk, "n_clicks"),
         inp(k.btnNo, "n_clicks"),
     ],
     ste(ks.sto.mdl, "data"),
+    ste(ks.sto.nfy, "data"),
     prevent_initial_call=True
 )
-def mdl_OnClick(nclk_ok, nclk_no, dta_mdl):
-    if not nclk_ok and not nclk_no: return noUpd.by(3)
-    mdl = models.Mdl.fromDict(dta_mdl)
+def mdl_OnClick(nclk_ok, nclk_no, dta_mdl, dta_nfy):
+    if not nclk_ok and not nclk_no: return noUpd.by(4)
+
+    nfy = models.Nfy.fromDic(dta_nfy)
+    mdl = models.Mdl.fromDic(dta_mdl)
     tsk = models.Tsk()
 
     trigId = getTrgId()
@@ -90,4 +99,4 @@ def mdl_OnClick(nclk_ok, nclk_no, dta_mdl):
 
         mdl.reset()
 
-    return False, mdl.toDict(), tsk.toDict()
+    return False, mdl.toDict(), tsk.toDict(), nfy.toDict()

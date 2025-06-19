@@ -1,0 +1,36 @@
+name: immich-mediakit
+services:
+  immich-mediakit:
+    container_name: immich-mediakit
+    hostname: immich-mediakit
+    image: razgrizhsu/immich-mediakit:latest
+    restart: unless-stopped
+    ports:
+      - ${MKIT_PORT:-8086}:8086
+      - ${MKIT_PORTWS:-8087}:8087
+    volumes:
+      - ${MKIT_DATA}:/app/data
+      - ${MKIT_DATA}/cache:/root/.cache/torch/
+      - ${IMMICH_PATH}:/immich:ro  # Read-only access to Immich photos
+    env_file:
+      - .env
+    environment:
+      - DASH_DEBUG=${DASH_DEBUG:-false}
+      - IMMICH_PATH=/immich  # Override path inside container
+    depends_on:
+      - qdrant
+    healthcheck:
+      test: sh -c "curl -f http://localhost:${MKIT_PORT:-8086}/ || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  qdrant:
+    container_name: immich-mediakit-qdrant
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - ${QDRANT_PORT:-6333}:6333
+    volumes:
+      - ${MKIT_DATA}/qdrant:/qdrant/storage

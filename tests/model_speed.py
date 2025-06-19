@@ -259,7 +259,7 @@ def method4_complex_base_dict_model(cursor: sqlite3.Cursor):
                 except:
                     data[field] = None
 
-        asset = ComplexAsset.fromDict(data)
+        asset = ComplexAsset.fromDic(data)
         result.append(asset)
 
     end_time = time.time()
@@ -406,7 +406,7 @@ def run_nested_object_test(iterations: int = 3, num_records: int = 100, silent: 
         start_time = time.time()
         model_results = []
         for data in test_data:
-            model = ComplexAsset.fromDict(data)
+            model = ComplexAsset.fromDic(data)
             model_results.append(model)
         model_time = time.time() - start_time
         method_model_times.append(model_time)

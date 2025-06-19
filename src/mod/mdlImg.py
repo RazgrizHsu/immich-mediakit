@@ -220,7 +220,7 @@ def mdlImg_OnImgPopClicked(clks, dta_mdl):
 
     if not ctx.triggered: return noUpd
 
-    mdl = models.MdlImg.fromDict(dta_mdl)
+    mdl = models.MdlImg.fromDic(dta_mdl)
 
     trigIdx = ctx.triggered_id
     if isinstance(trigIdx, dict) and "aid" in trigIdx:
@@ -252,8 +252,8 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl, dta_now):
 
     if not ctx.triggered: return noUpd
 
-    mdl = models.MdlImg.fromDict(dta_mdl)
-    now = models.Now.fromDict(dta_now)
+    mdl = models.MdlImg.fromDic(dta_mdl)
+    now = models.Now.fromDic(dta_now)
 
     trigIdx = ctx.triggered_id
 

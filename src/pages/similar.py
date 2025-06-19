@@ -250,7 +250,7 @@ pager.regCallbacks(k.pagerPnd)
 def sim_OnTabChange(active_tab, dta_now):
     if not active_tab or not dta_now: return noUpd
 
-    now = Now.fromDict(dta_now)
+    now = Now.fromDic(dta_now)
 
     if now.sim.activeTab == active_tab: return noUpd
 
@@ -277,8 +277,8 @@ def sim_OnTabChange(active_tab, dta_now):
 def sim_onPagerChanged(dta_pgr, dta_now):
     if not dta_pgr or not dta_now: return noUpd.by(2)
 
-    now = Now.fromDict(dta_now)
-    pgr = Pager.fromDict(dta_pgr)
+    now = Now.fromDic(dta_now)
+    pgr = Pager.fromDic(dta_pgr)
 
     # Check if we're already on this page with same data
     oldPgr = now.sim.pagerPnd
@@ -316,7 +316,7 @@ def sim_onPagerChanged(dta_pgr, dta_now):
     prevent_initial_call="initial_duplicate"
 )
 def sim_SyncUrlAssetToNow(dta_ass, dta_now):
-    now = Now.fromDict(dta_now)
+    now = Now.fromDic(dta_now)
 
     if not dta_ass:
         if not now.sim.assFromUrl: return noUpd.by(2)
@@ -325,7 +325,7 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
         patch['sim']['assFromUrl'] = None
         return patch, noUpd
 
-    ass = models.Asset.fromDict(dta_ass)
+    ass = models.Asset.fromDic(dta_ass)
 
     lg.info(f"[sim:sync] asset from url: #{ass.autoId} id[{ass.id}]")
 
@@ -351,7 +351,6 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     [
         out(k.gvSim, "children"),
         out(k.gvPnd, "children"),
-        out(ks.sto.nfy, "data", allow_duplicate=True),
         out(ks.sto.now, "data", allow_duplicate=True),
         out(pager.id.store(k.pagerPnd), "data", allow_duplicate=True),
         out(k.tabPnd, "disabled"),
@@ -360,15 +359,13 @@ def sim_SyncUrlAssetToNow(dta_ass, dta_now):
     ],
     inp(ks.sto.now, "data"),
     [
-        ste(ks.sto.nfy, "data"),
         ste(ks.sto.cnt, "data"),
     ],
-    prevent_initial_call="initial_duplicate"
+    prevent_initial_call=True
 )
-def sim_Load(dta_now, dta_nfy, dta_cnt):
-    now = Now.fromDict(dta_now)
-    nfy = Nfy.fromDict(dta_nfy)
-    cnt = Cnt.fromDict(dta_cnt)
+def sim_Load(dta_now, dta_cnt):
+    now = Now.fromDic(dta_now)
+    cnt = Cnt.fromDic(dta_cnt)
 
     trgId = getTrgId()
     if trgId: lg.info(f"[sim:load] load, trig: [ {trgId} ]")
@@ -376,10 +373,6 @@ def sim_Load(dta_now, dta_nfy, dta_cnt):
     cntNo, cntOk, cntPn = cnt.simNo, cnt.simOk, cnt.simPnd
 
     gvSim = []
-
-    if cntNo <= 0:
-        nfy.info("Not have any vectors, please do generate vectors first")
-
 
     # Check multi mode from dto settings
     if db.dto.muod:
@@ -448,7 +441,7 @@ def sim_Load(dta_now, dta_nfy, dta_cnt):
 
     return [
         gvSim, gvPnd,
-        nfy.toDict(), nowDict,
+        nowDict,
         pagerData.toDict() if pagerData else noUpd,
         tabDisabled, tabLabel, activeTab
     ]
@@ -499,9 +492,9 @@ ccbk(
     prevent_initial_call="initial_duplicate"
 )
 def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
-    now = Now.fromDict(dta_now)
-    ste = Ste.fromDict(dta_ste) if dta_ste else Ste()
-    cnt = Cnt.fromDict(dta_cnt)
+    now = Now.fromDic(dta_now)
+    ste = Ste.fromDic(dta_ste) if dta_ste else Ste()
+    cnt = Cnt.fromDic(dta_cnt)
 
     from mod.mgr.tskSvc import mgr
     isTaskRunning = False
@@ -554,7 +547,7 @@ def sim_OnSwitchViewGroup(clks, dta_now):
     # Check if any button was actually clicked
     if not any(clks): return noUpd.by(2)
 
-    now = Now.fromDict(dta_now)
+    now = Now.fromDic(dta_now)
 
     trgId = ctx.triggered_id
 
@@ -619,12 +612,12 @@ def sim_RunModal(
 
     trgId = getTrgId()
 
-    now = Now.fromDict(dta_now)
-    cnt = Cnt.fromDict(dta_cnt)
-    mdl = Mdl.fromDict(dta_mdl)
-    tsk = Tsk.fromDict(dta_tsk)
-    nfy = Nfy.fromDict(dta_nfy)
-    ste = Ste.fromDict(dta_ste)
+    now = Now.fromDic(dta_now)
+    cnt = Cnt.fromDic(dta_cnt)
+    mdl = Mdl.fromDic(dta_mdl)
+    tsk = Tsk.fromDic(dta_tsk)
+    nfy = Nfy.fromDic(dta_nfy)
+    ste = Ste.fromDic(dta_ste)
 
     retNow, retTsk = noUpd, noUpd
 
@@ -636,14 +629,14 @@ def sim_RunModal(
         for tid, info in mgr.list().items():
             if info.status.value in ['pending', 'running']:
                 nfy.warn(f"Task already running, please wait for it to complete")
-                return noUpd.by(4).updFr(0, nfy)
+                return noUpd.by(4).upd(0, nfy)
 
     if tsk.id:
         if mgr and mgr.getInfo(tsk.id):
             ti = mgr.getInfo(tsk.id)
             if ti and ti.status in ['pending', 'running']:
                 nfy.warn(f"[similar] Task already running: {tsk.id}")
-                return noUpd.by(4).updFr(0, nfy)
+                return noUpd.by(4).upd(0, nfy)
             # lg.info(f"[similar] Clearing completed task: {tsk.id}")
             tsk.id = None
             tsk.cmd = None
@@ -655,7 +648,7 @@ def sim_RunModal(
         cntRs = db.pics.countHasSimIds(isOk=0)
         if cntRs <= 0:
             nfy.warn(f"[similar] No search records to clear")
-            return noUpd.by(4).updFr(0, nfy)
+            return noUpd.by(4).upd(0, nfy)
 
         mdl.reset()
         mdl.id = ks.pg.similar
@@ -672,7 +665,7 @@ def sim_RunModal(
         cntRs = db.pics.countHasSimIds()
         if cntOk <= 0 and cntRs <= 0:
             nfy.warn(f"[similar] DB does not contain any similarity records")
-            return noUpd.by(4).updFr(0, nfy)
+            return noUpd.by(4).upd(0, nfy)
 
         mdl.reset()
         mdl.id = ks.pg.similar
@@ -768,7 +761,7 @@ def sim_RunModal(
         if cnt.vec <= 0:
             nfy.error("No vector data to process")
             now.sim.clearAll()
-            return noUpd.by(4).updFr( 0, [nfy, now] )
+            return noUpd.by(4).upd( 0, [nfy, now] )
 
         thMin = db.dto.thMin
 
@@ -788,11 +781,11 @@ def sim_RunModal(
                 else:
                     nfy.info(f"[sim] the asset #{assSel.autoId} already resolved")
                     now.sim.assFromUrl = None
-                    return noUpd.by(4).updFr( 0, [nfy, now] )
+                    return noUpd.by(4).upd( 0, [nfy, now] )
             else:
                 nfy.warn(f"[sim] not found dst assetId[{now.sim.assFromUrl}]")
                 now.sim.assFromUrl = None
-                return noUpd.by(4).updFr( 0, [nfy, now] )
+                return noUpd.by(4).upd( 0, [nfy, now] )
 
         # find from db
         if not asset:
@@ -824,7 +817,7 @@ def sim_RunModal(
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
-    return noUpd.by( 4 ).updFr( 0, [nfy, retNow, mdl, retTsk] )
+    return noUpd.by( 4 ).upd( 0, [nfy, retNow, mdl, retTsk] )
 
 
 #========================================================================

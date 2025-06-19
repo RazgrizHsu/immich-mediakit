@@ -111,8 +111,8 @@ def layout():
     prevent_initial_call=False
 )
 def vec_UpdateStatus(dta_cnt, dta_tsk):
-    cnt = models.Cnt.fromDict(dta_cnt) if dta_cnt else models.Cnt()
-    tsk = models.Tsk.fromDict(dta_tsk) if dta_tsk else models.Tsk()
+    cnt = models.Cnt.fromDic(dta_cnt) if dta_cnt else models.Cnt()
+    tsk = models.Tsk.fromDic(dta_tsk) if dta_tsk else models.Tsk()
 
     hasPics = cnt.ass > 0
     hasVecs = cnt.vec > 0
@@ -186,13 +186,13 @@ def vec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, dta_t
     trgId = getTrgId()
     if trgId == ks.sto.tsk and not dta_tsk.get('id'): return noUpd.by(3)
 
-    tsk = models.Tsk.fromDict(dta_tsk)
+    tsk = models.Tsk.fromDic(dta_tsk)
     if tsk.id: return noUpd.by(3)
 
-    now = models.Now.fromDict(dta_now)
-    cnt = models.Cnt.fromDict(dta_cnt)
-    mdl = models.Mdl.fromDict(dta_mdl)
-    nfy = models.Nfy.fromDict(dta_nfy)
+    now = models.Now.fromDic(dta_now)
+    cnt = models.Cnt.fromDic(dta_cnt)
+    mdl = models.Mdl.fromDic(dta_mdl)
+    nfy = models.Nfy.fromDic(dta_nfy)
 
     lg.info(f"[vec] trig[{trgId}] clk[{nclk_proc}/{nclk_clear}] tsk[{tsk}]")
 

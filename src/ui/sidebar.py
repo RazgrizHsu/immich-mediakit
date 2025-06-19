@@ -50,8 +50,8 @@ def layout():
     prevent_initial_call="initial_duplicate",
 )
 def onUpdateSideBar(_trigger, dta_count, dta_nfy):
-    cnt = models.Cnt.fromDict(dta_count)
-    nfy = models.Nfy.fromDict(dta_nfy)
+    cnt = models.Cnt.fromDic(dta_count)
+    nfy = models.Nfy.fromDic(dta_nfy)
 
     rst = chk.checkSystem()
 

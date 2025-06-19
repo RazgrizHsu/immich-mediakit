@@ -9,6 +9,11 @@ import torch
 
 dotenv.load_dotenv()
 
+from util import log
+
+lg = log.get(__name__)
+
+
 def getDevice():
     if torch.cuda.is_available():
         return torch.device('cuda')
@@ -127,6 +132,9 @@ class ks:
     title = "Immich-MediaKit"
     cmd = cmds
 
+    class glo:
+        gws = 'global-ws'
+
     class pg(co.find):
         fetch = co.tit('fetch', 'Fetch', cmds.fetch.dict(), desc='Get photo asset from Immich')
         vector = co.tit('vector', 'Vectors', cmds.vec.dict(), desc='Process to generate vectors for similarity calculations')
@@ -231,7 +239,7 @@ class envs:
     psqlUser:str = os.getenv('PSQL_USER','')
     psqlPass:str = os.getenv('PSQL_PASS','')
     mkitPort:str = os.getenv('MKIT_PORT', '8086')
-    mkitPortWs:str = os.getenv('MIKT_PORTWS', '8087')
+    mkitPortWs:str = os.getenv('MKIT_PORTWS', '8087')
 
     if os.getcwd().startswith(os.path.join(pathRoot, 'tests')):
         mkitData = os.path.join(pathRoot, 'data/')
@@ -240,14 +248,20 @@ class envs:
         if not mkitData.endswith('/'): mkitData += '/'
 
 #------------------------------------------------------------------------
-# WebSocket URL generator
 #------------------------------------------------------------------------
-def getWebSocketUrl():
-    if isDock:
-        return f"ws://localhost:{envs.mkitPortWs}"
+def getHostName():
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except:
+        return None
 
-    host = os.getenv('MKIT_WS_HOST', 'localhost')
-    return f"ws://{host}:{envs.mkitPortWs}"
+def getEnvs():
+    return { 'port':envs.mkitPort, 'portWs':envs.mkitPortWs }
 
 #------------------------------------------------------------------------
 # const

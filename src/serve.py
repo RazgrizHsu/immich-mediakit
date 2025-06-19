@@ -1,7 +1,7 @@
 import os
 import shutil
 from typing import Optional
-from flask import send_file, request, make_response
+from flask import send_file, request, make_response, jsonify
 from flask_caching import Cache
 
 from conf import envs, ks, pathCache
@@ -133,3 +133,16 @@ def regBy(app):
         except Exception as e:
             lg.error(f"Error serving livephoto: {str(e)}")
             return "", 500
+
+    #----------------------------------------------------------------
+    # WebSocket URL endpoint
+    #----------------------------------------------------------------
+    @app.server.route('/api/conf')
+    def getConf():
+        try:
+            import conf
+            envs = conf.getEnvs()
+            return jsonify(envs)
+        except Exception as e:
+            lg.error(f"[api] getConf Failed: {str(e)}")
+            return jsonify({"error": "Failed to get Conf, {str(e)}"}), 500

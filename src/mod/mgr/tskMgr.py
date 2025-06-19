@@ -15,7 +15,7 @@ from util import log
 
 lg = log.get(__name__)
 
-from mod.models import TskStatus, IFnRst, IFnProg
+from mod.models import TskStatus, IFnRst, IFnProg, Gws
 
 DEBUG = False
 
@@ -32,6 +32,11 @@ class TskInfo:
     err: Optional[str] = None
     dts: Optional[float] = None
     dte: Optional[float] = None
+
+    def gws(self, typ:str):
+        ti = self
+        g = Gws.mk( typ, ti.sn, ti.status.value, ti.name, ti.msg, ti.prog )
+        return g
 
 
 @dataclass
@@ -63,37 +68,20 @@ class TskMgr:
     # thread: svc
     #------------------------------------------------
     async def _sendCurrentTaskStatus(self, conn: ServerConnection):
-        """Send current running task status to newly connected client"""
         try:
-            running_tasks = [(tsn, ti) for tsn, ti in self.infos.items() if ti.status in [TskStatus.RUNNING, TskStatus.PENDING]]
+            tsks = [(tsn, ti) for tsn, ti in self.infos.items() if ti.status in [TskStatus.RUNNING, TskStatus.PENDING]]
 
-            if not running_tasks:
-                # lg.info(f"[tskMgr] No running tasks to send to new client")
-                return
+            if not tsks: return
 
-            for tsn, ti in running_tasks:
+            for tsn, ti in tsks:
                 lg.info(f"[tskMgr] Sending current task status to new client: {ti.name} - {ti.status.value}")
 
-                # Send start message
-                start_msg = {
-                    'type': 'start',
-                    'tsn': tsn,
-                    'name': ti.name
-                }
-                lg.info(f"[tskMgr] Sending start message: {start_msg}")
-                await conn.send(json.dumps(start_msg))
 
-                # Send current progress if running
+                await conn.send(ti.gws('start').jstr())
+
                 if ti.status == TskStatus.RUNNING:
-                    progress_msg = {
-                        'type': 'progress',
-                        'tsn': tsn,
-                        'progress': ti.prog,
-                        'message': ti.msg,
-                        'status': ti.status.value
-                    }
-                    lg.info(f"[tskMgr] Sending progress message: {progress_msg}")
-                    await conn.send(json.dumps(progress_msg))
+                    msg = ti.gws('prog')
+                    await conn.send(msg.jstr())
 
                 break  # Only one task should be running at a time
         except Exception as e:
@@ -107,14 +95,7 @@ class TskMgr:
         lg.info(f"[tskMgr] connected.. Total[{cnt}] conn[{id(conn)}]")
 
         try:
-            await conn.send(json.dumps({
-                'type': 'connected',
-                'message': 'WebSocket connected to TskMgr'
-            }))
-
-            # Small delay to ensure client is ready
-            import asyncio
-            await asyncio.sleep(0.1)
+            await conn.send(Gws.jsonStr('connected'))
 
             # Send current running task status to newly connected client
             await self._sendCurrentTaskStatus(conn)
@@ -158,22 +139,12 @@ class TskMgr:
     #================================================
     # open fn
     #================================================
-    async def broadcast(self, wmsg: dict):
-        msgType = wmsg.get('type')
-        tsn = wmsg.get('tsn')
-        # lg.info(f"[tskMgr:broadcast] START type[{msgType}] tsn[{tsn}] conns[{len(self.conns)}]")
+    async def broadcast(self, gws: Gws):
 
         if self.conns:
-            try:
-                msgStr = json.dumps(wmsg)
-                if DEBUG: lg.info(f"[tskMgr:broadcast] JSON msg: {msgStr[:200]}...")
-            except Exception as e:
-                lg.error(f"[tskMgr:broadcast] JSON serialization failed: {e}")
-                lg.error(f"[tskMgr:broadcast] Message type: {msgType}")
-                lg.error(f"[tskMgr:broadcast] Message content: {wmsg}")
-                return
+            msgStr = gws.jstr()
 
-            disconnected = set()
+            disd = set()
             sentOk = 0
             for idx, c in enumerate(self.conns):
                 try:
@@ -181,22 +152,22 @@ class TskMgr:
                     await c.send(msgStr)
                     sentOk += 1
 
-                    if wmsg.get('type') == 'progress':
-                        if DEBUG: lg.info(f"[tskMgr] Progress sent: {wmsg.get('progress')}%")
-                    elif wmsg.get('type') == 'complete':
-                        lg.info(f"[tskMgr] Complete sent: status[{wmsg.get('status')}]")
-                    elif wmsg.get('type') == 'start':
-                        lg.info(f"[tskMgr] Start sent: name[{wmsg.get('name')}]")
+                    if gws.typ == 'progress':
+                        if DEBUG: lg.info(f"[tskMgr] Progress sent: {gws.prg}%")
+                    elif gws.typ == 'complete':
+                        lg.info(f"[tskMgr] Complete sent: status[{gws.ste}]")
+                    elif gws.typ == 'start':
+                        lg.info(f"[tskMgr] Start sent: name[{gws.nam}]")
 
                 except Exception as e:
                     lg.error(f"[tskMgr] Broadcast error for conn[{idx + 1}]: {e}")
-                    disconnected.add(c)
+                    disd.add(c)
 
-            if DEBUG: lg.info(f"[tskMgr:broadcast] DONE sent[{sentOk}/{len(self.conns)}] disconnected[{len(disconnected)}]")
-            self.conns -= disconnected
+            if DEBUG: lg.info(f"[tskMgr:broadcast] DONE sent[{sentOk}/{len(self.conns)}] disconnected[{len(disd)}]")
+            self.conns -= disd
 
-        elif wmsg.get('type') in ['start', 'progress', 'complete']:
-            lg.warning(f"[tskMgr] No clients for [{wmsg.get('type')}] message")
+        elif gws.typ in ['start', 'progress', 'complete']:
+            lg.warning(f"[tskMgr] No clients for [{gws.typ}] message")
 
     def start(self):
         if not self.running:
@@ -242,13 +213,7 @@ class TskMgr:
         if self.wsLoop:
             def sendCancelMessage():
                 asyncio.run_coroutine_threadsafe(
-                    self.broadcast({
-                        'type': 'complete',
-                        'tsn': tsn,
-                        'message': ti.msg,
-                        'status': ti.status.value,
-                        'error': None
-                    }),
+                    self.broadcast(ti.gws('complete')),
                     self.wsLoop #type:ignore
                 )
             sendCancelMessage()
@@ -274,10 +239,10 @@ class TskMgr:
         #------------------------------------
         # sending
         #------------------------------------
-        def doSend(msg):
+        def doSend(gws:Gws):
             # lg.info(f"[tskMgr] send: {msg}")
             future = aio.run_coroutine_threadsafe(
-                self.broadcast(msg),
+                self.broadcast(gws),
                 self.wsLoop #type:ignore
             )
             pass
@@ -296,22 +261,12 @@ class TskMgr:
             if now - dtu < 0.3 and pct < 100: return #limit sec
             dtu = now
 
-            doSend({
-                'type': 'progress',
-                'tsn': tsn,
-                'progress': pct,
-                'message': msg,
-                'status': ti.status.value
-            })
+            doSend(ti.gws('progress'))
             pass
 
         #------------------------------------
         try:
-            doSend({
-                'type': 'start',
-                'tsn': tsn,
-                'name': ti.name
-            })
+            doSend(ti.gws('start'))
 
             if ti.status != TskStatus.CANCELLED:
                 sto, retMsg = tk.run(fnReport)
@@ -337,14 +292,7 @@ class TskMgr:
             ti.dte = time.time()
 
             # Only send complete message if not already sent by cancel()
-            if ti.status != TskStatus.CANCELLED:
-                doSend( {
-                    'type': 'complete',
-                    'tsn': tsn,
-                    'message': ti.msg,
-                    'status': ti.status.value,
-                    'error': ti.err
-                })
+            if ti.status != TskStatus.CANCELLED: doSend(ti.gws('complete') )
 
             if tsn in self.threads: del self.threads[tsn]
 
