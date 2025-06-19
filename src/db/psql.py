@@ -170,20 +170,33 @@ def testAssetsPath():
                 if not rows or not len(rows): return "No Assets"
 
                 for row in rows:
-                    path = row.get("path", "")
-                    if path:
-                        path = imgs.fixPath(fixPrefix(path))
-                        isOk = os.path.exists(path)
+                    pathDB = row.get("path", "")
+                    if pathDB:
+                        original_path = pathDB
+                        pathFx = fixPrefix(pathDB)
+                        pathFi = imgs.fixPath(pathFx)
+                        isOk = os.path.exists(pathFi)
                         # lg.info( f"[psql] test isOk[{isOk}] path: {path}" )
-                        if isOk:
-                            return "OK"
+                        if isOk: return [ "OK" ]
+                        else:
+                            return [
+                                "Asset file not found at expected path:",
+                                f"  {pathFi}",
+                                "",
+                                f"This path was constructed from:",
+                                f"  IMMICH_PATH + DB Path",
+                                f"  DB Path: '{pathFx}'",
+                                "",
+                                "Please verify IMMICH_PATH environment variable matches your Immich installation path."
+                            ]
 
-                    if not isOk: return f"{os.path.dirname(path)}"
-
-                return f"test failed"
+                return [
+                    "Asset path test failed.",
+                    "Unable to find any accessible asset files.",
+                ]
 
     except Exception as e:
-        raise mkErr(f"Failed to test assets path", e)
+        raise mkErr("Failed to test assets path. Please verify IMMICH_PATH environment variable matches your Immich installation path", e)
 
 
 

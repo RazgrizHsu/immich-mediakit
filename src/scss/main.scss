@@ -1523,3 +1523,86 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	&-smx { font-size:0.6rem !important }
 }
 
+
+
+
+$notify-colors: (
+    "info": (
+        "start": #4CAF50,
+        "end": #00C853
+    ),
+    "error": (
+        "start": #F44336,
+        "end": #D50000
+    ),
+	"warn": (
+		"start": #FF8503,
+		"end": #ff8503
+	)
+);
+
+@mixin bgNfy($type) {
+    @if map-has-key($notify-colors, $type) {
+        $start-color: map-get(map-get($notify-colors, $type), "start");
+        $end-color: map-get(map-get($notify-colors, $type), "end");
+        background: linear-gradient(to bottom, $start-color, $end-color);
+    } @else {
+        background: linear-gradient(to bottom, #757575, #616161);
+    }
+}
+
+.js-notify {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 9999;
+    align-items: center;
+    width: auto;
+    height: auto;
+
+    .jsnfy {
+        color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px 3px rgba(255,255,255,0.3);
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+
+        flex-grow: 0;
+        flex-shrink: 0;
+        width: fit-content;
+        max-width: 80vw;
+        &.info {
+            @include bgNfy("info");
+        }
+
+        &.error {
+            @include bgNfy("error");
+        }
+    }
+
+
+    .jsnfy .box {
+        padding: 10px 15px;
+        display: flex;
+        align-items: center;
+    }
+
+    .bi {
+		margin-right:3px;
+        &.rotating {
+            display: inline-block;
+            animation: spin 1.5s linear infinite;
+            margin-right: 8px;
+        }
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+}

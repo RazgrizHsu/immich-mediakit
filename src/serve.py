@@ -145,4 +145,18 @@ def regBy(app):
             return jsonify(envs)
         except Exception as e:
             lg.error(f"[api] getConf Failed: {str(e)}")
-            return jsonify({"error": "Failed to get Conf, {str(e)}"}), 500
+            return jsonify({"error": f"Failed to get Conf, {str(e)}"}), 500
+
+
+    #----------------------------------------------------------------
+    # WebSocket URL endpoint
+    #----------------------------------------------------------------
+    @app.server.route('/api/chk')
+    def getChkResults():
+        try:
+            import chk
+            chks = chk.checkSystem()
+            return jsonify(chks)
+        except Exception as e:
+            lg.error(f"[api] getChkResults Failed: {str(e)}")
+            return jsonify({"error": f"Failed to get ChkResults, {str(e)}"}), 500

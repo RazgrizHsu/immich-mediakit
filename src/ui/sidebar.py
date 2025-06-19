@@ -53,38 +53,6 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
     cnt = models.Cnt.fromDic(dta_count)
     nfy = models.Nfy.fromDic(dta_nfy)
 
-    rst = chk.checkSystem()
-
-    if not rst.immichLogic.ok:
-        if 'Delete' in rst.immichLogic.details:
-            nfy.error([
-                f"[system]", htm.Br(),
-                f" the immich source code check failed,", htm.Br(),
-                f" the Delete logic may have changed.", htm.Br(),
-                f" Please **DO NOT use the system** and **check the GitHub repository** for updates immediately.", htm.Br(),
-                f" If no updates are available, please report this issue to raz."
-            ])
-        if 'Restore' in rst.immichLogic.details:
-            nfy.error([
-                f"[system]", htm.Br(),
-                f" the immich source code check failed,", htm.Br(),
-                f" the Restore logic may have changed.", htm.Br(),
-                f" Please **DO NOT use the system** and **check the GitHub repository** for updates immediately.", htm.Br(),
-                f" If no updates are available, please report this issue to raz"
-            ])
-
-    if not rst.allOk:
-        errs = []
-        if not rst.psql.ok: errs.append(f"PostgreSQL: {rst.psql.msg}")
-        if not rst.immichPath.ok: errs.append(f"Immich Path: {rst.immichPath.msg}")
-        if not rst.qdrant.ok: errs.append(f"Qdrant: {rst.qdrant.msg}")
-
-        if errs:
-            nfy.error([
-                f"[system errors]", htm.Br(),
-                *[htm.Div([f"• {detail}", htm.Br()]) for detail in errs]
-            ])
-
     dvcType = conf.device.type
     if dvcType == 'cuda':
         try:
@@ -115,10 +83,7 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
     envRows = [
         htm.Div([
             htm.Small("system:"),
-            htm.Span([
-                getStatusIcon(rst.allOk),
-                " all ok" if rst.allOk else " ERROR"
-            ], className="tag info" if rst.allOk else "tag red")
+            htm.Span( "loading..", id="span-sys-chk", className="tag second")
         ], className="mb-2"),
         htm.Div([
             htm.Small("device:"),
