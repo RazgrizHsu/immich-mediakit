@@ -17,13 +17,11 @@ DEBUG = False
 lg = log.get(__name__)
 
 class k:
-    wsId = 'global-task-ws'
-
     div = 'task-ws-div'
     prg = 'task-ws-progress'
     txt = 'task-ws-txt'
     rst = 'task-ws-result'
-    btn = 'task-ws-btn-close'
+    btnClose = 'task-ws-btn-close'
     btnFloat = 'task-float-btn'
     btnCancel = 'task-ws-btn-cancel'
 
@@ -33,7 +31,7 @@ def render():
             dbc.Col(htm.P("", id=k.txt), width=6),
             dbc.Col([
                 dbc.Button("Float", id=k.btnFloat, className="btn-primary btn-sm txt-sm", size="sm"),
-                dbc.Button("❎", id=k.btn, className="btn-outline-secondary btn-sm ms-2", size="sm", disabled=True),
+                dbc.Button("❎", id=k.btnClose, className="btn-outline-secondary btn-sm ms-2", size="sm", disabled=True),
             ], className="text-end"),
         ]),
         dbc.Row([
@@ -49,8 +47,6 @@ def render():
                 dbc.Button("Cancel", id=k.btnCancel, className="btn-warning", size="sm", disabled=True),
             ], className="text-end"),
         ], className="msgs"),
-
-        htm.Div(id="ws-state", style={'display': 'none'}),
 
     ],
         id=k.div,
@@ -71,19 +67,24 @@ def tsk_onBtnFloat(_nclk, curCls): #type:ignore
     db.dto.tskFloat = not db.dto.tskFloat
     return "tskPanel fly" if db.dto.tskFloat else "tskPanel"
 
+
+#------------------------------------------------------------------------
+# tsk
+#------------------------------------------------------------------------
 @cbk(
     [
         out(k.div, "className", allow_duplicate=True),
         out(k.txt, "children"),
         out(k.btnCancel, "disabled", allow_duplicate=True),
-        out(k.btn, "disabled", allow_duplicate=True),
+        out(k.btnClose, "disabled", allow_duplicate=True),
     ],
     inp(ks.sto.tsk, "data"),
     ste(k.div, "className"),
     prevent_initial_call=True
 )
 def tsk_PanelStatus(dta_tsk, css):
-    tsk = models.Tsk.fromDict(dta_tsk)
+
+    tsk = models.Tsk.fromDic(dta_tsk)
 
     hasTsk = tsk.name is not None
 
@@ -103,19 +104,22 @@ def tsk_PanelStatus(dta_tsk, css):
     return css, f"⌖ {tsk.name} ⌖", cancelDisabled, closeDisabled
 
 
+#------------------------------------------------------------------------
 @cbk(
     out(ks.sto.tsk, "data", allow_duplicate=True),
-    inp(k.btn, "n_clicks"),
+    inp(k.btnClose, "n_clicks"),
     ste(ks.sto.tsk, "data"),
     prevent_initial_call=True
 )
 def tsk_onBtnClose(_nclk, dta_tsk):
-    tsk = models.Tsk.fromDict(dta_tsk)
+    tsk = models.Tsk.fromDic(dta_tsk)
     if tsk.id or tsk.name:
         tsk.reset()
         lg.info("[tsk] close and reset..")
     return tsk.toDict()
 
+
+#------------------------------------------------------------------------
 @cbk(
     [
         out(ks.sto.nfy, "data", allow_duplicate=True),
@@ -129,8 +133,8 @@ def tsk_onBtnClose(_nclk, dta_tsk):
 def tsk_onBtnCancel(_nclk, dta_tsk, dta_nfy):
     if not _nclk: return noUpd.by(2)
 
-    tsk = models.Tsk.fromDict(dta_tsk)
-    nfy = models.Nfy.fromDict(dta_nfy)
+    tsk = models.Tsk.fromDic(dta_tsk)
+    nfy = models.Nfy.fromDic(dta_nfy)
 
     lg.info(f"[tsk] Cancel button clicked, tsk.id[{tsk.id}] tsk.tsn[{tsk.tsn}]")
 
@@ -148,45 +152,7 @@ def tsk_onBtnCancel(_nclk, dta_tsk, dta_nfy):
         nfy.warn("Failed to cancel task")
         return nfy.toDict(), noUpd
 
-
-@cbk(
-    out("ws-state", "children"),
-    [
-        inp(k.wsId, "state"),
-        inp(k.wsId, "error")
-    ],
-    prevent_initial_call=True
-)
-def tsk_WsConnStatus(state, error):
-    if error:
-        lg.error(f"[tsk:ws] conn error: {error}")
-        return f"ws error: {error}"
-    if state:
-        # lg.info(f"[tsk:ws] conn state changed: {state}")
-        return f"conn state: {state}"
-
-    return "ws connecting..."
-
-@cbk(
-    out("ws-state", "children", allow_duplicate=True),
-    inp(k.wsId, "message"),
-    prevent_initial_call=True
-)
-def tsk_OnWsConnected(msg):
-    if not msg: return noUpd
-    try:
-        rawData = msg.get('data') if isinstance(msg, dict) else msg
-        if not rawData: raise RuntimeError( "[wsid] not rawData" )
-
-        data = json.loads(rawData)
-        if data.get('type') == 'connected':
-            lg.info(f"[tsk] WebSocket reconnected, checking for running tasks")
-            return "ws connected!"
-    except Exception as e:
-        lg.error(f"[tsk] Error handling connected message: {e}")
-    return noUpd
-
-
+#------------------------------------------------------------------------
 @cbk(
     [
         out(ks.sto.tsk, "data", allow_duplicate=True),
@@ -197,16 +163,24 @@ def tsk_OnWsConnected(msg):
     ste(ks.sto.now, "data"),
     ste(ks.sto.cnt, "data"),
     ste(ks.sto.ste, "data"),
+    ste(ks.glo.gws, "data"),
     prevent_initial_call=True
 )
-def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt, dta_ste):
-    tsk = models.Tsk.fromDict(dta_tsk)
-    nfy = models.Nfy.fromDict(dta_nfy)
-    now = models.Now.fromDict(dta_now)
-    cnt = models.Cnt.fromDict(dta_cnt)
-    ste = models.Ste.fromDict(dta_ste)
+def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt, dta_ste, dta_gws):
+    tsk = models.Tsk.fromDic(dta_tsk)
+    nfy = models.Nfy.fromDic(dta_nfy)
+    now = models.Now.fromDic(dta_now)
+    cnt = models.Cnt.fromDic(dta_cnt)
+    ste = models.Ste.fromDic(dta_ste)
+    gws = models.Gws.fromDic(dta_gws)
 
     if not tsk.id or not tsk.cmd: return noUpd.by(2)
+
+    if not gws.dtc:
+        nfy.error(f"❌ Cannot start task: WebSocket is not connected, state[{dta_gws}]")
+        tsk.reset()
+
+        return tsk.toDict(), nfy.toDict()
 
     #prevent task concurrent
     from .mgr.tskSvc import mgr
@@ -249,42 +223,43 @@ def tsk_OnTasking(dta_tsk, dta_nfy, dta_now, dta_cnt, dta_ste):
         return tsk.toDict(), nfy.toDict()
 
 
+#------------------------------------------------------------------------
 @cbk(
     [
         out(k.prg, "value"),
         out(k.prg, "label"),
         out(k.rst, "children"),
     ],
-    inp(k.wsId, "message"),
+    inp(ks.glo.gws, "data"),
     ste(ks.sto.tsk, "data"),
     ste(k.rst, "children"),
     prevent_initial_call=True
 )
-def tsk_UpdUI(wmsg, dta_tsk, rstChs):
-    if not wmsg: return noUpd.by(3)
+def tsk_UpdUI(gwsmsg, dta_tsk, rstChs):
+    if not gwsmsg: return noUpd.by(3)
+
+    gws = models.Gws.fromDic(gwsmsg)
 
     # lg.info(f"[tws:uui] received: {wmsg}, tsk: {dta_tsk}")
     try:
-        rawData = wmsg.get('data') if isinstance(wmsg, dict) else wmsg
-        if not rawData: raise RuntimeError( "[tsk] no rawData" )
-        data = json.loads(rawData)
-        tsk = models.Tsk.fromDict(dta_tsk)
+        # Direct message string from custom WebSocket
+        tsk = models.Tsk.fromDic(dta_tsk)
 
         # 暫時不檢查 tsn，因為目前只支援單一任務
         # 之後可以改進為維護 tsn 映射表
 
-        typ = data.get('type')
+        typ = gws.typ
 
         if typ == 'start':
-            taskName = data.get('name', '')
-            tsn = data.get('tsn')
+            taskName = gws.nam
+            tsn = gws.tsn
             lg.info(f"[tws:uui] start: {taskName} (tsn: {tsn}) current tsk: {dta_tsk}")
             return 0, "0%", f"Starting {taskName}..."
 
         elif typ == 'progress':
             # lg.info(f"[tws:uui] prog recv: {data}")
-            prog = data.get('progress', 0)
-            msgs = data.get('message', '')
+            prog = gws.prg
+            msgs = gws.msg
 
             if isinstance(msgs, list):
                 htms = []
@@ -299,8 +274,8 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
                 return prog, f"{prog}%", msgs
 
         elif typ == 'complete':
-            ste = data.get('status')
-            msg = data.get('message')
+            ste = gws.ste
+            msg = gws.msg
 
             if isinstance(msg, list):
                 htms = []
@@ -326,7 +301,9 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
 
 
 
+#------------------------------------------------------------------------
 # 處理任務完成並更新 store
+#------------------------------------------------------------------------
 @cbk(
     [
         out(ks.sto.cnt, "data", allow_duplicate=True),
@@ -335,36 +312,31 @@ def tsk_UpdUI(wmsg, dta_tsk, rstChs):
         out(ks.sto.tsk, "data", allow_duplicate=True),
         out(ks.sto.ste, "data", allow_duplicate=True),
     ],
-    inp(k.wsId, "message"),
+    inp(ks.glo.gws, "data"),
     ste(ks.sto.tsk, "data"),
     prevent_initial_call=True
 )
 def tsk_OnData(wmsg, dta_tsk):
-    if not wmsg: return noUpd.by(5)
+    if not wmsg:
+        lg.warn(f"[tsk:dta] no wmsg")
+        return noUpd.by(5)
+
+    gws = models.Gws.fromDic(wmsg)
 
     try:
-        rawData = wmsg.get('data') if isinstance(wmsg, dict) else wmsg
-        if not rawData: raise RuntimeError( "[tsk] no rawData" )
-        data = json.loads(rawData)
 
-        msgType = data.get('type')
-        #lg.info(f"[tws:dta] Processing message type: {msgType}")
+        typ = gws.typ
 
-        # Handle task state sync on WebSocket reconnection for start/progress messages
-        if msgType == 'start' or msgType == 'progress':
-            tsk = models.Tsk.fromDict(dta_tsk)
+        if typ == 'start' or typ == 'progress':
+            tsk = models.Tsk.fromDic(dta_tsk)
 
-            if msgType == 'start':
-                #lg.info(f"[tws:dta] Received start message for reconnection sync")
-                taskName = data.get('name', '')
-                tsn = data.get('tsn')
+            if typ == 'start':
+                taskName = gws.nam
+                tsn = gws.tsn
             else:
-                #lg.info(f"[tws:dta] Received progress message for reconnection sync")
-                # For progress messages, we need to derive task name from existing tasks
-                tsn = data.get('tsn')
+                tsn = gws.tsn
                 taskName = None
 
-                # Try to get task name from task manager
                 from .mgr import tskSvc
                 if tskSvc.mgr and tsn:
                     ti = tskSvc.mgr.getInfo(tsn)
@@ -374,9 +346,6 @@ def tsk_OnData(wmsg, dta_tsk):
                     lg.warning(f"[tws:dta] Could not determine task name from progress message")
                     return noUpd.by(5)
 
-            #lg.info(f"[tws:dta] Current tsk.name: '{tsk.name}', incoming taskName: '{taskName}', tsn: '{tsn}'")
-
-            # If no current task or different task, sync with running task info
             if not tsk.name or (taskName and tsk.name != taskName):
                 lg.info(f"[tws:dta] Syncing task state on reconnect: {taskName} (tsn: {tsn})")
                 tsk.name = taskName
@@ -387,11 +356,10 @@ def tsk_OnData(wmsg, dta_tsk):
 
             return noUpd.by(5)
 
-        if msgType == 'complete':
-            lg.info(f"[tws:dta] Type[{data.get('type')}] tsn[{data.get('tsn')}]")
+        if typ == 'complete':
 
             from .mgr import tskSvc
-            sto = tskSvc.getResultBy(data.get('tsn'))
+            sto = tskSvc.getResultBy(gws.tsn)
 
             dicCnt, dicNfy, dicNow, dicTsk, dicSte = noUpd.by(5)
 
@@ -424,12 +392,13 @@ def tsk_OnData(wmsg, dta_tsk):
     return noUpd.by(5)
 
 
+#------------------------------------------------------------------------
 @cbk(
     [
-        out(k.btn, "disabled"),
+        out(k.btnClose, "disabled"),
         out(k.btnCancel, "disabled"),
     ],
-    inp(k.wsId, "message"),
+    inp(ks.glo.gws, "data"),
     ste(ks.sto.tsk, "data"),
     prevent_initial_call=True
 )
@@ -437,11 +406,11 @@ def tsk_OnStatus(wmsg, dta_tsk):
     if not wmsg: return noUpd.by(2)
 
     try:
-        rawData = wmsg.get('data') if isinstance(wmsg, dict) else wmsg
-        if not rawData: raise RuntimeError( "[tsk] no rawData" )
-        data = json.loads(rawData)
+        # Direct message string from custom WebSocket
+        data = json.loads(wmsg) if isinstance(wmsg, str) else wmsg
+        if not data: raise RuntimeError( "[tsk] no data" )
         msgType = data.get('type')
-        tsk = models.Tsk.fromDict(dta_tsk)
+        tsk = models.Tsk.fromDic(dta_tsk)
 
         if msgType == 'start':
             return True, False  # Disable close, enable cancel
@@ -453,6 +422,7 @@ def tsk_OnStatus(wmsg, dta_tsk):
     return noUpd.by(2)
 
 
+#------------------------------------------------------------------------
 # only for test
 # @cbk(
 #     out("task-test-ws-btn", "disabled"),
@@ -466,7 +436,7 @@ def tsk_OnStatus(wmsg, dta_tsk):
     # from .mgr.tskSvc import mgr
     # if not n_clicks: return noUpd
     #
-    # tsk = models.Tsk.fromDict(dta_tsk)
+    # tsk = models.Tsk.fromDic(dta_tsk)
     # if DEBUG: lg.info(f"[TSW] Current task: id={tsk.id}, name={tsk.name}")
     #
     # if not tsk.id:

@@ -1,70 +1,66 @@
-"""
-Logging module - Provides unified log configuration and logger instances
-"""
-
 import logging
+import logging.handlers
 import sys
 import os
-from datetime import datetime
 from typing import Any, Optional
 
-EnableLogFile = False
+EnableLogFile = True
 LogLevel = logging.INFO
+KeepDays = 3
 
 log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'logs')
 os.makedirs(log_dir, exist_ok=True)
 
-log_file = os.path.join(log_dir, f'app_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+log_file = os.path.join(log_dir, 'mediakit.log')
+
+class filterLv(logging.Filter):
+    def filter(self, record):
+        if record.levelname == 'WARNING': record.levelname = 'WARN'
+        if record.levelname == 'ERROR': record.levelname = 'ERRO'
+        return True
 
 def setup(level=LogLevel, enableFile=EnableLogFile):
-    """Configure logging system"""
-    formatter = logging.Formatter(
+
+    fmtC = logging.Formatter(
         fmt='%(asctime)s.%(msecs)03d|%(levelname)s| %(message)s',
         datefmt='%H:%M:%S'
     )
+    fmtF = logging.Formatter(
+        fmt='%(asctime)s.%(msecs)03d|%(levelname)s|%(name)s| %(message)s',
+        datefmt='%H:%M:%S'
+    )
 
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level)
-    console_handler.setFormatter(formatter)
+    hndC = logging.StreamHandler(sys.stdout)
+    hndC.setLevel(level)
+    hndC.setFormatter(fmtC)
 
-    root_logger = logging.getLogger()
-    root_logger.setLevel(level)
+    rlg = logging.getLogger()
+    rlg.setLevel(level)
 
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    root_logger.addHandler(console_handler)
+    for handler in rlg.handlers[:]: rlg.removeHandler(handler)
+    rlg.addHandler(hndC)
 
     if enableFile:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(level)
-        file_handler.setFormatter(formatter)
-        root_logger.addHandler(file_handler)
+        hndF = logging.handlers.TimedRotatingFileHandler(
+            log_file,
+            when='midnight',
+            interval=1,
+            backupCount=KeepDays
+        )
+        hndF.setLevel(level)
+        hndF.setFormatter(fmtF)
+        rlg.addHandler(hndF)
+
+    for handler in rlg.handlers: handler.addFilter(filterLv())
 
     logging.getLogger('werkzeug').setLevel(logging.INFO)
     logging.getLogger('flask').setLevel(logging.INFO)
     logging.getLogger('httpx').setLevel(logging.WARNING)
 
-    return root_logger
+    return rlg
 
-def enableFile(enable=True):
-    """Enable or disable file logging"""
-    global EnableLogFile
-    EnableLogFile = enable
-    setup(enableFile=enable)
-    logging.info(f"File logging is {'enabled' if enable else 'disabled'}")
-
-def setLog(level):
-    """Set logging level"""
-    global LogLevel
-    LogLevel = level
-    setup(level=level)
-    logging.info(f"Log level has been set to {logging.getLevelName(level)}")
-
-lg = logging.getLogger('dupfnd')
 
 setup()
-
 
 class LoggerAdapter:
     def __init__(self, logger: logging.Logger):
@@ -107,7 +103,6 @@ class LoggerAdapter:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._logger, name)
-
 
 def get(name: str) -> LoggerAdapter:
     return LoggerAdapter(logging.getLogger(name))

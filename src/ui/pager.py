@@ -243,7 +243,7 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
 
         if DEBUG: lg.info(f"[pgr:{pgrId}] onClick triggered: {ctx.triggered}, page_clicks: {clks_pg}, nav_clicks: {clks_nv}")
 
-        pgr = models.Pager.fromDict(dta_pgr)
+        pgr = models.Pager.fromDic(dta_pgr)
 
         # Ensure idx is valid (default to 1 if None)
         if pgr.idx is None:
@@ -312,7 +312,7 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
             if DEBUG: lg.info(f"[pgr:{pgrId}] NoStore, RetEmpty")
             return [[] for _ in dta_bars]
 
-        pgr = models.Pager.fromDict(dta_pgr)
+        pgr = models.Pager.fromDic(dta_pgr)
         if DEBUG: lg.info(f"[pgr:{pgrId}] pgr: page={pgr.idx}, size={pgr.size}, total={pgr.cnt}")
 
         results = []

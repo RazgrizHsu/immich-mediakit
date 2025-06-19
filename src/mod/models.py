@@ -1,5 +1,6 @@
 import os
 import uuid
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, Callable, Tuple
 
@@ -258,6 +259,19 @@ class Asset(BaseDictModel):
 
 
 @dataclass
+class Album(BaseDictModel):
+    id: str = ""
+    ownerId: str = ""
+    albumName: str = ""
+    description: str = ""
+    createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None
+    albumThumbnailAssetId: Optional[str] = None
+    isActivityEnabled: bool = True
+    order: str = "asc"
+
+
+@dataclass
 class Cnt(BaseDictModel):
     ass: int = 0  # 總資產數
     vec: int = 0  # 已向量化數
@@ -336,8 +350,6 @@ class Sets(BaseDictModel):
 
 @dataclass
 class Now(BaseDictModel):
-    usrId: Optional[str] = None
-
     sim: PgSim = field(default_factory=PgSim)
 
 from enum import Enum
@@ -351,12 +363,41 @@ class TskStatus(Enum):
 
 
 @dataclass
-class WsMsg(BaseDictModel):
-    tsn: Optional[str] = None
-    type: Optional[str] = None
-    name: Optional[str] = None
-    message: Optional[str] = None
-    status: Optional[TskStatus] = None
+class Gws(BaseDictModel):
+    dtc: float = time.time()
+    tsn: str = ''
+    typ: Optional[str] = None
+    nam: Optional[str] = None
+    msg: Optional[str] = None
+    ste: Optional[TskStatus] = None
+    prg: float = 0.0
+
+
+    @classmethod
+    def mk(cls, typ, tsn=None, ste=None, nam=None, msg=None, prg=0.0):
+
+        m = cls()
+        if typ: m.typ = typ
+        if tsn: m.tsn = tsn
+        if ste: m.ste = ste
+        if nam: m.nam = nam
+        if msg: m.msg = msg
+        if prg: m.prg = prg
+        return m
+
+    def jstr(self): return self.toJson()
+
+    @classmethod
+    def jsonStr(cls, typ, tsn=None, ste=None, nam=None, msg=None, prg=0.0):
+
+        m = cls()
+        if typ: m.typ = typ
+        if tsn: m.tsn = tsn
+        if ste: m.ste = ste
+        if nam: m.nam = nam
+        if msg: m.msg = msg
+        if prg: m.prg = prg
+        return m.toJson()
 
 
 @dataclass

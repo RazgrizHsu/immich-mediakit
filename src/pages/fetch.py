@@ -109,12 +109,10 @@ dis_hide = {"display": "none"}
         out(k.selectUsr, "value"),
     ],
     inp(k.initFetch, "data"),
-    ste(ks.sto.now, "data"),
     prevent_initial_call="initial_duplicate"
 )
-def assets_Init(dta_pi, dta_now):
-    now = models.Now.fromDict(dta_now)
-    lg.info(f"[fth:init] usrId[{db.dto.usrId}] now[{now.usrId}]")
+def assets_Init(dta_pi):
+    lg.info(f"[fth:init] usrId[{db.dto.usrId}] dta[{dta_pi}]")
 
     opts = []
     usrs = db.psql.fetchUsers()
@@ -134,7 +132,6 @@ def assets_Init(dta_pi, dta_now):
         out(k.btnFetch, "disabled"),
         out(k.btnClean, "children"),
         out(k.btnClean, "disabled"),
-        out(ks.sto.now, "data", allow_duplicate=True),
         out(ks.sto.nfy, "data", allow_duplicate=True)
     ],
     [
@@ -142,17 +139,15 @@ def assets_Init(dta_pi, dta_now):
         inp(ks.sto.cnt, "data"),
     ],
     ste(ks.sto.tsk, "data"),
-    ste(ks.sto.now, "data"),
     ste(ks.sto.nfy, "data"),
     prevent_initial_call=True
 )
-def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
-    tsk = models.Tsk.fromDict(dta_tsk)
-    now = models.Now.fromDict(dta_now)
-    cnt = models.Cnt.fromDict(dta_cnt)
-    nfy = models.Nfy.fromDict(dta_nfy)
+def assets_Status(usrId, dta_cnt, dta_tsk, dta_nfy):
+    tsk = models.Tsk.fromDic(dta_tsk)
+    cnt = models.Cnt.fromDic(dta_cnt)
+    nfy = models.Nfy.fromDic(dta_nfy)
 
-    hasData = cnt.vec > 0 or cnt.ass > 0
+    # hasData = cnt.vec > 0 or cnt.ass > 0
 
     isTasking = tsk.id is not None
 
@@ -162,20 +157,19 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
     txtBtn = f"Fetch: Get Assets"
     txtClr = f"Clean Data"
 
-    if usrId and usrId != now.usrId:
+    if usrId and usrId != db.dto.usrId:
         usr = db.psql.fetchUser(usrId)
         if usr:
             db.dto.usrId = usrId
-            now.usrId = usrId
             nfy.info(f"Switched user: {usr.name}")
         else:
-            usrId = now.usrId = db.dto.usrId = None
+            usrId = db.dto.usrId = None
 
     if isTasking:
         disBtnRun = disBtnClr = True
         txtBtn = "Task in progress..."
 
-    if not now.usrId:
+    if not db.dto.usrId:
         disBtnRun = disBtnClr = True
         txtBtn = "Please select user"
         nfy.info(txtBtn)
@@ -185,13 +179,13 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
         txtBtn = "Please select user"
         txtClr = "---"
     else:
-        if not now.usrId:
+        if not db.dto.usrId:
             disBtnRun = disBtnClr = True
             txtBtn = "--No users--"
         else:
-            usr = db.psql.fetchUser(now.usrId)
-            cntRemote = db.psql.count(now.usrId)
-            cntLocal = db.pics.count(now.usrId)
+            usr = db.psql.fetchUser(db.dto.usrId)
+            cntRemote = db.psql.count(db.dto.usrId)
+            cntLocal = db.pics.count(db.dto.usrId)
 
             if cntLocal <= 0:
                 disBtnClr = True
@@ -207,7 +201,7 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
 
     lg.info(f"[assets:status] usrId[{usrId}] cnt: {cnt}")
 
-    return txtBtn, disBtnRun, txtClr, disBtnClr, now.toDict(), nfy.toDict()
+    return txtBtn, disBtnRun, txtClr, disBtnClr, nfy.toDict()
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
@@ -233,10 +227,10 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_now, dta_nfy):
 def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
     if not clk_feh and not clk_clr and not clk_rst: return noUpd.by(2)
 
-    now = models.Now.fromDict(dta_now)
-    mdl = models.Mdl.fromDict(dta_mdl)
-    tsk = models.Tsk.fromDict(dta_tsk)
-    nfy = models.Nfy.fromDict(dta_nfy)
+    now = models.Now.fromDic(dta_now)
+    mdl = models.Mdl.fromDic(dta_mdl)
+    tsk = models.Tsk.fromDic(dta_tsk)
+    nfy = models.Nfy.fromDic(dta_nfy)
 
     if tsk.id: return noUpd.by(2)
     trgSrc = getTrgId()
@@ -248,30 +242,30 @@ def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk,
             htm.Div([htm.B('Warning:'), ' Reset all local data'], className="p-5")
         ]
     elif trgSrc == k.btnClean:
-        if not now.usrId:
+        if not db.dto.usrId:
             nfy.warn("not select user..")
             mdl.reset()
         else:
-            usr = db.psql.fetchUser(now.usrId)
-            cnt = db.pics.count(now.usrId)
+            usr = db.psql.fetchUser(db.dto.usrId)
+            cnt = db.pics.count(db.dto.usrId)
 
             if not usr:
-                nfy.warn( f"No User Id[{ now.usrId }]" )
+                nfy.warn( f"No User Id[{ db.dto.usrId }]" )
             else:
                 mdl.id = ks.pg.fetch
                 mdl.cmd = ks.cmd.fetch.clear
                 mdl.msg = f'Start clearing user[ {usr.name} ] assets[ {cnt} ]'
 
     elif trgSrc == k.btnFetch:
-        if not now.usrId:
+        if not db.dto.usrId:
             nfy.warn("not select user..")
             mdl.reset()
         else:
-            cnt = db.psql.count(now.usrId)
-            usr = db.psql.fetchUser(now.usrId)
+            cnt = db.psql.count(db.dto.usrId)
+            usr = db.psql.fetchUser(db.dto.usrId)
 
             if not usr:
-                nfy.warn( f"No User Id[{ now.usrId }]" )
+                nfy.warn( f"No User Id[{ db.dto.usrId }]" )
             else:
                 mdl.id = ks.pg.fetch
                 mdl.cmd = ks.cmd.fetch.asset
@@ -297,7 +291,7 @@ def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
     try:
         # todo: add support for all users?
 
-        if not now.usrId:
+        if not db.dto.usrId:
             raise RuntimeError( f"No UserId" )
 
         try:
@@ -307,7 +301,7 @@ def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
             nfy.error(msg)
             return sto, msg
 
-        usr = db.psql.fetchUser(now.usrId)
+        usr = db.psql.fetchUser(db.dto.usrId)
 
         if not usr:
             msg = f"Error: User not found"
@@ -393,10 +387,10 @@ def onFetchClear(doReport: IFnProg, sto: tskSvc.ITaskStore):
         return sto, msg
 
     try:
-        if not now.usrId:
+        if not db.dto.usrId:
             raise RuntimeError( "NoUserId" )
 
-        usr = db.psql.fetchUser(now.usrId)
+        usr = db.psql.fetchUser(db.dto.usrId)
         if not usr:
             msg = f"Error: User not found"
             nfy.error(msg)
@@ -404,14 +398,14 @@ def onFetchClear(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
         doReport(10, f"Starting clear assets for {usr.name}")
 
-        assets = db.pics.getAllByUsrId(now.usrId)
+        assets = db.pics.getAllByUsrId(db.dto.usrId)
         if not assets or len(assets) == 0:
             msg = f"No assets found for {usr.name}"
             return sto, msg
 
         assIds = [a.autoId for a in assets]
         #------------------------------------
-        db.pics.clearBy(now.usrId)
+        db.pics.clearBy(db.dto.usrId)
 
         db.vecs.deleteBy(assIds)
 

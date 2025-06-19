@@ -1,4 +1,4 @@
-#!/bin/bash
+
 
 set -e
 
@@ -6,7 +6,7 @@ IMAGE_NAME="razgrizhsu/immich-mediakit"
 
 SCRIPT_DIR="$(dirname "$0")"
 if [ ! -f "$SCRIPT_DIR/pyproject.toml" ]; then
-  echo "Error: pyproject.toml not found"
+  echo "Error: pyproject.toml not found in $SCRIPT_DIR"
   exit 1
 fi
 VERSION=$(grep '^version = ' "$SCRIPT_DIR/pyproject.toml" | sed 's/version = "\(.*\)"/\1/')
@@ -17,7 +17,6 @@ fi
 TAG="${VERSION}"
 UPLOAD=false
 
-# Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
     --upload)
@@ -36,7 +35,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "Building Docker image: ${IMAGE_NAME}:${TAG}"
+echo "Starting Docker image build process..."
 
 cd "$(dirname "$0")"
 
@@ -55,27 +54,42 @@ if [ ! -d "src" ]; then
   exit 1
 fi
 
-docker build \
-  --tag "${IMAGE_NAME}:${TAG}" \
-  --build-arg MKIT_PORT=8086 \
-  --build-arg MIKT_PORTWS=8087 \
-  .
+echo "Using Docker Buildx builder 'budx'."
+docker buildx use budx
 
-echo "Successfully built ${IMAGE_NAME}:${TAG}"
+PLATFORMS="linux/amd64,linux/arm64/v8"
+
+BUILD_ARGS=(
+  "--build-arg" "MKIT_PORT=8086"
+  "--build-arg" "MKIT_PORTWS=8087"
+  "."
+)
 
 if [ "$UPLOAD" = true ]; then
-  echo "Uploading to Docker Hub..."
+  echo "Building multi-platform Docker images for ${PLATFORMS} and pushing to Docker Hub: ${IMAGE_NAME}:${TAG}"
 
-  echo "Pushing ${IMAGE_NAME}:${TAG} to Docker Hub..."
-  docker push "${IMAGE_NAME}:${TAG}"
+  docker buildx build \
+    --platform "${PLATFORMS}" \
+    -t "${IMAGE_NAME}:${TAG}" \
+    -t "${IMAGE_NAME}:latest" \
+    "${BUILD_ARGS[@]}" \
+    --push
 
-  if [ "$TAG" != "latest" ]; then
-    echo "Tagging and pushing as latest..."
-    docker tag "${IMAGE_NAME}:${TAG}" "${IMAGE_NAME}:latest"
-    docker push "${IMAGE_NAME}:latest"
-  fi
+  echo "Successfully built and pushed ${IMAGE_NAME}:${TAG} and ${IMAGE_NAME}:latest for multiple platforms."
 
-  echo "Successfully pushed ${IMAGE_NAME}:${TAG}"
 else
-  echo "To upload: $0 --upload"
+  echo "Building Docker image for current host platform and loading to local Docker daemon (not pushing)."
+  echo "To build and push multi-platform images, run with --upload option."
+
+  CURRENT_PLATFORM=$(uname -m | sed 's/aarch64/arm64/' | sed 's/x86_64/amd64/')
+
+  docker buildx build \
+    --platform "${CURRENT_PLATFORM}" \
+    -t "${IMAGE_NAME}:${TAG}" \
+    "${BUILD_ARGS[@]}" \
+    --load
+
+  echo "Successfully built and loaded ${IMAGE_NAME}:${TAG} for local testing."
 fi
+
+echo "Build process completed."

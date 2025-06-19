@@ -103,7 +103,7 @@ def onUpdateMenus(dta_cnt):
     # lg.info("Registered pages:")
     # for page, config in dash.page_registry.items(): lg.info(f"- {page}: {config['path']}")
 
-    cnt = models.Cnt.fromDict(dta_cnt)
+    cnt = models.Cnt.fromDic(dta_cnt)
 
     disVec = cnt.ass <= 0
     disSim = cnt.vec <= 0
