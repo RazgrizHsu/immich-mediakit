@@ -12,6 +12,41 @@ if [ -z "$VERSION" ]; then
   echo "Warning: Could not read version from pyproject.toml, using 'latest'"
   VERSION="latest"
 fi
+
+echo "Updating version in src/conf.py to ${VERSION}..."
+if [ -f "$SCRIPT_DIR/src/conf.py" ]; then
+  sed -i.bak "s/version='[^']*'/version='${VERSION}'/" "$SCRIPT_DIR/src/conf.py"
+
+  echo "Checking Python syntax and version reading..."
+  cd "$SCRIPT_DIR"
+  python3 -c "
+import sys
+sys.path.insert(0, './src')
+try:
+    from conf import envs
+    print(f'✓ conf.py syntax check passed')
+    print(f'✓ Version read from conf.py: {envs.version}')
+    if envs.version == '${VERSION}':
+        print('✓ Version update successful')
+    else:
+        print('✗ Version mismatch in conf.py')
+        sys.exit(1)
+except Exception as e:
+    print(f'✗ Error checking conf.py: {str(e)}')
+    sys.exit(1)
+"
+
+  if [ $? -ne 0 ]; then
+    echo "Error: Python syntax check or version read failed, restoring backup"
+    mv "$SCRIPT_DIR/src/conf.py.bak" "$SCRIPT_DIR/src/conf.py"
+    exit 1
+  else
+    rm -f "$SCRIPT_DIR/src/conf.py.bak"
+    echo "✓ Version update completed successfully"
+  fi
+else
+  echo "Warning: src/conf.py not found, skipping version update"
+fi
 TAG="${VERSION}"
 UPLOAD=false
 

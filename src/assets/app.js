@@ -40,8 +40,8 @@ class Notifier
 	constructor( msg, type, iconClass )
 	{
 		this.msg = msg
-		this.type = type
-		this.iconClass = iconClass
+		this.typ = type
+		this.cssIco = iconClass
 		this.el = null
 	}
 
@@ -59,21 +59,21 @@ class Notifier
 
 		this.el = document.createElement( 'div' )
 		this.el.classList.add( 'jsnfy' )
-		if ( this.type ) this.el.classList.add( this.type )
+		if ( this.typ ) this.el.classList.add( this.typ )
 
 		const box = document.createElement( 'div' )
 		box.classList.add( 'box' )
 
-		if ( this.iconClass )
+		if ( this.cssIco )
 		{
 			const ico = document.createElement( 'i' )
-			ico.className = `bi ${ this.iconClass }`
+			ico.className = `bi ${ this.cssIco }`
 			if ( rotating ) ico.classList.add( 'rotating' )
 			box.appendChild( ico )
 		}
 
 		const txt = document.createElement( 'span' )
-		txt.textContent = this.msg
+		txt.innerHTML = this.msg.replace(/\n/g, '<br/>')
 		box.appendChild( txt )
 
 		this.el.appendChild( box )
@@ -1585,7 +1585,7 @@ const TskWS = {
 		if ( this.recnnCnt >= this.recnnMax )
 		{
 			console.error( '[wst] Max reconnect attempts reached' )
-			notify( '❌ WebSocket connection lost. Please refresh the page.', 'error' )
+			notify( '❌ WebSocket connection lost. Please refresh the page.', 'error', 999999 )
 			return
 		}
 
@@ -1790,6 +1790,13 @@ function onFetchedChk( data ){
 			sp.classList.add('red')
 		}
 	}
+
+	if( !data.ver.ok ) {
+
+		let msg = data.ver.msg.join( '\n' )
+		let n = notify.load( msg, 'warn' ).run( 5000 )
+	}
+
 }
 
 document.addEventListener( 'DOMContentLoaded', function(){
