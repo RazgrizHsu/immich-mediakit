@@ -2,8 +2,9 @@ import os
 import uuid
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, Callable, Tuple
+from typing import Dict, List, Any, Optional, Callable, Tuple, Union
 
+from dsh import htm
 from conf import ks, envs, co
 from util import log
 from .bse.baseModel import BaseDictModel
@@ -29,21 +30,41 @@ class Nfy(BaseDictModel):
     def remove(self, nid):
         if nid in self.msgs: del self.msgs[nid]
 
-    def info(self, msg, to=5000):
+    def info(self, msg: Union[str, List[str]], to=5000):
         lg.info(f"[notify] {msg}")
-        self._add(msg, "info", to)
+        self._add(self._format_message(msg), "info", to)
 
-    def success(self, msg, to=5000):
+    def success(self, msg: Union[str, List[str]], to=5000):
         lg.info(f"[notify] {msg}")
-        self._add(msg, "success", to)
+        self._add(self._format_message(msg), "success", to)
 
-    def warn(self, msg, to=8000):
+    def warn(self, msg: Union[str, List[str]], to=8000):
         lg.warning(f"[notify] {msg}")
-        self._add(msg, "warning", to)
+        self._add(self._format_message(msg), "warning", to)
 
-    def error(self, msg, to=0):
+    def error(self, msg: Union[str, List[str]], to=0):
         lg.error(f"[notify] {msg}")
-        self._add(msg, "danger", to)
+        self._add(self._format_message(msg), "danger", to)
+
+    def _format_message(self, msg: Union[str, List[str]]):
+        if isinstance(msg, str):
+            if '\n' in msg:
+                parts = msg.split('\n')
+                result = []
+                for i, part in enumerate(parts):
+                    if i > 0:
+                        result.append(htm.Br())
+                    result.append(part)
+                return result
+            return msg
+        elif isinstance(msg, list):
+            result = []
+            for i, item in enumerate(msg):
+                if i > 0:
+                    result.append(htm.Br())
+                result.append(item)
+            return result
+        return msg
 
     def _add(self, msg, typ, to):
         nid = str(uuid.uuid4())
