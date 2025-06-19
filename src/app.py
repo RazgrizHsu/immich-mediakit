@@ -4,9 +4,9 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from dsh import dash, htm, dcc, dbc
-from dash_extensions import WebSocket
 from util import log, err
-from mod import notify, mdlImg, session, mdl, tsk
+from conf import ks
+from mod import notify, mdlImg, session, mdl
 from mod.mgr import tskSvc
 import conf, db
 
@@ -46,8 +46,8 @@ app.layout = htm.Div([
 
     dcc.Location(id='url', refresh=False),
 
-    # Global WebSocket connection for task updates
-    WebSocket(id=tsk.k.wsId, url=conf.getWebSocketUrl()),
+    # WebSocket connection managed by app.js
+    dcc.Store(id=ks.glo.gws),
 
     notify.render(),
     session.render(),

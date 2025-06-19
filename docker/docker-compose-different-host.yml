@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     ports:
       - ${MKIT_PORT:-8086}:8086
-      - ${MIKT_PORTWS:-8087}:8087
+      - ${MKIT_PORTWS:-8087}:8087
     volumes:
       - ${MKIT_DATA}:/app/data
       - ${MKIT_DATA}/cache:/root/.cache/torch/

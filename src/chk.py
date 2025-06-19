@@ -75,13 +75,18 @@ def immichLogic() -> ChkInfo:
     try:
         chkDel = immich.checkLogicDelete()
         chkRst = immich.checkLogicRestore()
+        chkAlbAdd = immich.checkAlbAssAdd()
+        chkAlbDel = immich.checkAlbumAssDel()
 
-        if chkDel and chkRst:
+        allChecks = [chkDel, chkRst, chkAlbAdd, chkAlbDel]
+        if all(allChecks):
             return ChkInfo(True, 'Github checked!')
 
         chks = []
         if not chkDel: chks.append('Delete')
         if not chkRst: chks.append('Restore')
+        if not chkAlbAdd: chks.append('AlbumAdd')
+        if not chkAlbDel: chks.append('AlbumRemove')
 
         return ChkInfo(False, 'Logic check failed!', f'Failed: {", ".join(chks)}')
 

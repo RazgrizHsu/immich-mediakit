@@ -1,3 +1,4 @@
+from os import wait
 from typing import List, Tuple
 
 import requests
@@ -131,3 +132,116 @@ def restoreBy(assetIds: List[str]):
                 return affectedRows
     except Exception as e:
         raise err.mkErr(f"Failed to restore assets: {str(e)}", e)
+
+
+
+
+
+
+
+
+
+
+#------------------------------------------------------
+# Album Repository Verification
+#------------------------------------------------------
+urlAlbumRepo = "https://github.com/immich-app/immich/blob/main/server/src/repositories/album.repository.ts"
+
+codeAlbumAssAdd = """
+async addAssets(db: Kysely<DB>, albumId: string, assetIds: string[]): Promise<void> {
+  if (assetIds.length === 0) {
+    return;
+  }
+
+  await db
+    .insertInto('albums_assets_assets')
+    .values(assetIds.map((assetId) => ({ albumsId: albumId, assetsId: assetId })))
+    .execute();
+}
+"""
+
+codeAlbumAssDel = """
+async removeAssetIds(albumId: string, assetIds: string[]): Promise<void> {
+  if (assetIds.length === 0) {
+    return;
+  }
+
+  await this.db
+    .deleteFrom('albums_assets_assets')
+    .where('albums_assets_assets.albumsId', '=', albumId)
+    .where('albums_assets_assets.assetsId', 'in', assetIds)
+    .execute();
+}
+"""
+
+
+def checkAlbAssAdd():
+    return checkBy(urlAlbumRepo, codeAlbumAssAdd)
+
+def checkAlbumAssDel():
+    return checkBy(urlAlbumRepo, codeAlbumAssDel)
+
+
+#------------------------------------------------------
+# Asset Service/Repository Verification
+#------------------------------------------------------
+urlAssetService = "https://github.com/immich-app/immich/blob/main/server/src/services/asset.service.ts"
+urlAssetRepo = "https://github.com/immich-app/immich/blob/main/server/src/repositories/asset.repository.ts"
+
+codeAssetUpdateAll = """
+  async updateAll(auth: AuthDto, dto: AssetBulkUpdateDto): Promise<void> {
+    const { ids, description, dateTimeOriginal, latitude, longitude, ...options } = dto;
+    await this.requireAccess({ auth, permission: Permission.ASSET_UPDATE, ids });
+
+    if (
+      description !== undefined ||
+      dateTimeOriginal !== undefined ||
+      latitude !== undefined ||
+      longitude !== undefined
+    ) {
+      await this.assetRepository.updateAllExif(ids, { description, dateTimeOriginal, latitude, longitude });
+      await this.jobRepository.queueAll(
+        ids.map((id) => ({
+          name: JobName.SIDECAR_WRITE,
+          data: { id, description, dateTimeOriginal, latitude, longitude },
+        })),
+      );
+    }
+
+    if (
+      options.visibility !== undefined ||
+      options.isFavorite !== undefined ||
+      options.duplicateId !== undefined ||
+      options.rating !== undefined
+    ) {
+      await this.assetRepository.updateAll(ids, options);
+
+      if (options.visibility === AssetVisibility.LOCKED) {
+        await this.albumRepository.removeAssetsFromAll(ids);
+      }
+    }
+  }
+"""
+
+codeAssetRepoUpdate = """
+  async updateAll(ids: string[], options: Updateable<Assets>): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    await this.db
+      .updateTable('assets')
+      .set(options)
+      .where('id', '=', anyUuid(ids))
+      .execute();
+  }
+"""
+
+
+def checkAssetUpdateLogic():
+    return checkBy(urlAssetService, codeAssetUpdateAll)
+
+
+def checkAssetRepositoryUpdate():
+    return checkBy(urlAssetRepo, codeAssetRepoUpdate)
+

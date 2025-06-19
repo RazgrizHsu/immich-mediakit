@@ -26,8 +26,8 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(usr_dict["id"], "1")
         self.assertEqual(usr_dict["name"], "TestUser")
 
-        usr_from_dict = Usr.fromDict(usr_dict)
-        usr_from_json = Usr.fromDict(json.loads(usr_json))
+        usr_from_dict = Usr.fromDic(usr_dict)
+        usr_from_json = Usr.fromDic(json.loads(usr_json))
 
         self.assertEqual(usr_from_dict.id, "1")
         self.assertEqual(usr_from_dict.name, "TestUser")
@@ -42,7 +42,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertIsNone(usr1.key)
 
         usr1_dict = usr1.toDict()
-        usr1_restored = Usr.fromDict(usr1_dict)
+        usr1_restored = Usr.fromDic(usr1_dict)
 
         self.assertEqual(usr1_restored.id, "1")
         self.assertEqual(usr1_restored.name, "User1")
@@ -50,7 +50,7 @@ class TestBaseDictModel(unittest.TestCase):
 
         usr2 = Usr()
         usr2_dict = usr2.toDict()
-        usr2_restored = Usr.fromDict(usr2_dict)
+        usr2_restored = Usr.fromDic(usr2_dict)
 
         self.assertIsNone(usr2_restored.id)
         self.assertIsNone(usr2_restored.name)
@@ -63,7 +63,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(now_dict["usr"]["id"], "1")
         self.assertEqual(now_dict["usr"]["name"], "User1")
 
-        now_restored = Now.fromDict(now_dict)
+        now_restored = Now.fromDic(now_dict)
 
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")
@@ -80,7 +80,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(now_dict["usrs"][0]["id"], "1")
         self.assertEqual(now_dict["usrs"][1]["id"], "2")
 
-        now_restored = Now.fromDict(now_dict)
+        now_restored = Now.fromDic(now_dict)
 
         self.assertEqual(len(now_restored.usrs), 2)
         self.assertIsInstance(now_restored.usrs[0], Usr)
@@ -93,7 +93,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertIsNone(now1.usr)
 
         now1_dict = now1.toDict()
-        now1_restored = Now.fromDict(now1_dict)
+        now1_restored = Now.fromDic(now1_dict)
 
         self.assertIsNone(now1_restored.usr)
         self.assertEqual(now1_restored.useType, "test")
@@ -102,7 +102,7 @@ class TestBaseDictModel(unittest.TestCase):
         now2 = Now(usr=usr, useType="test")
 
         now2_dict = now2.toDict()
-        now2_restored = Now.fromDict(now2_dict)
+        now2_restored = Now.fromDic(now2_dict)
 
         self.assertIsInstance(now2_restored.usr, Usr)
         self.assertEqual(now2_restored.usr.id, "1")
@@ -119,7 +119,7 @@ class TestBaseDictModel(unittest.TestCase):
 
         now_dict = now.toDict()
 
-        now_restored = Now.fromDict(now_dict)
+        now_restored = Now.fromDic(now_dict)
 
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")
@@ -157,7 +157,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset_dict["id"], "test-asset")
         self.assertEqual(asset_dict["ownerId"], "user1")
 
-        asset_restored = Asset.fromDict(asset_dict)
+        asset_restored = Asset.fromDic(asset_dict)
         self.assertEqual(asset_restored.id, "test-asset")
         self.assertEqual(asset_restored.originalFileName, "test.jpg")
 
@@ -179,7 +179,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset_dict["simInfos"][0]["id"], "a")
         self.assertEqual(asset_dict["simInfos"][1]["id"], "b")
 
-        asset_restored = Asset.fromDict(asset_dict)
+        asset_restored = Asset.fromDic(asset_dict)
         self.assertEqual(asset_restored.id, "test-asset")
         self.assertEqual(asset_restored.originalFileName, "test.jpg")
         self.assertEqual(len(asset_restored.simInfos), 2)
@@ -195,7 +195,7 @@ class TestBaseDictModel(unittest.TestCase):
             "jsonExif": exif_json_string
         }
 
-        asset = Asset.fromDict(asset_dict)
+        asset = Asset.fromDic(asset_dict)
         self.assertIsInstance(asset.jsonExif, AssetExif)
         self.assertEqual(asset.jsonExif.make, "Canon")
         self.assertEqual(asset.jsonExif.model, "EOS 5D")
@@ -250,7 +250,7 @@ class TestBaseDictModel(unittest.TestCase):
         tsk_from_json = json.loads(tsk_json)
         self.assertTrue(isinstance(tsk_from_json["args"]["created_at"], str))
 
-        tsk_restored = Tsk.fromDict(tsk_dict)
+        tsk_restored = Tsk.fromDic(tsk_dict)
         self.assertTrue(isinstance(tsk_restored.args["created_at"], datetime))
         self.assertEqual(tsk_restored.args["created_at"].year, 2023)
         self.assertEqual(tsk_restored.args["created_at"].month, 1)
@@ -266,7 +266,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(nfy_dict["msgs"][msg_id]["message"], "Test message")
         self.assertEqual(nfy_dict["msgs"][msg_id]["type"], "info")
 
-        nfy_restored = Nfy.fromDict(nfy_dict)
+        nfy_restored = Nfy.fromDic(nfy_dict)
         self.assertEqual(len(nfy_restored.msgs), 1)
         msg_id = list(nfy_restored.msgs.keys())[0]
         self.assertEqual(nfy_restored.msgs[msg_id]["message"], "Test message")
@@ -303,10 +303,10 @@ class TestBaseDictModel(unittest.TestCase):
             "mdl": mdl.toDict()
         }
 
-        now_restored = Now.fromDict(data["now"])
-        nfy_restored = Nfy.fromDict(data["nfy"])
-        tsk_restored = Tsk.fromDict(data["tsk"])
-        mdl_restored = Mdl.fromDict(data["mdl"])
+        now_restored = Now.fromDic(data["now"])
+        nfy_restored = Nfy.fromDic(data["nfy"])
+        tsk_restored = Tsk.fromDic(data["tsk"])
+        mdl_restored = Mdl.fromDic(data["mdl"])
 
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")
@@ -344,7 +344,7 @@ class TestBaseDictModel(unittest.TestCase):
 
         now.switchUsr("1")
         now_dict = now.toDict()
-        now_restored = Now.fromDict(now_dict)
+        now_restored = Now.fromDic(now_dict)
 
         self.assertIsInstance(now_restored.usr, Usr)
         self.assertEqual(now_restored.usr.id, "1")
@@ -457,12 +457,12 @@ class TestBaseDictModel(unittest.TestCase):
 
         # Missing required field 'name'
         invalid_dict = {"id": "test"}
-        result = RequiredFieldModel.fromDict(invalid_dict)
+        result = RequiredFieldModel.fromDic(invalid_dict)
         self.assertIsNone(result)
 
         # Test with wrong number of arguments
         invalid_dict2 = {"id": "test", "name": "test", "extra": "field", "another": "field"}
-        result2 = RequiredFieldModel.fromDict(invalid_dict2)
+        result2 = RequiredFieldModel.fromDic(invalid_dict2)
         # This should succeed as extra fields are filtered
         self.assertIsNotNone(result2)
 
@@ -572,7 +572,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertIsNone(result2)
 
 
-    def test_wsmsg_with_enum(self):
+    def test_data_with_enum(self):
         # Test 1: Create WsMsg with TskStatus enum
         msg = WsMsg(
             tsn="task-123",
@@ -611,7 +611,7 @@ class TestBaseDictModel(unittest.TestCase):
             "message": "Done!",
             "status": TskStatus.COMPLETED
         }
-        msg_from_dict = WsMsg.fromDict(dict_with_enum)
+        msg_from_dict = WsMsg.fromDic(dict_with_enum)
         self.assertEqual(msg_from_dict.tsn, "task-456")
         self.assertEqual(msg_from_dict.status, TskStatus.COMPLETED)
 
@@ -623,7 +623,7 @@ class TestBaseDictModel(unittest.TestCase):
             "message": "Error occurred",
             "status": "failed"
         }
-        msg_from_string = WsMsg.fromDict(dict_with_string)
+        msg_from_string = WsMsg.fromDic(dict_with_string)
         self.assertEqual(msg_from_string.tsn, "task-789")
         # Check if it can handle string value for enum
         self.assertTrue(msg_from_string.status == TskStatus.FAILED or msg_from_string.status == "failed")
@@ -637,7 +637,7 @@ class TestBaseDictModel(unittest.TestCase):
             # Check status is either enum or string value
             self.assertTrue(restored.status == status or restored.status == status.value)
 
-    def test_wsmsg_optional_fields(self):
+    def test_data_optional_fields(self):
         # Test with minimal fields
         msg = WsMsg(tsn="minimal-123")
         self.assertEqual(msg.tsn, "minimal-123")
@@ -653,7 +653,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertIsNone(restored.type)
         self.assertIsNone(restored.status)
 
-    def test_wsmsg_fromstr_errors(self):
+    def test_data_fromstr_errors(self):
         # Test invalid JSON
         with self.assertRaises(ValueError) as ctx:
             WsMsg.fromStr("not json")

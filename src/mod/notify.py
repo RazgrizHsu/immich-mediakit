@@ -36,7 +36,7 @@ def render():
 def update_notifications(dta_nfy):
     if not dta_nfy: return []
 
-    nfy = models.Nfy.fromDict(dta_nfy)
+    nfy = models.Nfy.fromDic(dta_nfy)
 
     divs = []
 
@@ -49,7 +49,7 @@ def update_notifications(dta_nfy):
         # lg.info(f"[notify] Update notification: {data['message']}")
         divs.append(
             dbc.Alert(
-                msg, 
+                msg,
                 id={'type': 'notify-alert', 'index': nid},
                 color=data['type'],
                 dismissable=True,
@@ -74,7 +74,7 @@ def remove_notification(itemOpened, itemIds, dta_nfy):
     if not dta_nfy: return dash.no_update
     if not any(itemIds) or all(itemOpened): return dash.no_update
 
-    nfy = models.Nfy.fromDict(dta_nfy)
+    nfy = models.Nfy.fromDic(dta_nfy)
 
     # Find the IDs of closed
     cIds = []

@@ -33,9 +33,6 @@ def render():
     cnt.refreshFromDB()
 
 
-    now.usrId = dto.usrId
-
-
     photoQ = dto.photoQ
     if not photoQ or photoQ not in [ ks.db.thumbnail, ks.db.preview, ks.db.fullsize ]:
         dto.photoQ = ks.db.thumbnail
