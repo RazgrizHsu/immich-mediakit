@@ -185,18 +185,19 @@ Using Docker Compose is the easiest installation method, automatically including
 1. **Copy Docker Configuration Files**
 
    The compose has a few differences when you're installing MediaKit on the same host vs on a different host than Immich. Choose the same as you have for setting up the database.
+   
    [Same host](./docker/docker-compose-same-host.yml)
    [Different hsot](./docker/docker-compose-different-host.yml)
    [docker/.env](./docker/.env)
 
-2. **Modify the `PSQL_HOST` and `IMMICH_PATH` in the `.env` file**
+3. **Modify the `PSQL_HOST` and `IMMICH_PATH` in the `.env` file**
 
-3. **Start Services**
+4. **Start Services**
    ```bash
    docker compose up -d
    ```
 
-4. **Access Application**
+5. **Access Application**
    - Open browser to `http://localhost:8086`
 
 ### Option 2: Source Installation (GPU Acceleration Supported)
