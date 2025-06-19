@@ -1,5 +1,3 @@
-
-
 set -e
 
 IMAGE_NAME="razgrizhsu/immich-mediakit"
@@ -54,8 +52,14 @@ if [ ! -d "src" ]; then
   exit 1
 fi
 
-echo "Using Docker Buildx builder 'budx'."
-docker buildx use budx
+BUILDER_NAME="budx"
+if ! docker buildx inspect "$BUILDER_NAME" &>/dev/null; then
+  echo "Docker Buildx builder '$BUILDER_NAME' not found. Creating it..."
+  docker buildx create --name "$BUILDER_NAME" --driver docker-container --use
+else
+  echo "Using Docker Buildx builder '$BUILDER_NAME'."
+  docker buildx use "$BUILDER_NAME"
+fi
 
 PLATFORMS="linux/amd64,linux/arm64/v8"
 
