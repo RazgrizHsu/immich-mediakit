@@ -109,6 +109,41 @@ enabling advanced management capabilities through AI-powered similarity detectio
   - Enable Immich's recycle bin feature before processing external libraries
   - Remember that MediaKit reads from Immich thumbnails, so original file locations don't affect similarity detection
 
+---
+
+## System Startup
+
+When MediaKit starts up, it performs several system checks as shown below:
+
+<p align="center">
+<img src="docs/chk.gif" alt="System startup checks" />
+</p>
+
+**Important startup notes:**
+- Pay attention to the startup messages displayed during initialization
+- The system will show proper status indicators and perform version checks
+- If any components are outdated or incompatible, you'll receive update prompts
+- Ensure all checks pass before proceeding with operations
+
+If you encounter any startup errors or version mismatches, follow the update instructions above or check the logs for detailed error information.
+
+## Logging
+
+MediaKit automatically logs system operations and errors to help with troubleshooting.
+
+**Log Location:**
+- Logs are stored in the `MKIT_DATA/logs/` directory
+- Log files are rotated daily for better organization
+
+**Troubleshooting:**
+- If you encounter any issues or unexpected behavior, check the log files in the logs directory
+- The logs contain detailed information about system operations, errors, and warnings
+- Log files can help identify configuration issues, database connection problems, or processing errors
+
+
+---
+
+
 ## Installation & Setup
 
 ### Installation Method Selection Guide
@@ -202,6 +237,13 @@ Using Docker Compose is the easiest installation method, automatically including
 5. **Access Application**
    - Open browser to `http://localhost:8086`
 
+6. **Updating MediaKit**
+   To update MediaKit when using Docker Compose, run:
+   ```bash
+   docker compose down && docker compose pull && docker compose up -d
+   ```
+
+
 ### Option 2: Source Installation (GPU Acceleration Supported)
 If you need GPU hardware acceleration or want a custom installation.
 
@@ -240,6 +282,10 @@ If you need GPU hardware acceleration or want a custom installation.
    ```bash
    python -m src.app
    ```
+
+
+---
+
 
 
 ## Developer Notes

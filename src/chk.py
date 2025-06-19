@@ -23,18 +23,34 @@ class SysSte:
     vec: ChkInfo
     logic: ChkInfo
 
-    @property
-    def allOk(self) -> bool:
-        return all(check.ok for check in [self.psql, self.path, self.vec, self.logic])
-
 
 def ver() -> ChkInfo:
     try:
+        import re
+        verL = envs.version
 
-        return ChkInfo(True, ['Qdrant connection OK', f'URL: {envs.qdrantUrl}'])
+        url = "https://github.com/RazgrizHsu/immich-mediakit/blob/main/pyproject.toml"
+
+        try:
+            txt = immich.getGithubRaw(url)
+            mth = re.search(r'^version\s*=\s*"([^"]+)"', txt, re.MULTILINE)
+            if not mth: return ChkInfo(False, ['Version check failed', 'Cannot parse version from remote pyproject.toml'])
+            verR = mth.group(1)
+
+            if verL == verR: return ChkInfo(True, [f'Version check passed', f'Current version: {verL}'])
+            else:
+                return ChkInfo(False, [
+                    f'Version mismatch detected!',
+                    f'Local : {verL}',
+                    f'Remote: {verR}',
+                    f'Visit Github for update details'
+                ])
+
+        except RuntimeError as e:
+            return ChkInfo(False, ['Version check failed', str(e)])
 
     except Exception as e:
-        return ChkInfo(False, ['Qdrant check failed', str(e)])
+        return ChkInfo(False, ['Version check failed', str(e)])
 
 def qdrant() -> ChkInfo:
     try:

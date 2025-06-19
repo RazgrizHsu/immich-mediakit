@@ -229,7 +229,7 @@ def pathFromRoot(path):
 # envs
 #------------------------------------------------------------------------
 class envs:
-    version='0.1.2'
+    version='0.1.3'
     isDev = False if isDock else bool(os.getenv('IsDev', False))
     isDock = False if not isDock else True
     immichPath:str = '/immich' if isDock else os.getenv('IMMICH_PATH', '')
