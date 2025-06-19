@@ -129,75 +129,36 @@ Choose the installation method that suits your needs:
 - Access to an Immich installation with trash feature enabled
 - A configured `.env` file (see below)
 
-### Option 1: Docker Compose
-Using Docker Compose is the easiest installation method, automatically including the Qdrant vector database.
+### Set up your Immich database
+Before you can use mediakit, you need to set your database up, so MediaKit can connect to it. This explanation covers only Immich installations via docker compose.
 
-#### Immich database configuration
-If your Immich is running with Docker Compose, you will need to create the network we will use to connect to it. To create the network execute the following command on the host:
+#### Immich on the same host as mediakit
+If your Immich installation is on the same machine than you want to install MediaKit on, a docker network can be used to connect to the db.
+To create the network execute the following command (on the host, not in the docker container):
 ```bash
 docker network create immich-mediakit
 ```
 
+Then add the netowrk to your immich database container and to the docker compose:
 ```yaml
 services:
   database:
     container_name: immich_postgres
     image: ghcr.io/immich-app/postgres:14-vectorchord0.3.0-pgvectors0.2.0
-    networks: # Add the immich-mediakit network to the db to allow immich-mediakit access to the db
+    networks: # Add the immich-mediakit network to the db to allow immich-mediakit to access the db
       - immich-mediakit
 
 
-networks: # Add the immich-mediakit network to the immich docker compose
+networks: # Add the immich-mediakit network to the immich docker compose without any indentation
   immich-mediakit:
     external: true
 ```
 
 After updating, restart Immich to apply the changes. The `PSQL_HOST` in your `.env` file should match the container name of the database.
 
-#### Installation
-**Important Notes:**
-- ⚠️ **Docker Compose version currently cannot use GPU hardware acceleration**
-- Only CPU vectorization processing is available, which will be slower
-- If you need GPU acceleration, please use Option 2 source installation
-
-**Installation Steps:**
-
-1. **Copy Docker Configuration Files**
-   [docker/docker-compose.yml](./docker/docker-compose.yml)
-   [docker/.env](./docker/.env)
-
-2. **Modify .env File**
-   Edit the `.env` file to configure your Immich path and database connection:
-   ```
-   # PostgreSQL connection to Immich
-   PSQL_HOST=localhost # The PSQL_HOST should match the container name of the database if you're using the docker network
-   PSQL_PORT=5432
-   PSQL_DB=immich
-   PSQL_USER=postgres
-   PSQL_PASS=postgres
-   
-   # Immich connection - Change to your Immich install path (UPLOAD_LOCATION env variable of Immich if you're using Immich with docker compose)
-   IMMICH_PATH=/path/to/your/immich
-   
-   # MediaKit settings
-   MKIT_PORT=8086
-   MIKT_PORTWS=8087
-   MKIT_DATA=./data  # Data storage directory
-   ```
-
-3. **Start Services**
-   ```bash
-   docker compose up
-   ```
-
-4. **Access Application**
-   - Open browser to `http://localhost:8086`
-
-### Option 2: Source Installation (GPU Acceleration Supported)
-If you need GPU hardware acceleration or want a custom installation.
-
-#### Immich database configuration
-If your Immich is running with Docker Compose, you need to expose the PostgreSQL port. Add the following port mapping to your Immich's docker-compose.yml:
+#### Immich on a different host as mediakit
+If your Immich installation is on a different machine than you want to install MediaKit on, you need to expose the PostgreSQL port. Note that this exposes your database to anyone in the hosts network, so use a secure password!
+Add the following port mapping to your Immich's docker compose:
 
 ```yaml
 services:
@@ -208,9 +169,39 @@ services:
       - "5432:5432"  # Add this line to expose PostgreSQL
 ```
 
-After updating, restart Immich to apply the changes. The exposed port (5432) should match the PSQL_PORT setting in your MediaKit .env file.
+After updating, restart Immich to apply the changes. The exposed port (5432 in this example) should match the `PSQL_PORT` setting in your MediaKit `.env` file.
 
-#### Installation
+
+### Option 1: Docker Compose
+Using Docker Compose is the easiest installation method, automatically including the Qdrant vector database.
+
+**Important Notes:**
+- ⚠️ **Docker Compose version currently cannot use GPU hardware acceleration**
+- Only CPU vectorization processing is available, which will be slower
+- If you need GPU acceleration, please use Option 2 source installation
+
+**Installation Steps:**
+
+1. **Copy Docker Configuration Files**
+
+   The compose has a few differences when you're installing MediaKit on the same host vs on a different host than Immich. Choose the same as you have for setting up the database.
+   [Same host](./docker/docker-compose-same-host.yml)
+   [Different hsot](./docker/docker-compose-different-host.yml)
+   [docker/.env](./docker/.env)
+
+2. **Modify the `PSQL_HOST` and `IMMICH_PATH` in the `.env` file**
+
+3. **Start Services**
+   ```bash
+   docker compose up -d
+   ```
+
+4. **Access Application**
+   - Open browser to `http://localhost:8086`
+
+### Option 2: Source Installation (GPU Acceleration Supported)
+If you need GPU hardware acceleration or want a custom installation.
+
 **Use Cases:**
 - Need GPU acceleration for vectorization processing
 - Want to customize Python environment
