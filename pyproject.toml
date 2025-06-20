@@ -4,5 +4,5 @@ version = "0.1.3"
 
 [tool.pyright]
 include = ["src"]
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 pythonPath = "/opt/homebrew/Caskroom/miniconda/base/envs/py3/bin/python"
