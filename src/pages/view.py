@@ -27,6 +27,8 @@ class K:
         grid = "div-photo-grid"
         pagerMain = "vg-pager-main"
 
+    initView = "view-init"
+
 
 optFileters = [
     {"label": "All Assets", "value": "all"},
@@ -115,7 +117,10 @@ def layout():
 
             # Main pager store
             *pager.createStore(pgId=K.div.pagerMain, page=1, size=24, total=total)
-        ])
+        ]),
+
+        # Init store
+        dcc.Store(id=K.initView),
 
         #====== bottom end ======================================================
     ])
@@ -130,21 +135,16 @@ pager.regCallbacks(K.div.pagerMain)
 #========================================================================
 @cbk(
     out(K.inp.selectUsrId, "options"),
-    [
-        inp(ks.sto.cnt, "data"),
-        inp(ks.sto.now, "data"),
-    ],
-    prevent_initial_call=False
+    inp(K.initView, "data"),
 )
-def vw_Init(dta_cnt, dta_now):
-    cnt = models.Cnt.fromDic(dta_cnt)
-    now = models.Now.fromDic(dta_now)
-
+def vw_Init(dta_init):
     opts = [{"label": "All Users", "value": ""}]
     usrs = db.psql.fetchUsers()
     if usrs and len(usrs) > 0:
         for usr in usrs:
             opts.append({"label": usr.name, "value": usr.id})
+
+    lg.info(f"[vw] init users[{len(usrs)}]")
 
     return opts
 

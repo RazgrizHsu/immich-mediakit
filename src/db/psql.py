@@ -107,7 +107,6 @@ def fetchUsers() -> List[models.Usr]:
                 usrs = [models.Usr.fromDic(d) for d in dics]
 
                 nams = []
-
                 for u in usrs: nams.append(u.name)
 
                 lg.info(f"[psql] fetch users[{len(usrs)}] {nams}")

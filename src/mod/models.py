@@ -180,9 +180,9 @@ class SimInfo(BaseDictModel):
 
 @dataclass
 class Usr(BaseDictModel):
-    id: str
-    name: str
-    email: str
+    id: str = ''
+    name: str = ''
+    email: str = ''
 
 
 @dataclass

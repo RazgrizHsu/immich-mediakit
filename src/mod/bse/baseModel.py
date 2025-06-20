@@ -41,14 +41,13 @@ class Json(Dict[str, Any]):
                         self[k] = v
 
 
-# noinspection PyArgumentList
 @dataclass
 class BaseDictModel:
-    _type_hints_cache = {}
-    _type_checks_cache = {}
+    _cheTHints = {}
+    _cheTChks = {}
 
-    _cursor_columns_cache = {}  # 保存cursor的columns緩存
-    _complex_type_cache = {}  # 緩存嵌套類型檢查結果
+    _cheDbCols = {}
+    _cheTCompx = {}
 
     def __str__(self):
         dic = self.toDict()
@@ -67,32 +66,63 @@ class BaseDictModel:
         if hasattr(obj, 'value'): return obj.value  # Handle Enum
         return str(obj)
 
-    # noinspection PyTypeChecker
     def toDict(self) -> Dict[str, Any]: return asdict(self)
-
-    # noinspection PyTypeChecker
     def toTuple(self) -> Tuple[Any, ...]: return astuple(self)
-
     def toJson(self) -> str: return json.dumps(self.toDict(), default=self.jsonSerializer, ensure_ascii=False)
 
     @classmethod
-    def _get_type_hints(cls):
-        if cls not in BaseDictModel._type_hints_cache:
-            BaseDictModel._type_hints_cache[cls] = get_type_hints(cls)
-        return BaseDictModel._type_hints_cache[cls]
+    def _getTypeHints(cls):
+        if cls not in BaseDictModel._cheTHints:
+            BaseDictModel._cheTHints[cls] = get_type_hints(cls)
+        return BaseDictModel._cheTHints[cls]
 
     @classmethod
-    def _is_model_subclass(cls, type_cls):
-        cache_key = (cls, type_cls)
-        if cache_key not in BaseDictModel._type_checks_cache:
-            result = inspect.isclass(type_cls) and issubclass(type_cls, BaseDictModel)
-            BaseDictModel._type_checks_cache[cache_key] = result
-        return BaseDictModel._type_checks_cache[cache_key]
+    def _isSubclass(cls, type_cls):
+        ck = (cls, type_cls)
+        if ck not in BaseDictModel._cheTChks:
+            rst = inspect.isclass(type_cls) and issubclass(type_cls, BaseDictModel)
+            BaseDictModel._cheTChks[ck] = rst
+        return BaseDictModel._cheTChks[ck]
 
 
     @classmethod
-    def _process_typed_field(cls, key: str, val: Any, hint_type: Type) -> Any:
-        origin = get_origin(hint_type)
+    def _covBasicType(cls, val: Any, target_type: Type) -> Any:
+        if target_type == str and not isinstance(val, str): return str(val)
+        if target_type == int and not isinstance(val, int): return int(val)
+        if target_type == float and not isinstance(val, float): return float(val)
+        if target_type == bool and not isinstance(val, bool): return bool(val)
+        return val
+
+    @classmethod
+    def _convert_model_from_dict(cls, val: Any, model_class: Type) -> Any:
+        if isinstance(val, dict): return model_class.fromDic(val)
+        return val
+
+    @classmethod
+    def _parse_json_to_model(cls, val: str, model_class: Type) -> Any:
+        try:
+            jso = json.loads(val)
+            if isinstance(jso, dict): return model_class.fromDic(jso)
+        except:
+            pass
+        return val
+
+    @classmethod
+    def _mkWithFallback(cls, processed_data: Dict[str, Any],
+                                      original_data: Dict[str, Any],
+                                      type_hints: Dict[str, Type]) -> Any:
+        try:
+            return cls(**processed_data)
+        except (TypeError, ValueError) as e:
+            filtered_data = {k: v for k, v in original_data.items() if k in type_hints}
+            try:
+                return cls(**filtered_data)
+            except:
+                raise e
+
+    @classmethod
+    def _procTypedField(cls, key: str, val: Any, typ: Type) -> Any:
+        origin = get_origin(typ)
 
         if val is None:
             if origin is list:
@@ -100,42 +130,50 @@ class BaseDictModel:
             return None
 
         if origin is None:
-            if cls._is_model_subclass(hint_type):
-                if isinstance(val, dict):
-                    # noinspection PyUnresolvedReferences
-                    return hint_type.fromDic(val)
-                elif isinstance(val, str):
-                    try:
-                        json_data = json.loads(val)
-                        if isinstance(json_data, dict):
-                            # noinspection PyUnresolvedReferences
-                            return hint_type.fromDic(json_data)
-                    except:
-                        pass
-            elif inspect.isclass(hint_type) and issubclass(hint_type, Enum):
+            if cls._isSubclass(typ):
+                rst = cls._convert_model_from_dict(val, typ)
+                if rst != val: return rst
+                if isinstance(val, str): return cls._parse_json_to_model(val, typ)
+            elif inspect.isclass(typ) and issubclass(typ, Enum):
                 if isinstance(val, str):
-                    # Try to convert string to enum
-                    for member in hint_type:
-                        if member.value == val:
-                            return member
-                    # If not found by value, return as is
+                    for member in typ:
+                        if member.value == val: return member
                     return val
+            else:
+                try:
+                    return cls._covBasicType(val, typ)
+                except (ValueError, TypeError):
+                    pass
             return val
 
         if origin is list:
             if isinstance(val, list):
-                item_type = get_args(hint_type)[0]
-                if cls._is_model_subclass(item_type):
-                    return [item_type.fromDic(item) for item in val]
-                return val
+                ctyp = get_args(typ)[0]
+                if cls._isSubclass(ctyp):
+                    return [ctyp.fromDic(item) for item in val]
+                else:
+                    coved = []
+                    for item in val:
+                        try:
+                            coved.append(cls._covBasicType(item, ctyp))
+                        except (ValueError, TypeError):
+                            coved.append(item)
+                    return coved
             elif isinstance(val, str):
                 try:
-                    list_data = json.loads(val)
-                    if isinstance(list_data, list):
-                        item_type = get_args(hint_type)[0]
-                        if cls._is_model_subclass(item_type):
-                            return [item_type.fromDic(item) for item in list_data]
-                        return list_data
+                    lst = json.loads(val)
+                    if isinstance(lst, list):
+                        ctyp = get_args(typ)[0]
+                        if cls._isSubclass(ctyp):
+                            return [ctyp.fromDic(item) for item in lst]
+                        else:
+                            coved = []
+                            for item in lst:
+                                try:
+                                    coved.append(cls._covBasicType(item, ctyp))
+                                except (ValueError, TypeError):
+                                    coved.append(item)
+                            return coved
                 except:
                     pass
             return val
@@ -143,27 +181,26 @@ class BaseDictModel:
         if origin is dict: return val
 
         if origin is Union:
-            type_args = get_args(hint_type)
-            real_types = [t for t in type_args if t is not type(None)]
+            targs = get_args(typ)
+            rtyps = [t for t in targs if t is not type(None)]
 
-            if len(real_types) == 1:
-                real_type = real_types[0]
-                if cls._is_model_subclass(real_type):
-                    if isinstance(val, dict):
-                        return real_type.fromDic(val)
-                    elif isinstance(val, str):
-                        try:
-                            json_data = json.loads(val)
-                            if isinstance(json_data, dict):
-                                return real_type.fromDic(json_data)
-                        except:
-                            pass
+            if len(rtyps) == 1:
+                real_type = rtyps[0]
+                if cls._isSubclass(real_type):
+                    rst = cls._convert_model_from_dict(val, real_type)
+                    if rst != val: return rst
+                    if isinstance(val, str): return cls._parse_json_to_model(val, real_type)
+                else:
+                    try:
+                        return cls._covBasicType(val, real_type)
+                    except (ValueError, TypeError):
+                        pass
             return val
 
         return val
 
     @classmethod
-    def _process_json_fields(cls, data: Dict[str, Any], type_hints: Dict[str, Type]) -> Dict[str, Any]:
+    def _procJsonFields(cls, data: Dict[str, Any], type_hints: Dict[str, Type]) -> Dict[str, Any]:
         for fname, ftype in type_hints.items():
             if ftype == Json and fname in data and isinstance(data[fname], str):
                 try:
@@ -173,26 +210,26 @@ class BaseDictModel:
         return data
 
     @classmethod
-    def _has_complex_types(cls, type_hints):
-        if cls not in cls._complex_type_cache:
-            complex_fields = set()
+    def _hasCompx(cls, type_hints):
+        if cls not in cls._cheTCompx:
+            fdCompx = set()
             for key, hint_type in type_hints.items():
                 origin = get_origin(hint_type)
                 if origin is list or origin is Union:
-                    complex_fields.add(key)
+                    fdCompx.add(key)
                     continue
 
                 if origin is None:
-                    if cls._is_model_subclass(hint_type):
-                        complex_fields.add(key)
+                    if cls._isSubclass(hint_type):
+                        fdCompx.add(key)
                         continue
                     if inspect.isclass(hint_type) and issubclass(hint_type, Enum):
-                        complex_fields.add(key)
+                        fdCompx.add(key)
                         continue
 
-            cls._complex_type_cache[cls] = complex_fields
+            cls._cheTCompx[cls] = fdCompx
 
-        return cls._complex_type_cache[cls]
+        return cls._cheTCompx[cls]
 
     @classmethod
     def fromStr(cls: Type[T], src: str) -> T:
@@ -226,29 +263,16 @@ class BaseDictModel:
         try:
             if not src: return cls()
 
-            type_hints = cls._get_type_hints()
-            complex_fields = cls._has_complex_types(type_hints)
+            typs = cls._getTypeHints()
 
-            processed_data = {}
+            done = {}
             for key, val in src.items():
-                if key not in type_hints: continue
+                if key not in typs: continue
 
-                hint_type = type_hints[key]
-                origin = get_origin(hint_type)
+                hint_type = typs[key]
+                done[key] = cls._procTypedField(key, val, hint_type)
 
-                if key in complex_fields:
-                    processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
-                else:
-                    processed_data[key] = val
-
-            try:
-                return cls(**processed_data)
-            except (TypeError, ValueError) as e:
-                filtered_data = {k: v for k, v in src.items() if k in type_hints}
-                try:
-                    return cls(**filtered_data)
-                except:
-                    raise e
+            return cls._mkWithFallback(done, src, typs)
         except Exception as e:
             lg.exception(e)
             raise RuntimeError(f"Error converting dict to {cls.__name__}: {e}, src={src}")
@@ -259,49 +283,42 @@ class BaseDictModel:
         try:
             if not row: raise ValueError(f"row is empty")
 
-            cursor_id = id(cursor)
-            columns = cls._cursor_columns_cache.get(cursor_id)
-            if columns is None:
-                columns = [desc[0] for desc in cursor.description]
-                cls._cursor_columns_cache[cursor_id] = columns
+            curid = id(cursor)
+            cols = cls._cheDbCols.get(curid)
+            if cols is None:
+                cols = [desc[0] for desc in cursor.description]
+                cls._cheDbCols[curid] = cols
 
-            data = dict(zip(columns, row))
-            type_hints = cls._get_type_hints()
+            data = dict(zip(cols, row))
+            typs = cls._getTypeHints()
 
-            json_fields = [fname for fname, ftype in type_hints.items()
+            jfds = [fname for fname, ftype in typs.items()
                            if ftype == Json and fname in data and isinstance(data[fname], str)]
 
-            if json_fields: data = cls._process_json_fields(data, type_hints)
+            if jfds: data = cls._procJsonFields(data, typs)
 
-            complex_fields = cls._has_complex_types(type_hints)
+            fdCompx = cls._hasCompx(typs)
 
-            processed_data = {}
+            done = {}
             for key, val in data.items():
-                if key not in type_hints: continue
+                if key not in typs: continue
 
-                hint_type = type_hints[key]
-                origin = get_origin(hint_type)
+                typ = typs[key]
+                origin = get_origin(typ)
 
-                if (key in complex_fields
+                if (key in fdCompx
                     or
                     (
-                        isinstance(val, str) and cls._is_model_subclass(hint_type)
+                        isinstance(val, str) and cls._isSubclass(typ)
                         or
-                        (origin is Union and any(cls._is_model_subclass(t) for t in get_args(hint_type) if t is not type(None)))
+                        (origin is Union and any(cls._isSubclass(t) for t in get_args(typ) if t is not type(None)))
                     )
                 ):
-                    processed_data[key] = cls._process_typed_field(key, val, type_hints[key])
+                    done[key] = cls._procTypedField(key, val, typs[key])
                 else:
-                    processed_data[key] = val
+                    done[key] = val
 
-            try:
-                return cls(**processed_data)
-            except (TypeError, ValueError) as e:
-                filtered_data = {k: v for k, v in data.items() if k in type_hints}
-                try:
-                    return cls(**filtered_data)
-                except:
-                    raise e
+            return cls._mkWithFallback(done, data, typs)
         except Exception as e:
             lg.error(f"Error converting DB row to {cls.__name__}: {e}, row={row}")
             raise e
