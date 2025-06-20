@@ -1781,6 +1781,7 @@ function onFetchedChk( data ){
 	// update env card
 	let sp = document.querySelector( "#span-sys-chk" )
 	if( sp ) {
+
 		if( allOk ) {
 			sp.innerText = `ok`
 			sp.classList.add('info')
@@ -1789,19 +1790,21 @@ function onFetchedChk( data ){
 			sp.innerText = `Failed`
 			sp.classList.add('red')
 		}
-	}
 
-	if( !data.ver.ok ) {
+		console.info( `data.ver:`, data.ver )
 
-		let msg = data.ver.msg.join( '\n' )
-		let n = notify.load( msg, 'warn' ).run( 30000 )
+		if( !data.ver.ok ) {
 
-		if( sp ) {
-			sp.innerText = `please update`
-			sp.classList.remove('info',`second`)
-			sp.classList.add('warn')
+			let msg = data.ver.msg.join( '\n' )
+			notify.load( msg, 'warn' ).run( 30000 )
+
+			sp.innertext = `please update`
+			sp.classlist.remove('info',`second`)
+			sp.classlist.add('warn')
 		}
+		else sp.innerText =`ok - ver:${data.ver.msg[0]}`
 	}
+
 
 }
 

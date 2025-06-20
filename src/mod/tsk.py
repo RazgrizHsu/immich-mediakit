@@ -317,9 +317,7 @@ def tsk_UpdUI(gwsmsg, dta_tsk, rstChs):
     prevent_initial_call=True
 )
 def tsk_OnData(wmsg, dta_tsk):
-    if not wmsg:
-        lg.warn(f"[tsk:dta] no wmsg")
-        return noUpd.by(5)
+    if not wmsg: return noUpd.by(5)
 
     gws = models.Gws.fromDic(wmsg)
 
