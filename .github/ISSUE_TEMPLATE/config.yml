@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/RazgrizHsu/immich-mediakit/blob/main/README.md
+    about: Check the documentation for setup and usage guides
+  - name: 💬 Discussions
+    url: https://github.com/RazgrizHsu/immich-mediakit/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🐛 Immich Issues
+    url: https://github.com/immich-app/immich/issues
+    about: For issues with Immich itself (not MediaKit)

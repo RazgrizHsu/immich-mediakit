@@ -1,0 +1,60 @@
+name: Question / Support
+description: Ask a question or get help with Immich-MediaKit
+title: "[Question] "
+labels: ["question"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask your question here! Please search existing issues first.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Pre-flight Checklist
+      options:
+        - label: I have searched existing issues and discussions
+          required: true
+        - label: I have read the documentation and README
+          required: true
+        - label: I have checked the troubleshooting guides
+          required: true
+
+  - type: dropdown
+    id: question-category
+    attributes:
+      label: Question Category
+      description: What type of question is this?
+      options:
+        - Installation/Setup
+        - Configuration
+        - Usage/How-to
+        - Troubleshooting
+        - Best Practices
+        - Other
+      default: 5
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: Please describe your question...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to do? What's your setup?
+      placeholder: |
+        What I'm trying to achieve: ...
+        My setup: ...
+        What I've tried: ...
+    validations:
+      required: false
