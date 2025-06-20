@@ -1,11 +1,8 @@
 from dsh import htm, dcc, dbc, inp, out, ste, cbk
 from mod import models
 from conf import ks, envs
-from db import psql
-import immich
 import torch
 import conf
-import chk
 
 class k:
     connInfo = 'div-conn-info'

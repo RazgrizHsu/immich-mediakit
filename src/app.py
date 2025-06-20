@@ -69,12 +69,13 @@ app.layout = htm.Div([
 if __name__ == "__main__":
     lg = log.get(__name__)
     try:
-        lg.info("=======================================")
-        lg.info(f"Starting Dash {'-DEBUG-' if conf.envs.isDev else ''}")
+        from conf import envs
+        lg.info("========================================================================")
+        lg.info(f"[MediaKit] Start ... ver[{ envs.version }] {'-DEBUG-' if conf.envs.isDev else ''}")
+        lg.info("========================================================================")
 
-        if log.EnableLogFile: lg.info(f"Log file recording: {log.log_file}")
+        if log.EnableLogFile: lg.info(f"Log recording: {log.log_file}")
 
-        lg.info("---------------------------------------")
         if conf.envs.isDev:
 
             hotReload = bool(os.getenv( 'HotReload', False ))
