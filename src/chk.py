@@ -37,7 +37,7 @@ def ver() -> ChkInfo:
             if not mth: return ChkInfo(False, ['Version check failed', 'Cannot parse version from remote pyproject.toml'])
             verR = mth.group(1)
 
-            if verL == verR: return ChkInfo(True, [f'Version check passed', f'Current version: {verL}'])
+            if verL == verR: return ChkInfo(True, [verL])
             else:
                 return ChkInfo(False, [
                     f'Version mismatch detected!',

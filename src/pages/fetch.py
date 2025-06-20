@@ -109,10 +109,9 @@ dis_hide = {"display": "none"}
         out(k.selectUsr, "value"),
     ],
     inp(k.initFetch, "data"),
-    prevent_initial_call="initial_duplicate"
 )
-def assets_Init(dta_pi):
-    lg.info(f"[fth:init] usrId[{db.dto.usrId}] dta[{dta_pi}]")
+def fth_Init(dta_pi):
+    lg.info(f"[fth:init] select usrId[{db.dto.usrId}]")
 
     opts = []
     usrs = db.psql.fetchUsers()
@@ -142,7 +141,7 @@ def assets_Init(dta_pi):
     ste(ks.sto.nfy, "data"),
     prevent_initial_call=True
 )
-def assets_Status(usrId, dta_cnt, dta_tsk, dta_nfy):
+def fth_Status(usrId, dta_cnt, dta_tsk, dta_nfy):
     tsk = models.Tsk.fromDic(dta_tsk)
     cnt = models.Cnt.fromDic(dta_cnt)
     nfy = models.Nfy.fromDic(dta_nfy)
@@ -199,7 +198,7 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_nfy):
                 txtBtn = "--No user--"
                 txtClr = "--No user--"
 
-    lg.info(f"[assets:status] usrId[{usrId}] cnt: {cnt}")
+    lg.info(f"[fth:status] cnt: {cnt}")
 
     return txtBtn, disBtnRun, txtClr, disBtnClr, nfy.toDict()
 
@@ -224,7 +223,7 @@ def assets_Status(usrId, dta_cnt, dta_tsk, dta_nfy):
     ],
     prevent_initial_call=True
 )
-def assets_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
+def fth_RunModal(clk_feh, clk_clr, clk_rst, usrId, dta_now, dta_mdl, dta_tsk, dta_nfy):
     if not clk_feh and not clk_clr and not clk_rst: return noUpd.by(2)
 
     now = models.Now.fromDic(dta_now)
