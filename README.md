@@ -2,7 +2,7 @@
 
 <p align="center"><img src="src/assets/logo.png" width="256" height="256" alt="logo" /></p>
 <p align="center">
-<small> 
+<small>
 An extension toolkit for <a href="https://github.com/immich-app/immich">Immich</a>
 enabling advanced management capabilities through AI-powered similarity detection
 </small>
@@ -220,24 +220,46 @@ Using Docker Compose is the easiest installation method, automatically including
 1. **Copy Docker Configuration Files**
 
    The compose has a few differences when you're installing MediaKit on the same host vs on a different host than Immich. Choose the same as you have for setting up the database.
-   
-   [Same host](./docker/docker-compose-same-host.yml)
-   
-   [Different host](./docker/docker-compose-different-host.yml)
-   
-   [docker/.env](./docker/.env)
 
-3. **Modify the `PSQL_HOST` and `IMMICH_PATH` in the `.env` file**
+   **Same host configuration:**
+   - [docker-compose.yml](./docker/same-host/docker-compose.yml)
+   - [docker-compose-immich.yml](./docker/same-host/docker-compose-immich.yml)
+   - [.env](./docker/same-host/.env)
 
-4. **Start Services**
+   **Different host configuration:**
+   - [docker-compose.yml](./docker/different-host/docker-compose.yml)
+   - [docker-compose-immich.yml](./docker/different-host/docker-compose-immich.yml)
+   - [.env](./docker/different-host/.env)
+
+2. **Configure Environment Variables**
+
+   Choose the appropriate `.env` file based on your setup and modify:
+   - `PSQL_HOST`: Database connection (service name for same-host, IP address for different-host)
+   - `IMMICH_PATH`: Path to your Immich upload directory
+   - `MKIT_DATA`: Directory for MediaKit data storage
+
+3. **Create Docker Network (Same-host only)**
+
+   If using same-host setup, create the shared network:
+   ```bash
+   docker network create immich-mediakit
+   ```
+
+4. **Update Immich Configuration (Required)**
+
+   Modify your existing Immich docker-compose.yml file according to the example provided:
+   - **Same-host**: Add networks configuration to enable communication
+   - **Different-host**: Expose PostgreSQL port for external access
+
+5. **Start Services**
    ```bash
    docker compose up -d
    ```
 
-5. **Access Application**
+6. **Access Application**
    - Open browser to `http://localhost:8086`
 
-6. **Updating MediaKit**
+7. **Updating MediaKit**
    To update MediaKit when using Docker Compose, run:
    ```bash
    docker compose down && docker compose pull && docker compose up -d
@@ -273,7 +295,7 @@ If you need GPU hardware acceleration or want a custom installation.
    ```bash
    pip install -r requirements.txt
    ```
-   
+
    **Linux System Notes:**
    - For GPU acceleration, install CUDA and corresponding PyTorch version first
    - May need additional system packages: `sudo apt-get install python3-dev libffi-dev`
