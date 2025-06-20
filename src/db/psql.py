@@ -106,9 +106,11 @@ def fetchUsers() -> List[models.Usr]:
                 dics = cursor.fetchall()
                 usrs = [models.Usr.fromDic(d) for d in dics]
 
-                for u in usrs: u.id = str(u.id)
+                nams = []
 
-                lg.info(f"[psql] fetch users[{len(usrs)}] {usrs}")
+                for u in usrs: nams.append(u.name)
+
+                lg.info(f"[psql] fetch users[{len(usrs)}] {nams}")
 
                 return usrs
     except Exception as e:
