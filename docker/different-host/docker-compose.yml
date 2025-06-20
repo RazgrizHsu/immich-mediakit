@@ -9,14 +9,14 @@ services:
       - ${MKIT_PORT:-8086}:8086
       - ${MKIT_PORTWS:-8087}:8087
     volumes:
-      - ${MKIT_DATA}:/app/data
-      - ${MKIT_DATA}/cache:/root/.cache/torch/
-      - ${IMMICH_PATH}:/immich:ro  # Read-only access to Immich photos
+      - ${MKIT_DATA}:/app/data                  # mediakit data
+      - ${MKIT_DATA}/cache:/root/.cache/torch/  # model cache
+      - ${IMMICH_PATH}:/immich:ro               # Read-only access to Immich photos
     env_file:
       - .env
     environment:
       - DASH_DEBUG=${DASH_DEBUG:-false}
-      - IMMICH_PATH=/immich  # Override path inside container
+      - IMMICH_PATH=/immich                     # Override path inside container
     depends_on:
       - qdrant
     healthcheck:
@@ -25,6 +25,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - immich-mediakit
 
   qdrant:
     container_name: immich-mediakit-qdrant
@@ -34,3 +36,9 @@ services:
       - ${QDRANT_PORT:-6333}:6333
     volumes:
       - ${MKIT_DATA}/qdrant:/qdrant/storage
+    networks:
+      - immich-mediakit
+
+networks:
+  immich-mediakit:
+    driver: bridge
