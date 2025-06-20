@@ -239,14 +239,25 @@ def saveVectorBy(asset: models.Asset, photoQ) -> Tuple[models.Asset, Optional[st
     try:
         path = asset.getImagePath(photoQ)
         img = getImg(path)
+        if img is None:
+            return asset, f"image load failed: {asset.id} - cannot load image from {path}"
 
         vec = extractFeatures(img)
+        if vec is None:
+            return asset, f"feature extraction failed: {asset.id} - cannot extract features"
+
         db.vecs.save(asset.autoId, vec)
 
         return asset, None
 
     except Exception as e:
-        return asset, f"save vector failed: {asset.id} - {str(e)}"
+        errMsg = str(e)
+        if "Vector" in errMsg or "primitive" in errMsg:
+            return asset, f"vector storage failed: {asset.id} - {errMsg}"
+        elif "image" in errMsg or "PIL" in errMsg:
+            return asset, f"image processing failed: {asset.id} - {errMsg}"
+        else:
+            return asset, f"feature extraction failed: {asset.id} - {errMsg}"
 
 def loadImagesParallel(assets: List[models.Asset], photoQ, maxWorkers: int = 10) -> Tuple[List[Image.Image], List[models.Asset], List[Tuple[models.Asset, Optional[str]]]]:
     imgs = []
@@ -291,9 +302,14 @@ def saveVectorBatch(assets: List[models.Asset], photoQ) -> List[Tuple[models.Ass
                 db.vecs.save(asset.autoId, vec)
                 results.append((asset, None))
             except Exception as e:
-                results.append((asset, f"Save vector failed {asset.id}: {str(e)}"))
+                errMsg = str(e)
+                if "Vector" in errMsg or "primitive" in errMsg:
+                    results.append((asset, f"vector storage failed: {asset.id} - {errMsg}"))
+                else:
+                    results.append((asset, f"vector save failed: {asset.id} - {errMsg}"))
 
     except Exception as e:
+        lg.warning(f"Batch feature extraction failed: {str(e)}")
 
         # fallback
         for idx, asset in enumerate(rstOKs):
@@ -303,9 +319,15 @@ def saveVectorBatch(assets: List[models.Asset], photoQ) -> List[Tuple[models.Ass
                     db.vecs.save(asset.autoId, vec)
                     results.append((asset, None))
                 else:
-                    results.append((asset, f"No corresponding image for asset {asset.id}"))
+                    results.append((asset, f"image loading failed: {asset.id} - no corresponding image"))
             except Exception as fallback_e:
-                results.append((asset, f"Fallback failed {asset.id}: {str(fallback_e)}"))
+                errMsg = str(fallback_e)
+                if "Vector" in errMsg or "primitive" in errMsg:
+                    results.append((asset, f"vector storage failed: {asset.id} - {errMsg}"))
+                elif "image" in errMsg or "PIL" in errMsg:
+                    results.append((asset, f"image processing failed: {asset.id} - {errMsg}"))
+                else:
+                    results.append((asset, f"feature extraction failed: {asset.id} - {errMsg}"))
 
     return results
 
@@ -330,25 +352,32 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg,
     lastUpdateTime = 0
 
     try:
-        if onUpdate:
-            if device_type == 'cuda':
-                try:
-                    gpu_name = torch.cuda.get_device_name(0)
-                    gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-                    deviceStr = f"NVIDIA {gpu_name} ({gpu_memory:.1f}GB, batch={batchSize})"
-                except:
-                    deviceStr = f"CUDA GPU (batch={batchSize})"
-            elif device_type == 'mps':
-                try:
-                    import platform
-                    system_info = platform.processor() or "Apple Silicon"
-                    deviceStr = f"Apple {system_info} GPU (MPS, batch={batchSize})"
-                except:
-                    deviceStr = f"Apple GPU (MPS, batch={batchSize})"
-            else:
-                cpu_count = multiprocessing.cpu_count()
-                deviceStr = f"CPU ({cpu_count} cores, workers={numWorkers})"
+        if device_type == 'cuda':
+            try:
+                gpu_name = torch.cuda.get_device_name(0)
+                gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                deviceStr = f"NVIDIA {gpu_name} ({gpu_memory:.1f}GB, batch={batchSize})"
+                lg.info(f"[processVectors] Device: NVIDIA {gpu_name[:20]}, Memory: {gpu_memory:.1f}GB, Batch: {batchSize}")
+            except:
+                deviceStr = f"CUDA GPU (batch={batchSize})"
+                lg.info(f"[processVectors] Device: CUDA GPU, Batch: {batchSize}")
+        elif device_type == 'mps':
+            try:
+                import platform
+                system_info = platform.processor() or "Apple Silicon"
+                import psutil
+                total_memory = psutil.virtual_memory().total / (1024**3)
+                deviceStr = f"Apple {system_info} ({total_memory:.1f}GB, batch={batchSize})"
+                lg.info(f"[processVectors] Device: Apple {system_info}, Memory: {total_memory:.1f}GB, Batch: {batchSize}")
+            except:
+                deviceStr = f"Apple GPU (MPS, batch={batchSize})"
+                lg.info(f"[processVectors] Device: Apple MPS, Batch: {batchSize}")
+        else:
+            cpu_count = multiprocessing.cpu_count()
+            deviceStr = f"CPU ({cpu_count} cores, workers={numWorkers})"
+            lg.info(f"[processVectors] Device: CPU, Cores: {cpu_count}, Workers: {numWorkers}")
 
+        if onUpdate:
             onUpdate(inPct, f"Processing [{pi.all}] images on {deviceStr}")
 
         batches = []
@@ -369,14 +398,22 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg,
                     results = saveVectorBatch(batch, photoQ)
 
                     with lock:
+                        firstError = None
                         for asset, error in results:
                             if error:
                                 lg.error(error)
                                 pi.erro += 1
+                                if firstError is None:
+                                    firstError = error
                             else:
                                 pi.done += 1
                                 updAssets.append(asset)
                             cntDone += 1
+
+                        if firstError and pi.erro == 1:
+                            lg.error(f"[imgs] Stopping processing on first error: {firstError}")
+                            pi.erro += len(assets) - cntDone
+                            break
 
                         # 批次提交資料庫更新
                         if len(updAssets) >= commitBatch:
@@ -449,6 +486,11 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg,
                             if error:
                                 lg.error(error)
                                 pi.erro += 1
+                                if pi.erro == 1:
+                                    lg.error(f"[imgs] Stopping processing on first error: {error}")
+                                    executor.shutdown(wait=False, cancel_futures=True)
+                                    pi.erro += len(assets) - cntDone
+                                    break
                             else:
                                 pi.done += 1
                                 updAssets.append(asset)
@@ -509,12 +551,10 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg,
                             pi.erro += 1
                             cntDone += 1
 
-        # 最後提交剩餘的更新
         if updAssets:
             with db.pics.mkConn() as conn:
                 cur = conn.cursor()
-                for asset in updAssets:
-                    db.pics.setVectoredBy(asset, cur=cur)
+                for asset in updAssets: db.pics.setVectoredBy(asset, cur=cur)
                 conn.commit()
 
         if isCancelled and isCancelled():

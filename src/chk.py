@@ -52,13 +52,40 @@ def ver() -> ChkInfo:
     except Exception as e:
         return ChkInfo(False, ['Version check failed', str(e)])
 
-def qdrant() -> ChkInfo:
+def testVec() -> ChkInfo:
     try:
         if not envs.qdrantUrl: return ChkInfo(False, 'Qdrant URL not configured')
 
         db.vecs.init()
 
-        return ChkInfo(True, ['Qdrant connection OK', f'URL: {envs.qdrantUrl}'])
+        import numpy as np
+
+        if not db.vecs.conn: return ChkInfo(False, 'Qdrant connection not initialized')
+
+        tid = 999999999
+        tvec = np.random.rand(2048).astype(np.float32)
+        tvec = tvec / np.linalg.norm(tvec)
+
+        try:
+            db.vecs.save(tid, tvec, confirm=False)
+
+            stored = db.vecs.getBy(tid)
+            if not stored: return ChkInfo(False, 'Vector retrieval failed after save')
+
+            db.vecs.deleteBy([tid])
+
+        except Exception as e:
+            try:
+                db.vecs.deleteBy([tid])
+            except:
+                pass
+
+            errMsg = str(e)
+            if "primitive" in errMsg: return ChkInfo(False, ['Vector storage primitive error detected', errMsg])
+            if "Vector" in errMsg: return ChkInfo(False, ['Vector validation error', errMsg])
+            return ChkInfo(False, ['Vector operation failed', errMsg])
+
+        return ChkInfo(True, 'Vector write/read/delete test passed')
 
     except Exception as e:
         return ChkInfo(False, ['Qdrant check failed', str(e)])
@@ -125,11 +152,12 @@ def immichLogic() -> ChkInfo:
         return ChkInfo(False, ['Logic check error', str(e)])
 
 
+
 def checkSystem() -> SysSte:
     return SysSte(
         ver=ver(),
         psql=psql(),
         path=immichPath(),
-        vec=qdrant(),
+        vec=testVec(),
         logic=immichLogic()
     )

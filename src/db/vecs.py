@@ -25,8 +25,7 @@ def init():
 
         create()
     except Exception as e:
-        lg.error(f"Failed to initialize Qdrant: {str(e)}")
-
+        raise mkErr(f"Failed to initialize Qdrant", e)
 
 def close():
     global conn
@@ -110,11 +109,22 @@ def save(aid: int, vector: np.ndarray, confirm=True):
     try:
         if conn is None: raise RuntimeError("[vecs] Qdrant connection not initialized")
 
+        if not isinstance(vector, np.ndarray):
+            raise ValueError(f"[vecs] Vector must be numpy array, got {type(vector)}")
+
+        if np.isnan(vector).any():
+            raise ValueError(f"[vecs] Vector contains NaN values")
+
+        if np.isinf(vector).any():
+            raise ValueError(f"[vecs] Vector contains infinite values")
+
         vecList = vector.tolist()
         if not vecList or len(vecList) != 2048:
             raise ValueError(f"[vecs] Vector length is incorrect, expected 2048, actual {len(vecList) if vecList else 0}")
 
-        # Convert autoId to string for Qdrant
+        if not all(isinstance(x, (int, float)) for x in vecList[:5]):
+            raise ValueError(f"[vecs] Vector contains invalid data types")
+
         conn.upsert(
             collection_name=keyColl,
             points=[qmod.PointStruct(id=aid, vector=vecList, payload={"aid": aid})]
