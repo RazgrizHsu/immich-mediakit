@@ -262,16 +262,9 @@ class Asset(BaseDictModel):
     view: AssetViewOnly = field(default_factory=AssetViewOnly)
 
     def getImagePath(self, photoQ=None):
-        if photoQ == ks.db.preview:
-            path = self.pathPreview
-        else:
-            path = self.pathThumbnail
-
-        if not path: path = self.pathThumbnail
-
+        path = envs.pth.forImg(self.pathThumbnail, self.pathPreview, photoQ)
         if not path: raise RuntimeError(f"the thumbnail path is empty, assetId[{self.id}]")
-
-        return os.path.join(envs.immichPath, path)
+        return path
 
 
 @dataclass

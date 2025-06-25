@@ -1,6 +1,7 @@
 import os
 import time
 import random
+import re
 from typing import Dict, Callable, Optional
 
 import dotenv
@@ -263,6 +264,57 @@ class envs:
     else:
         mkitData = 'data/' if isDock else os.getenv('MKIT_DATA', os.path.join(pathRoot, 'data/'))
         if not mkitData.endswith('/'): mkitData += '/'
+
+    class pth:
+        @staticmethod
+        def base(path: Optional[str]) -> str:
+            if not path: return ""
+
+            thumbs_pattern = r'^(.*/)?thumbs/(.+)$'
+            match = re.match(thumbs_pattern, path)
+            if match: return match.group(2)
+            return ""
+
+        @staticmethod
+        def valid(path: Optional[str]) -> bool:
+            if not path: return False
+
+            thumbs_pattern = r'^(.*/)?thumbs/[0-9a-fA-F-]+/[0-9a-fA-F]{2}/[0-9a-fA-F]{2}/[0-9a-fA-F-]+-(thumbnail|preview)\.(webp|jpg|jpeg|png)$'
+            return bool(re.match(thumbs_pattern, path))
+
+        @staticmethod
+        def normalize(path: Optional[str]) -> str:
+            if not path: return ""
+
+            thumbsPath = envs.pth.base(path)
+            if thumbsPath:
+                return f"thumbs/{thumbsPath}"
+
+            return path
+
+        @staticmethod
+        def full(path: Optional[str]) -> str:
+            if not path: return ""
+
+            normalizedPath = envs.pth.normalize(path)
+            if not normalizedPath: return ""
+
+            if os.path.isabs(normalizedPath): return normalizedPath
+
+            if normalizedPath.startswith(envs.immichPath): return normalizedPath
+
+            fullPath = os.path.join(envs.immichPath, normalizedPath)
+            return os.path.normpath(fullPath)
+
+        @staticmethod
+        def forImg(pathThumb: Optional[str], pathPreview: Optional[str] = None, photoQ: Optional[str] = None) -> str:
+            if photoQ == ks.db.preview and pathPreview:
+                return envs.pth.full(pathPreview)
+            if pathThumb:
+                return envs.pth.full(pathThumb)
+            if pathPreview:
+                return envs.pth.full(pathPreview)
+            return ""
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------

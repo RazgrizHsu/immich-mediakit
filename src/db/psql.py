@@ -147,13 +147,6 @@ def count(usrId=None, assetType="IMAGE"):
         raise mkErr(f"Failed to count assets", e)
 
 
-#------------------------------------------------------
-# 因為db裡的值會帶upload/ (經由web上傳的)
-# 要對應到真實路徑, 必需要把upload替換為實際路徑
-#------------------------------------------------------
-def fixPrefix(path: Optional[str]):
-    if path and path.startswith('upload/'): path = path[7:]
-    return path
 
 
 def testAssetsPath():
@@ -174,8 +167,7 @@ def testAssetsPath():
                     pathDB = row.get("path", "")
                     if pathDB:
                         original_path = pathDB
-                        pathFx = fixPrefix(pathDB)
-                        pathFi = imgs.fixPath(pathFx)
+                        pathFi = envs.pth.full(pathDB)
                         isOk = os.path.exists(pathFi)
                         # lg.info( f"[psql] test isOk[{isOk}] path: {path}" )
                         if isOk: return [ "OK" ]
@@ -186,7 +178,7 @@ def testAssetsPath():
                                 "",
                                 f"This path was constructed from:",
                                 f"  IMMICH_PATH + DB Path",
-                                f"  DB Path: '{pathFx}'",
+                                f"  DB Path: '{original_path}'",
                                 "",
                                 "Please verify IMMICH_PATH environment variable matches your Immich installation path."
                             ]
@@ -394,7 +386,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
 
                         finalPath = videoPath if videoPath else originalVideoPath
                         if finalPath:
-                            livePaths[photoId] = fixPrefix(finalPath)
+                            livePaths[photoId] = envs.pth.normalize(finalPath)
                             liveVdoIds[photoId] = videoId
 
                 #----------------------------------------------------------------
@@ -411,8 +403,8 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                     assetId = asset['id']
                     if assetId in dictFiles:
                         for typ, path in dictFiles[assetId].items():
-                            if typ == ks.db.thumbnail: asset['thumbnail_path'] = fixPrefix(path)
-                            elif typ == ks.db.preview: asset['preview_path'] = fixPrefix(path)
+                            if typ == ks.db.thumbnail: asset['thumbnail_path'] = envs.pth.normalize(path)
+                            elif typ == ks.db.preview: asset['preview_path'] = envs.pth.normalize(path)
 
                     if assetId in livePaths: asset['video_path'] = livePaths[assetId]
                     if assetId in liveVdoIds: asset['video_id'] = liveVdoIds[assetId]
