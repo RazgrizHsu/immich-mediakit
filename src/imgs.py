@@ -206,14 +206,9 @@ def toB64(path):
 
     return None
 
-def fixPath(path: Optional[str]) -> str:
-    if path and not path.startswith(envs.immichPath):
-        path = os.path.join(envs.immichPath, path)
-
-    return path if path else ""
 
 def getImg(path) -> Optional[Image.Image]:
-    path = fixPath(path)
+    path = conf.envs.pth.full(path)
     try:
         if os.path.exists(path):
             size = os.path.getsize(path)
