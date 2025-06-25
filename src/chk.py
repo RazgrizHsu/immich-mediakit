@@ -98,7 +98,7 @@ def psql() -> ChkInfo:
 
         if not db.psql.init(): return ChkInfo(False, ['Cannot connect to PostgreSQL', 'Connection test failed'])
 
-        return ChkInfo(True, ['IMMICH_PATH accessible', f'Path: {envs.immichPath}'])
+        return ChkInfo(True, ['PostgreSQL connection successful', f'Host: {envs.psqlHost}:{envs.psqlPort}'])
     except Exception as e:
         return ChkInfo(False, ['PostgreSQL check failed', str(e)])
 
