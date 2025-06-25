@@ -146,7 +146,6 @@ class ks:
     class db:
         thumbnail = 'thumbnail'
         preview = 'preview'
-        fullsize = 'original'
 
         class status:
             trashed = 'trashed'

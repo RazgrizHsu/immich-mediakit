@@ -414,8 +414,6 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                             if typ == ks.db.thumbnail: asset['thumbnail_path'] = fixPrefix(path)
                             elif typ == ks.db.preview: asset['preview_path'] = fixPrefix(path)
 
-                    asset['fullsize_path'] = fixPrefix(asset['originalPath'])
-
                     if assetId in livePaths: asset['video_path'] = livePaths[assetId]
                     if assetId in liveVdoIds: asset['video_id'] = liveVdoIds[assetId]
 

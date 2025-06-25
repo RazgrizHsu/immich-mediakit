@@ -88,13 +88,12 @@ def regBy(app):
             def query_image():
                 with db.pics.mkConn() as conn:
                     cursor = conn.cursor()
-                    cursor.execute("SELECT pathThumbnail, pathPreview, pathFullsize FROM assets WHERE autoId = ?", [aid])
+                    cursor.execute("SELECT pathThumbnail, pathPreview FROM assets WHERE autoId = ?", [aid])
                     row = cursor.fetchone()
 
                     if row:
                         if photoQ == ks.db.preview: return row[1]
-                        elif photoQ == ks.db.fullsize: return row[2]
-                        else: return row[0]
+                        return row[0]
                     return None
 
             result = get_file_with_cache(cache_key, query_image, 'image/jpeg')

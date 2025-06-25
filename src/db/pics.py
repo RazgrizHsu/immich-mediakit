@@ -57,7 +57,6 @@ def init():
                     vdoId            TEXT,
                     pathThumbnail    TEXT,
                     pathPreview      TEXT,
-                    pathFullsize     TEXT,
                     pathVdo          TEXT,
                     jsonExif         TEXT Default '{}',
                     isVectored       INTEGER Default 0,
@@ -347,8 +346,8 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
             c.execute('''
                 Insert Into assets (id, ownerId, deviceId, vdoId, type, originalFileName,
                 fileCreatedAt, fileModifiedAt, isFavorite, isVisible, isArchived,
-                localDateTime, pathThumbnail, pathPreview, pathFullsize, pathVdo, jsonExif)
-                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                localDateTime, pathThumbnail, pathPreview, pathVdo, jsonExif)
+                Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 str(assId),
                 str(asset.get('ownerId')),
@@ -364,7 +363,6 @@ def saveBy(asset: dict, c: Cursor):  #, onExist:Callable[[models.Asset],None]):
                 asset.get('localDateTime'),
                 asset.get('thumbnail_path'),
                 asset.get('preview_path'),
-                asset.get('fullsize_path', asset.get('originalPath')),
                 asset.get('video_path'),
                 jsonExif,
             ))

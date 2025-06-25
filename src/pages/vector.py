@@ -42,7 +42,6 @@ def layout():
                                     options=[
                                         {"label": "Thumbnail (Fast)", "value": ks.db.thumbnail},
                                         {"label": "Preview", "value": ks.db.preview},
-                                        {"label": "FullSize (Slow)", "value": ks.db.fullsize},
                                     ],
                                     value=db.dto.photoQ,
                                     className="mb-3",
@@ -54,7 +53,6 @@ def layout():
                                 htm.Ul([
                                     htm.Li([htm.B("Thumbnail"), htm.Small(" Fastest, but with lower detail comparison accuracy"), ]),
                                     htm.Li([htm.B("Preview"), htm.Small(" Medium quality, generally the most balanced option"), ]),
-                                    htm.Li([htm.B("FullSize"), htm.Small(" Slowest, but provides the most precise detail comparison"), ]),
                                 ]),
                             ], width=12, className=""),
                         ], className="mb-0"),
