@@ -49,7 +49,7 @@ def regBy(app):
             if not path:
                 lg.warn(f"[serve] the db query failed with cache_key[ {cache_key} ]")
             else:
-                pathFull = os.path.join(envs.immichPath, path) #type:ignore
+                pathFull = envs.pth.full(path)
                 if not os.path.exists(pathFull):
                     lg.warn(f"[serve] not exists path[ {pathFull} ] immichPath[ {envs.immichPath} ]")
                 else:
@@ -63,7 +63,7 @@ def regBy(app):
         if data is None:
             path = db_query_func()
             if path:
-                pathFull = os.path.join(envs.immichPath, path)
+                pathFull = envs.pth.full(path)
                 if os.path.exists(pathFull):
                     with open(pathFull, 'rb') as f: data = f.read()
                     cache.set(cache_key, data)
