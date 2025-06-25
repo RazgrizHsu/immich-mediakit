@@ -201,7 +201,7 @@ def vw_OnFilterChange(
         inp(K.inp.checkFavorites, "value"),
     ],
     ste(ks.sto.cnt, "data"),
-    prevent_initial_call=True
+    prevent_initial_call="initial_duplicate"
 )
 def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
     if not dta_pgr: return noUpd

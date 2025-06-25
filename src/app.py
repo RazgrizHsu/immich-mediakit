@@ -107,7 +107,8 @@ if __name__ == "__main__":
                 debug=False,
                 log_output=False,
                 host='0.0.0.0',
-                port=int(conf.envs.mkitPort)
+                port=int(conf.envs.mkitPort),
+                allow_unsafe_werkzeug=True
             )
 
     finally:
