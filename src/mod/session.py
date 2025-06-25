@@ -34,7 +34,7 @@ def render():
 
 
     photoQ = dto.photoQ
-    if not photoQ or photoQ not in [ ks.db.thumbnail, ks.db.preview, ks.db.fullsize ]:
+    if not photoQ or photoQ not in [ ks.db.thumbnail, ks.db.preview ]:
         dto.photoQ = ks.db.thumbnail
 
     from conf import co

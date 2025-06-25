@@ -251,7 +251,6 @@ class Asset(BaseDictModel):
     localDateTime: Optional[str] = None
     pathThumbnail: Optional[str] = None
     pathPreview: Optional[str] = None
-    pathFullsize: Optional[str] = None
     pathVdo: Optional[str] = None
     jsonExif: AssetExif = field(default_factory=AssetExif)
     isVectored: Optional[int] = 0
@@ -263,9 +262,7 @@ class Asset(BaseDictModel):
     view: AssetViewOnly = field(default_factory=AssetViewOnly)
 
     def getImagePath(self, photoQ=None):
-        if photoQ == ks.db.fullsize:
-            path = self.pathFullsize
-        elif photoQ == ks.db.preview:
+        if photoQ == ks.db.preview:
             path = self.pathPreview
         else:
             path = self.pathThumbnail
