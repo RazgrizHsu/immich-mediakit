@@ -275,6 +275,15 @@ def loadImagesParallel(assets: List[models.Asset], photoQ, maxWorkers: int = 10)
         except Exception as e:
             return asset, None, f"Error loading image {asset.id}: {str(e)}"
 
+    def isCriticalError(error_msg: str) -> bool:
+        critical_keywords = [
+            'MemoryError', 'OutOfMemoryError', 'memory',
+            'No space left on device', 'ENOSPC', 'disk full',
+            'PermissionError', 'permission denied', 'access denied',
+            'OSError', 'IOError', 'FileNotFoundError'
+        ]
+        return any(keyword.lower() in error_msg.lower() for keyword in critical_keywords)
+
     with ThreadPoolExecutor(max_workers=maxWorkers) as executor:
         futureImg = {executor.submit(doLoadImg, asset): asset for asset in assets}
 
@@ -284,12 +293,20 @@ def loadImagesParallel(assets: List[models.Asset], photoQ, maxWorkers: int = 10)
                 imgs.append(img)
                 rstOKs.append(asset)
             else:
+                if error and isCriticalError(error):
+                    raise RuntimeError(f"Critical error during image loading: {error}")
                 rstNos.append((asset, error))
 
     return imgs, rstOKs, rstNos
 
 def saveVectorBatch(assets: List[models.Asset], photoQ) -> List[Tuple[models.Asset, Optional[str]]]:
-    imgs, rstOKs, rstNos = loadImagesParallel(assets, photoQ)
+    try:
+        imgs, rstOKs, rstNos = loadImagesParallel(assets, photoQ)
+    except RuntimeError as e:
+        if "Critical error during image loading" in str(e):
+            raise e
+        else:
+            return [(asset, f"Image loading failed: {str(e)}") for asset in assets]
 
     results = rstNos
     if not imgs: return results
@@ -459,6 +476,17 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg,
                             msg += f" ( remaining: {remainStr}{speedStr} )"
                             onUpdate(percent, msg)
 
+                except RuntimeError as e:
+                    if "Critical error during image loading" in str(e):
+                        lg.error(f"Critical error encountered, stopping processing: {str(e)}")
+                        with lock:
+                            pi.erro += len(assets) - cntDone
+                        break
+                    else:
+                        lg.error(f"Batch processing failed: {str(e)}")
+                        with lock:
+                            pi.erro += len(batch)
+                            cntDone += len(batch)
                 except Exception as e:
                     lg.error(f"Batch processing failed: {str(e)}")
                     with lock:
