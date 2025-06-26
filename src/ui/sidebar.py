@@ -20,7 +20,7 @@ def layout():
             dbc.CardHeader("env"),
             dbc.CardBody(id=k.cardEnv, children=[
                 htm.Div( "connecting..." )
-            ], className="igrid divRows")
+            ], className="igrid")
         ], className="mb-2"),
 
         dbc.Card([
@@ -55,7 +55,7 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
         try:
             gpuNam = torch.cuda.get_device_name(0)
             gpuMem = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-            dvcInfo = f"NVIDIA {gpuNam[:20]}... ({gpuMem:.1f}GB)"
+            dvcInfo = f"NVIDIA {gpuNam[:10]}... ({gpuMem:.1f}GB)"
             dvcStyle = "tag info"
         except:
             dvcInfo = "CUDA GPU"
@@ -78,13 +78,13 @@ def onUpdateSideBar(_trigger, dta_count, dta_nfy):
         dvcStyle = "tag"
 
     envRows = [
-        htm.Div([
-            htm.Small("system:"),
-            htm.Span( "loading..", id="span-sys-chk", className="tag second")
+        dbc.Row([
+            dbc.Col(htm.Small("system"), width=3),
+            dbc.Col(htm.Span( "loading..", id="span-sys-chk", className="tag second"))
         ], className="mb-2"),
-        htm.Div([
-            htm.Small("device:"),
-            htm.Span(dvcInfo, className=dvcStyle, title=f"Device: {conf.device}")
+        dbc.Row([
+            dbc.Col(htm.Small("device"), width=3),
+            dbc.Col(htm.Span(dvcInfo, className=f"{dvcStyle} warp", title=f"Device: {conf.device}"))
         ], className="mb-2"),
     ]
 

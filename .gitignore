@@ -18,3 +18,4 @@ temp/
 cache/
 *.db-journal
 docker/test
+docs/w

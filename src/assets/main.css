@@ -355,7 +355,9 @@ h3 { font-size: 1.68rem; }
 
 .img-pop .info .desc .info-content table td:first-child { font-weight: bold; color: #4ACDFF; width: 28%; padding: 0 0 0 0; }
 
-.tag { border: #E0E0E099 1px solid; padding: 0 4px 0 4px; margin: 1px 3px; border-radius: 5px; font-size: 12px !important; vertical-align: middle; background: #2D4A69; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag { border: #E0E0E099 1px solid; padding: 0 4px 0 4px; margin: 1px 3px; border-radius: 5px; font-size: 12px !important; vertical-align: middle; background: #2D4A69; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+
+.tag.warp { white-space: normal !important; overflow: visible !important; }
 
 .tag.second { background: #4A4A4A; }
 
@@ -523,6 +525,8 @@ h3 { font-size: 1.68rem; }
 .card .igrid .row { margin-bottom: 3px !important; }
 
 .card .igrid select { padding: 0; display: inline-block; width: 30px; text-align: center; }
+
+.card .igrid .row > * { padding-left: 0.5rem; padding-right: 0.5rem; }
 
 .card .igrid.divRows { padding: 2px 8px 2px 8px !important; }
 
