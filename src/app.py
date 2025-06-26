@@ -24,9 +24,6 @@ app = dash.Dash(
     __name__,
     title=conf.ks.title,
     external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.themes.DARKLY, dbc.icons.BOOTSTRAP],
-    external_scripts=[
-        'https://cdn.socket.io/4.8.1/socket.io.min.js'
-    ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"},
         {"rel": "icon", "type": "image/x-icon", "href": "/assets/favicon.ico"}
