@@ -88,17 +88,17 @@ ccbk(
 )
 def nfy_onRemove(clks, nfyData):
     if not nfyData or not nfyData.get('msgs'): return dash.no_update
-    
+
     ctx = dash.callback_context
     if not ctx.triggered: return dash.no_update
-    
+
     triggered = ctx.triggered[0]
     if not triggered['value']: return dash.no_update
-    
+
     try:
         triggeredId = json.loads(triggered['prop_id'].split('.')[0])
         msgId = triggeredId['index']
-        
+
         newMsgs = [msg for msg in nfyData['msgs'] if msg.get('id') != msgId]
         return {'msgs': newMsgs}
     except:

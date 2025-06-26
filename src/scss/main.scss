@@ -567,9 +567,14 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 	vertical-align:middle;
 	@include bg-gradient(#2D4A69);
 
-	white-space:nowrap;
-	overflow:hidden;
-	text-overflow:ellipsis;
+	white-space:nowrap!important;
+	overflow:hidden!important;
+	text-overflow:ellipsis!important;
+
+	&.warp {
+      white-space: normal!important;
+      overflow: visible!important;
+    }
 
 	&.second { @include bg-gradient(#4A4A4A); }
 
@@ -1119,6 +1124,11 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			display:inline-block;
 			width:30px;
 			text-align:center;
+		}
+
+		.row > * {
+			padding-left: 1rem * .5;
+			padding-right: 1rem * .5;
 		}
 
 		// use div as rows
