@@ -152,12 +152,15 @@ Choose the installation method that suits your needs:
 
 | Installation Method | Use Case | Advantages | Disadvantages |
 |---------------------|----------|------------|---------------|
-| **Docker Compose** | Quick trial, simple deployment | One-click install, auto Qdrant setup | CPU only, no GPU acceleration |
-| **Source Installation** | GPU acceleration needed, custom environment | GPU acceleration support, customizable | Manual Qdrant and dependency setup |
+| **Docker Compose (CPU)** | Quick trial, most users | One-click install, auto Qdrant setup | CPU processing only |
+| **Docker Compose (GPU)** | Linux users with NVIDIA GPU | One-click install, auto Qdrant setup, GPU acceleration | Linux + NVIDIA GPU only |
+| **Source Installation** | Custom environment, development | Multi-platform GPU support (CUDA/MPS), customizable | Manual Qdrant and dependency setup |
 
 **Recommended Choice:**
-- 🚀 **First-time users or small photo collections**: Use Docker Compose
-- ⚡ **Large collections or performance requirements**: Use source installation + GPU
+- 🚀 **Most users**: Use Docker Compose (CPU version)
+- ⚡ **Linux users with NVIDIA GPU**: Use Docker Compose (GPU version)
+- 🍎 **macOS users needing GPU**: Use source installation (MPS support)
+- 🔧 **Custom development or specific requirements**: Use source installation
 
 ### Prerequisites
 
@@ -210,11 +213,6 @@ After updating, restart Immich to apply the changes. The exposed port (5432 in t
 ### Option 1: Docker Compose
 Using Docker Compose is the easiest installation method, automatically including the Qdrant vector database.
 
-**Important Notes:**
-- ⚠️ **Docker Compose version currently cannot use GPU hardware acceleration**
-- Only CPU vectorization processing is available, which will be slower
-- If you need GPU acceleration, please use Option 2 source installation
-
 **Installation Steps:**
 
 1. **Copy Docker Configuration Files**
@@ -251,28 +249,64 @@ Using Docker Compose is the easiest installation method, automatically including
    - **Same-host**: Add networks configuration to enable communication
    - **Different-host**: Expose PostgreSQL port for external access
 
-5. **Start Services**
+5. **Choose CPU or GPU Version**
+
+   **CPU Version (Default):**
+   The default configuration uses the CPU-only image:
+   ```yaml
+   image: razgrizhsu/immich-mediakit:latest
+   ```
+   No additional configuration needed.
+
+   **GPU Version (Linux + NVIDIA GPU only):**
+   
+   To use NVIDIA GPU acceleration, edit your `docker-compose.yml`:
+   
+   a. Change the image to the CUDA version:
+   ```yaml
+   image: razgrizhsu/immich-mediakit:latest-cuda
+   ```
+   
+   b. Uncomment the deploy configuration:
+   ```yaml
+   deploy:
+     resources:
+       reservations:
+         devices:
+           - driver: nvidia
+             count: 1
+             capabilities: [gpu]
+   ```
+   
+   **Prerequisites for GPU:**
+   - NVIDIA GPU with CUDA support
+   - NVIDIA Docker runtime installed
+   - Linux host system
+   
+   **Note:** Docker GPU support is Linux + NVIDIA only. For macOS MPS or Windows GPU acceleration, use source installation.
+
+6. **Start Services**
    ```bash
    docker compose up -d
    ```
 
-6. **Access Application**
+7. **Access Application**
    - Open browser to `http://localhost:8086`
 
-7. **Updating MediaKit**
+8. **Updating MediaKit**
    To update MediaKit when using Docker Compose, run:
    ```bash
    docker compose down && docker compose pull && docker compose up -d
    ```
 
 
-### Option 2: Source Installation (GPU Acceleration Supported)
-If you need GPU hardware acceleration or want a custom installation.
+### Option 2: Source Installation
+For custom environments and development needs.
 
 **Use Cases:**
-- Need GPU acceleration for vectorization processing
 - Want to customize Python environment
 - Need to modify source code
+- Prefer manual control over dependencies
 
 **Installation Steps:**
 
@@ -292,13 +326,29 @@ If you need GPU hardware acceleration or want a custom installation.
    Create `.env` file and set connection information (refer to the example above)
 
 4. **Install Python Dependencies**
+   
+   **CPU version (default):**
    ```bash
    pip install -r requirements.txt
    ```
 
-   **Linux System Notes:**
-   - For GPU acceleration, install CUDA and corresponding PyTorch version first
-   - May need additional system packages: `sudo apt-get install python3-dev libffi-dev`
+   **GPU acceleration:**
+   ```bash
+   # Linux with NVIDIA GPU (CUDA)
+   pip install -r requirements-cuda.txt
+   
+   # macOS with Apple Silicon (MPS)
+   pip install -r requirements.txt  # PyTorch auto-detects MPS support
+   
+   # Windows with NVIDIA GPU
+   pip install -r requirements-cuda.txt
+   ```
+
+   **Platform-specific notes:**
+   - **Linux**: Install CUDA drivers and corresponding PyTorch version first
+   - **macOS**: Apple Silicon automatically supports MPS acceleration
+   - **Windows**: Requires NVIDIA GPU and CUDA drivers
+   - May need additional system packages: `sudo apt-get install python3-dev libffi-dev` (Linux)
 
 5. **Start Application**
    ```bash

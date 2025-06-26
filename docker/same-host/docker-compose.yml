@@ -16,6 +16,19 @@ services:
     environment:
       - DASH_DEBUG=${DASH_DEBUG:-false}
       - IMMICH_PATH=/immich                     # Override path inside container
+
+    # GPU Support (Linux + NVIDIA GPU only)
+    # To enable NVIDIA GPU acceleration:
+    # 1. Change image tag to razgrizhsu/immich-mediakit:latest-cuda
+    # 2. Uncomment the deploy configuration below
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
     depends_on:
       - qdrant
     healthcheck:
