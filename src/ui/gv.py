@@ -14,7 +14,6 @@ def createGrid(assets: list[models.Asset], minW: int = 250) -> htm.Div:
             className="text-center mt-4"
         )
 
-    lg.info(f"create grid: {len(assets)}")
     rows = [createPhotoCard(a) for a in assets]
 
     style = {

@@ -18,6 +18,9 @@ def test_fetchExInfo():
         print(f"Testing fetchExInfo with assetId: {testAssetId}")
         exInfo = psql.fetchExInfo(testAssetId)
 
+        if not exInfo:
+            raise RuntimeError('the ex is null')
+
         print(f"Albums count: {len(exInfo.albs)}")
         for alb in exInfo.albs:
             print(f"  - Album: {alb.albumName} (ID: {alb.id})")

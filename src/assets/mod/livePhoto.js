@@ -16,10 +16,15 @@ const LivePhoto = window.LivePhoto = {
 	setupVideoErrorHandling()
 	{
 		const handleVideo = (video) => {
+
+			if (video.dataset.livephotoHandled) return
+			video.dataset.livephotoHandled = 'true'
 			video.addEventListener('error', () => {
-				console.warn('[LivePhoto] load failed, hidden:', video.src)
-				const overlay = video.closest('.livephoto-overlay')
-				if (overlay) overlay.style.display = 'none'
+				// console.warn('[LivePhoto] load failed, hidden:', video.src)
+
+				video.style.display = 'none'
+				const span = video.closest('.viewer').querySelector('.livePhoto')
+				if(span) span.innerText = `LivePhoto (can't play)`
 			})
 
 			video.addEventListener('loadstart', () => {

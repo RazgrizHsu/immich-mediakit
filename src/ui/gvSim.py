@@ -164,29 +164,31 @@ def mkCard(ass: models.Asset):
         ),
         htm.Div([
 
-            htm.Video(
-                src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
-                id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
-                className="livephoto-video",
-            )
-            if isLvPh else
+            htm.Div([
+                htm.Video(
+                    src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
+                    id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
+                    className="livephoto-video",
+                ),
+                # if isLvPh else
 
-            htm.Img(
-                src=imgSrc,
-                id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
-                className=f"card-img"
-            )
-
-            if imgSrc else
-            htm.Img(src="assets/noimg.png", className="card-img"),
+                htm.Img(
+                    src=imgSrc,
+                    id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
+                    className=f"card-img"
+                ),
+            ], className='view'),
 
             htm.Div([
-                htm.Span(f"LivePhoto", className="tag blue") if isLvPh else None,
+                # htm.Span(f"#{ass.autoId}", className="tag"),
+            ], className="LT"),
+            htm.Div([
+                htm.Span(f"LivePhoto", className="tag blue livePhoto") if isLvPh else None,
                 htm.Span(f"SimOK!", className="tag blue") if ass.simOk else None,
                 htm.Span([
                     htm.I(className='bi bi-images'),
                     f'{len(ex.albs)}'
-                ], className='tag') if ex else None,
+                ], className='tag', **{}) if ex else None,
 
                 htm.Span([
                     htm.I(className='bi bi-bookmark-check-fill'),
@@ -198,7 +200,6 @@ def mkCard(ass: models.Asset):
                     f'{len(ex.tags)}'
                 ], className='tag') if ex else None,
             ], className="RT"),
-
             htm.Div([
                 htm.Span(f"#{ass.autoId}", className="tag"),
             ], className="LB"),
@@ -208,7 +209,7 @@ def mkCard(ass: models.Asset):
                 if ass.jsonExif else None,
                 htm.Span(f"{imgW} x {imgH}", className="tag lg"),
             ], className="RB")
-        ], className="img"),
+        ], className="viewer"),
         dbc.CardBody([
 
             dbc.Row([
