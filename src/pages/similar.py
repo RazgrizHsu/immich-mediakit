@@ -10,8 +10,8 @@ from dsh import cbk, ccbk, cbkFn
 from util import log
 from mod import mapFns, models, tskSvc
 from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk, Ste
-from ui import pager, cardSets, gvSim as gvs
 
+from ui import pager, cardSets, gv
 
 lg = log.get(__name__)
 
@@ -293,7 +293,7 @@ def sim_onPagerChanged(dta_pgr, dta_now):
 
     lg.info(f"[sim:pager] paged: {pgr.idx}/{(pgr.cnt + pgr.size - 1) // pgr.size}, got {len(paged)} items")
 
-    gvPnd = gvs.mkPndGrid(now.sim.assPend, onEmpty=[
+    gvPnd = gv.mkPndGrd(now.sim.assPend, onEmpty=[
         dbc.Alert("No pending items on this page", color="secondary", className="text-center"),
     ])
 
@@ -376,11 +376,11 @@ def sim_Load(dta_now, dta_cnt):
 
     # Check multi mode from dto settings
     if db.dto.muod:
-        gvSim = gvs.mkGroupGrid(now.sim.assCur, onEmpty=[
+        gvSim = gv.mkGrdGrps(now.sim.assCur, onEmpty=[
             dbc.Alert("No grouped results found..", color="secondary", className="text-center m-5"),
         ])
     else:
-        gvSim = gvs.mkGrid(now.sim.assCur, onEmpty=[
+        gvSim = gv.mkGrd(now.sim.assCur, onEmpty=[
             dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
         ])
 
@@ -423,7 +423,7 @@ def sim_Load(dta_now, dta_cnt):
 
     # Only rebuild gvPnd if pending data changed
     if needReload:
-        gvPnd = gvs.mkPndGrid(now.sim.assPend, onEmpty=[
+        gvPnd = gv.mkPndGrd(now.sim.assPend, onEmpty=[
             dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
         ])
     else:
@@ -499,7 +499,7 @@ def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
     from mod.mgr.tskSvc import mgr
     isTaskRunning = False
     if mgr:
-        for tskId, info in mgr.list().items():
+        for _, info in mgr.list().items():
             if info.status.value in ['pending', 'running']:
                 isTaskRunning = True
                 break
@@ -626,7 +626,7 @@ def sim_RunModal(
     # Check if any task is already running
     from mod.mgr.tskSvc import mgr
     if mgr:
-        for tid, info in mgr.list().items():
+        for _, info in mgr.list().items():
             if info.status.value in ['pending', 'running']:
                 nfy.warn(f"Task already running, please wait for it to complete")
                 return noUpd.by(4).upd(0, nfy)
@@ -827,7 +827,7 @@ from mod.models import IFnProg
 
 
 def queueAutoNext(sto: tskSvc.ITaskStore):
-    nfy, tsk = sto.nfy, sto.tsk
+    tsk = sto.tsk
 
     ass = db.pics.getAnyNonSim()
     if ass:

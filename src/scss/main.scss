@@ -1363,6 +1363,11 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		border:3px solid var(--info-bs);
 	}
 
+	// non-sim-mod (view.py grid)
+	&.view {
+		img, video { object-fit:cover!important }
+	}
+
 	.viewer {
 
 		position:relative;
@@ -1397,6 +1402,9 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		i { margin-right:4px }
 
 		//floating on img
+		> div {
+			z-index:2;
+		}
 		> div.LT {
 			position:absolute;
 			top:5px;

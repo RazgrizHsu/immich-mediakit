@@ -260,11 +260,7 @@ def countFiltered(usrId="", opts="all", search="", favOnly=False):
         return 0
 
 
-def getFiltered(
-    usrId="",
-    opts="all", search="", onlyFav=False,
-    page=1, pageSize=24
-) -> list[models.Asset]:
+def getFiltered( usrId="", opts="all", search="", onlyFav=False, page=1, pageSize=24) -> list[models.Asset]:
     try:
         cds = []
         pms = []
@@ -298,8 +294,11 @@ def getFiltered(
             cursor.execute(query, pms)
             assets = []
             for row in cursor.fetchall():
-                asset = models.Asset.fromDB(cursor, row)
-                assets.append(asset)
+                ass = models.Asset.fromDB(cursor, row)
+
+                ass.ex = psql.fetchExInfo(ass.id)
+
+                assets.append(ass)
             return assets
     except Exception as e:
         lg.error(f"Error fetching assets: {str(e)}")

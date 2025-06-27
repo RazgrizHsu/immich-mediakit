@@ -3,8 +3,7 @@ from conf import ks
 from dsh import dash, htm, dcc, cbk, dbc, inp, out, ste, getTrgId, noUpd
 from mod import models
 from mod.models import Pager
-from ui.gv import createGrid
-from ui import pager
+from ui import pager, gv
 from util import log
 
 lg = log.get(__name__)
@@ -164,18 +163,15 @@ def vw_Init(dta_init):
     ste(pager.id.store(K.div.pagerMain), "data"),
     prevent_initial_call=True
 )
-def vw_OnFilterChange(
-    usrId, filterOption, favoritesOnly, schKey, pgSize,
-    dta_pgr
-):
+def vw_OnOptChg( usrId, opts, cbxFav, schKey, pgSize, dta_pgr):
     pgr = Pager.fromDic(dta_pgr)
 
     # Update total count based on filters
     total = db.pics.countFiltered(
         usrId=usrId,
-        opts=filterOption,
+        opts=opts,
         search=schKey,
-        favOnly=favoritesOnly
+        favOnly=cbxFav
     )
 
     # Reset to page 1 and update size
@@ -220,6 +216,6 @@ def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
         lg.info(f"[vg:load] No photos found for page {pgr.idx}")
         return dbc.Alert("No photos found matching your criteria", color="info", className="text-center")
 
-    grid = createGrid(photos)
+    grid = gv.mkGrd(photos, maker=lambda a: gv.cards.mk(a, False) )
 
     return grid
