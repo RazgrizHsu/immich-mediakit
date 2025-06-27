@@ -1,122 +1,148 @@
-from dsh import htm, dcc, dbc
+from typing import List
+from dsh import htm, dbc
 from conf import ks
 from util import log
 from mod import models
-from ui.gvExif import mkTipExif
+
 
 lg = log.get(__name__)
 
+from ui import gvExif, cards
 
-def createGrid(assets: list[models.Asset], minW: int = 250) -> htm.Div:
+
+def mkGrd(assets: list[models.Asset], minW=230, onEmpty=None, maker=cards.mk):
     if not assets or len(assets) == 0:
-        return htm.Div(
-            dbc.Alert("No photos match your filter criteria", color="warning"),
-            className="text-center mt-4"
-        )
+        if onEmpty:
+            if isinstance(onEmpty, str):
+                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
+            else:
+                return onEmpty
+        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
 
-    rows = [createPhotoCard(a) for a in assets]
+    cntAss = len(assets)
 
-    style = {
-        "display": "grid",
-        "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
-        "gap": "1rem"
-    }
+    if cntAss <= 4:
+        styGrid = {
+            "display": "flex",
+            "flexWrap": "wrap",
+            "gap": "1rem",
+            "justifyContent": "center"
+        }
+        styItem = {"flex": f"1 1 {minW}px"}
+    else:
+        styGrid = {
+            "display": "grid",
+            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+            "gap": "1rem"
+        }
+        styItem = {}
 
-    return htm.Div(rows, style=style)
+    rows = []
+    firstRels = False
 
+    cntRelats = sum(1 for a in assets if a.vw.isRelats)
 
-def createPhotoCard(ass: models.Asset):
-    hasVec = ass.isVectored == 1
-    fnm = ass.originalFileName or '---'
-    dtc = ass.fileCreatedAt or 'Unknown date'
-    isFav = ass.isFavorite == 1
-    assId = ass.id
-    hasEx = ass.jsonExif is not None
-    cantFind = ( ass.simOk == 1 ) or ass.simGIDs
-    isLvPh = ass.vdoId is not None
-
-    image_src = f"/api/img/{ass.autoId}" if ass.autoId else "assets/noimg.png"
-
-    tipExif = None
-    if hasEx and ass.jsonExif is not None:
-        try:
-            tipExif = mkTipExif(assId, ass.jsonExif.toDict())
-        except Exception as e:
-            lg.error(f"Error processing EXIF data: {e}")
-
-    return htm.Div([
-        htm.Div([
-            htm.Video(
-                src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
-                style={"height": "160px", "width": "100%", "objectFit": "cover", "cursor": "pointer"},
-                className="livephoto-video",
-            ) if isLvPh else
-            dbc.CardImg(
-                src=image_src,
-                top=True,
-                style={"height": "160px", "objectFit": "cover", "cursor": "pointer"},
-            ),
-            htm.Div([
-                htm.Span(f"#{ass.autoId}", className="tag sm second"),
-            ], className="LT"),
-            htm.Div([
-                htm.Span(f"LivePhoto", className="tag blue") if isLvPh else None,
-            ], className="RT"),
-        ],
-            id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
-            className="head"
-        ),
-        htm.Div([
-            htm.H6(
-                fnm,
-                className="text-truncate",
-                title=fnm,
-                style={"fontSize": "0.9rem"}
-            ),
-            htm.P(
-                dtc,
-                className="small",
-                style={"fontSize": "0.8rem"}
-            ),
-            htm.Div([
-                dbc.Badge(
-                    "NoVec", color="warning", className="me-1"
-                ) if not hasVec else None,
-                dbc.Badge(
-                    "❤️", color="danger", className="ms-1"
-                ) if isFav else None,
-                dbc.Badge(
-                    f"resolved✅", color="secondary", className="ms-1"
-                ) if ass.simOk else None,
-                dbc.Badge(
-                    "EXIF",
-                    color="info",
-                    className="me-1 exif-badge",
-                    id={"type": "exif-badge", "index": assId}
-                ) if hasEx else htm.Span(),
+    for idx, a in enumerate(assets):
+        card = maker(a)
 
 
-            ], className="d-flex flex-wrap"),
+        if a.vw.isRelats and not firstRels:
+            firstRels = True
+            rows.append(htm.Div( htm.Label(f"relates ({cntRelats}) :"), className="hr"))
 
-            tipExif,
+        rows.append(htm.Div(card, style=styItem))
 
-            htm.Div([
+    lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
 
-                # dbc.Button(
-                #     f"Find Similar #{ass.autoId}",
-                #     id={"type": "btn-useAsAuid", "id": ass.autoId},
-                #     color="primary",
-                #     size="sm",
-                #     className="w-100"
-                # )
+    return htm.Div(rows, className="gv", style=styGrid)
 
-                dcc.Link(
-                    f"Find Similar #{ass.autoId}",
-                    href=f"/{ks.pg.similar}/{ass.autoId}",
-                    className="btn btn-primary btn-sm w-100"
-                ) if not cantFind else None
 
-            ], className="mt-2") if not cantFind else None,
+def mkGrdGrps(assets: List[models.Asset], minW=250, maxW=300, onEmpty=None):
+    if not assets or len(assets) == 0:
+        if onEmpty:
+            if isinstance(onEmpty, str):
+                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
+            else:
+                return onEmpty
+        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
 
-        ], className="p-2")
-    ], className="img-card")
+    cntAss = len(assets)
+
+    if cntAss <= 4:
+        styGrid = {
+            "display": "flex",
+            "flexWrap": "wrap",
+            "gap": "1rem",
+            "justifyContent": "center"
+        }
+        styItem = {"flex": f"1 1 {minW}px"}
+    else:
+        styGrid = {
+            "display": "grid",
+            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+            "gap": "1rem"
+        }
+        styItem = {}
+
+    groups = {}
+    for asset in assets:
+        grpId = asset.vw.muodId or 0
+        if grpId not in groups: groups[grpId] = []
+        groups[grpId].append(asset)
+
+    rows = []
+    for grpId in sorted(groups.keys()):
+        grpAssets = groups[grpId]
+        grpCount = len(grpAssets)
+
+
+        rows.append(htm.Div([
+            htm.Label(f"Group {grpId} ( {grpCount} items )", className="me-3"),
+
+            dbc.Button( [ htm.Span( className="fake-checkbox checked" ), "select this group all"], size="sm", color="secondary", id=f"cbx-sel-grp-all-{grpId}", className="txt-sm me-1" ),
+            dbc.Button( [ htm.Span( className="fake-checkbox" ),"deselect this group All"], size="sm", color="secondary", id=f"cbx-sel-grp-non-{grpId}", className="txt-sm" ),
+
+        ], className="hr"))
+
+        for asset in grpAssets:
+            card = cards.mk(asset)
+            rows.append(htm.Div(card, style=styItem))
+
+    lg.info(f"[fsp:gv] assets[{len(assets)}] groups[{len(groups)}] rows[{len(rows)}]")
+
+    return htm.Div(rows, className="gv fsp", style=styGrid)
+
+
+
+def mkPndGrd(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
+    if not assets or len(assets) == 0:
+        if onEmpty:
+            if isinstance(onEmpty, str):
+                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
+            else:
+                return onEmpty
+        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
+
+    cntAss = len(assets)
+
+    if cntAss <= 4:
+        styGrid = {
+            "display": "flex",
+            "flexWrap": "wrap",
+            "gap": "1rem",
+            "justifyContent": "start"
+        }
+        styItem = {"flex": f"1 1 {minW}px", "maxWidth": f"{maxW}px"}
+    else:
+        styGrid = {
+            "display": "grid",
+            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
+            "gap": "1rem"
+        }
+        styItem = {}
+
+    rows = [htm.Div(cards.mkCardPnd(a), style=styItem) for a in assets]
+
+    lg.info(f"[sim:gvPnd] assets[{len(assets)}] rows[{len(rows)}]")
+
+    return htm.Div(rows, style=styGrid)

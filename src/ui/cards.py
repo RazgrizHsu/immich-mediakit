@@ -1,120 +1,18 @@
+from os import wait
 from typing import List
-from dsh import htm, dbc
-from conf import co
+
+from dash_bootstrap_components import ListGroup
+from dsh import htm, dbc, dcc
+from conf import ks, co
 from util import log
 from mod import models
 import db
 
+from ui import gvExif, gvExif
 
 lg = log.get(__name__)
 
-from ui import gvExif
-
-
-def mkGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
-    if not assets or len(assets) == 0:
-        if onEmpty:
-            if isinstance(onEmpty, str):
-                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
-            else:
-                return onEmpty
-        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
-
-    cntAss = len(assets)
-
-    if cntAss <= 4:
-        styGrid = {
-            "display": "flex",
-            "flexWrap": "wrap",
-            "gap": "1rem",
-            "justifyContent": "center"
-        }
-        styItem = {"flex": f"1 1 {minW}px"}
-    else:
-        styGrid = {
-            "display": "grid",
-            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
-            "gap": "1rem"
-        }
-        styItem = {}
-
-    rows = []
-    firstRels = False
-
-    cntRelats = sum(1 for a in assets if a.vw.isRelats)
-
-    for idx, a in enumerate(assets):
-        card = mkCard(a)
-
-        if a.vw.isRelats and not firstRels:
-            firstRels = True
-            rows.append(htm.Div( htm.Label(f"relates ({cntRelats}) :"), className="hr"))
-
-        rows.append(htm.Div(card, style=styItem))
-
-    lg.info(f"[sim:gv] assets[{len(assets)}] rows[{len(rows)}]")
-
-    return htm.Div(rows, className="gv", style=styGrid)
-
-
-def mkGroupGrid(assets: List[models.Asset], minW=250, maxW=300, onEmpty=None):
-    if not assets or len(assets) == 0:
-        if onEmpty:
-            if isinstance(onEmpty, str):
-                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
-            else:
-                return onEmpty
-        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
-
-    cntAss = len(assets)
-
-    if cntAss <= 4:
-        styGrid = {
-            "display": "flex",
-            "flexWrap": "wrap",
-            "gap": "1rem",
-            "justifyContent": "center"
-        }
-        styItem = {"flex": f"1 1 {minW}px"}
-    else:
-        styGrid = {
-            "display": "grid",
-            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
-            "gap": "1rem"
-        }
-        styItem = {}
-
-    groups = {}
-    for asset in assets:
-        grpId = asset.vw.muodId or 0
-        if grpId not in groups: groups[grpId] = []
-        groups[grpId].append(asset)
-
-    rows = []
-    for grpId in sorted(groups.keys()):
-        grpAssets = groups[grpId]
-        grpCount = len(grpAssets)
-
-
-        rows.append(htm.Div([
-            htm.Label(f"Group {grpId} ( {grpCount} items )", className="me-3"),
-
-            dbc.Button( [ htm.Span( className="fake-checkbox checked" ), "select this group all"], size="sm", color="secondary", id=f"cbx-sel-grp-all-{grpId}", className="txt-sm me-1" ),
-            dbc.Button( [ htm.Span( className="fake-checkbox" ),"deselect this group All"], size="sm", color="secondary", id=f"cbx-sel-grp-non-{grpId}", className="txt-sm" ),
-
-        ], className="hr"))
-
-        for asset in grpAssets:
-            card = mkCard(asset)
-            rows.append(htm.Div(card, style=styItem))
-
-    lg.info(f"[fsp:gv] assets[{len(assets)}] groups[{len(groups)}] rows[{len(rows)}]")
-
-    return htm.Div(rows, className="gv fsp", style=styGrid)
-
-
-
-def mkCard(ass: models.Asset):
+def mk(ass: models.Asset, modSim=True):
     if not ass: return htm.Div("Photo not found")
 
     imgSrc = f"/api/img/{ass.autoId}" if ass.id else None
@@ -131,10 +29,18 @@ def mkCard(ass: models.Asset):
     isMain = ass.vw.isMain
     isRels = ass.vw.isRelats
     isLvPh = ass.vdoId
+    canFnd = ass.simOk is 0
 
-    css = f"h-100 sim {cssIds}"
+    css = f"h-100 sim {cssIds} {'' if modSim else 'view'}"
     if isMain: css += " main"
     if isRels: css += " rels"
+
+    tipExif = None
+    if ass.jsonExif is not None:
+        try:
+            tipExif = gvExif.mkTipExif(ass.id, ass.jsonExif.toDict())
+        except Exception as e:
+            lg.error(f"Error processing EXIF data: {e}")
 
     return dbc.Card([
         dbc.CardHeader(
@@ -161,7 +67,7 @@ def mkCard(ass: models.Asset):
                 ])
             ], id={"type": "card-select", "id": ass.autoId}),
             className=f"p-2 curP"
-        ),
+        ) if modSim else None,
         htm.Div([
 
             htm.Div([
@@ -170,8 +76,6 @@ def mkCard(ass: models.Asset):
                     id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
                     className="livephoto-video",
                 ),
-                # if isLvPh else
-
                 htm.Img(
                     src=imgSrc,
                     id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
@@ -180,11 +84,11 @@ def mkCard(ass: models.Asset):
             ], className='view'),
 
             htm.Div([
-                # htm.Span(f"#{ass.autoId}", className="tag"),
+                htm.Span(f"#{ass.autoId}", className="tag"),
+                htm.Span(f"SimOK!", className="tag info") if ass.simOk else None,
             ], className="LT"),
             htm.Div([
                 htm.Span(f"LivePhoto", className="tag blue livePhoto") if isLvPh else None,
-                htm.Span(f"SimOK!", className="tag blue") if ass.simOk else None,
                 htm.Span([
                     htm.I(className='bi bi-images'),
                     f'{len(ex.albs)}'
@@ -201,7 +105,6 @@ def mkCard(ass: models.Asset):
                 ], className='tag') if ex else None,
             ], className="RT"),
             htm.Div([
-                htm.Span(f"#{ass.autoId}", className="tag"),
             ], className="LB"),
             htm.Div([
 
@@ -224,8 +127,17 @@ def mkCard(ass: models.Asset):
             ], class_name="grid"
             ) if db.dto.showGridInfo else None,
             htm.Div([
+                tipExif,
 
-                # htm.Span("exif", className='tag info'),
+                htm.Span('resolved ✅', className='tag') if ass.simOk else None,
+                htm.Span('❤️', className='tag') if ass.isFavorite else None,
+                htm.Span("exif", className='tag blue', id={'type':'exif-badge', 'index': ass.id}) if ass.jsonExif else None,
+                #                dbc.Badge(
+                #     "", color="danger", className="ms-1"
+                # ) if isFav else None,
+                # dbc.Badge(
+                #     f"", color="secondary", className="ms-1"
+                # ) if ass.simOk else None,
                 #
                 # htm.Span([
                 #     htm.I(className='bi bi-images'),
@@ -248,48 +160,25 @@ def mkCard(ass: models.Asset):
 
             ], className=f'tagbox'),
 
-            dbc.Row([
-                htm.Table( htm.Tbody(gvExif.mkExifRows(ass)) , className="exif"),
-            ]) if db.dto.showGridInfo else None,
+            # dbc.Row([
+            #     htm.Table( htm.Tbody(gvExif.mkExifRows(ass)) , className="exif"),
+            # ]) if db.dto.showGridInfo else None,
+
+            htm.Div([
+
+                dcc.Link(
+                    f"Find Similar #{ass.autoId}",
+                    href=f"/{ks.pg.similar}/{ass.autoId}",
+                    className="btn btn-primary btn-sm w-100"
+                ) if canFnd else None,
+
+            ], className='m-2') if not modSim else None,
 
 
         ], className="p-0"),
     ], className=css)
 
 
-
-def mkPndGrid(assets: list[models.Asset], minW=230, maxW=300, onEmpty=None):
-    if not assets or len(assets) == 0:
-        if onEmpty:
-            if isinstance(onEmpty, str):
-                return dbc.Alert(f"{onEmpty}", color="warning", className="text-center")
-            else:
-                return onEmpty
-        return htm.Div(dbc.Alert("--------", color="warning"), className="text-center")
-
-    cntAss = len(assets)
-
-    if cntAss <= 4:
-        styGrid = {
-            "display": "flex",
-            "flexWrap": "wrap",
-            "gap": "1rem",
-            "justifyContent": "start"
-        }
-        styItem = {"flex": f"1 1 {minW}px", "maxWidth": f"{maxW}px"}
-    else:
-        styGrid = {
-            "display": "grid",
-            "gridTemplateColumns": f"repeat(auto-fit, minmax({minW}px, 1fr))",
-            "gap": "1rem"
-        }
-        styItem = {}
-
-    rows = [htm.Div(mkCardPnd(a), style=styItem) for a in assets]
-
-    lg.info(f"[sim:gvPnd] assets[{len(assets)}] rows[{len(rows)}]")
-
-    return htm.Div(rows, style=styGrid)
 
 
 def mkCardPnd(ass: models.Asset, showRelated=True):

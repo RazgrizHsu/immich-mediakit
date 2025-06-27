@@ -24,7 +24,10 @@ const LivePhoto = window.LivePhoto = {
 
 				video.style.display = 'none'
 				const span = video.closest('.viewer').querySelector('.livePhoto')
-				if(span) span.innerText = `LivePhoto (can't play)`
+				if(span) {
+					span.innerText = `LivePhoto (can't play)`
+					span.classList.add('red')
+				}
 			})
 
 			video.addEventListener('loadstart', () => {

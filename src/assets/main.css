@@ -600,6 +600,8 @@ h3 { font-size: 1.68rem; }
 
 .card.sim.checked { border: 3px solid var(--info-bs); }
 
+.card.sim.view img, .card.sim.view video { object-fit: cover !important; }
+
 .card.sim .viewer { position: relative; }
 
 .card.sim .viewer:has(video) { background: #555555; }
@@ -611,6 +613,8 @@ h3 { font-size: 1.68rem; }
 .card.sim .viewer img:hover, .card.sim .viewer video:hover { opacity: 1; transform: scale(1.02); transition: all 0.3s ease; cursor: pointer; box-shadow: 0 0 10px white; }
 
 .card.sim .viewer i { margin-right: 4px; }
+
+.card.sim .viewer > div { z-index: 2; }
 
 .card.sim .viewer > div.LT { position: absolute; top: 5px; left: 5px; display: flex; justify-content: start; }
 
