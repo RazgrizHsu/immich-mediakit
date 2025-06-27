@@ -203,17 +203,22 @@ select {
 
 @mixin btn-colors($lig, $bs, $dk, $dkr) {
     background-color: $bs;
-    border-color: $dk;
+    // border-color: $dk;
+	$lit:color-mix(in srgb, $lig 90%, white);
+	$lit2:color-mix(in srgb, $lig 70%, white);
+	border-color:$lit;
+	border: $lit 1px solid;
+
 
     &:hover,
     &:focus {
         background-color: $dk;
-        border-color: $dkr;
+        border-color: $lit2;
     }
 
     &:active {
         background-color: $dkr;
-        border-color: $dkr;
+        border-color: $lig;
     }
 }
 

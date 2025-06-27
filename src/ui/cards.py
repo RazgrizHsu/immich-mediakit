@@ -73,12 +73,12 @@ def mk(ass: models.Asset, modSim=True):
             htm.Div([
                 htm.Video(
                     src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
-                    id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
+                    id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
                     className="livephoto-video",
                 ),
                 htm.Img(
                     src=imgSrc,
-                    id={"type": "img-pop-multi", "aid": ass.autoId}, n_clicks=0,
+                    id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
                     className=f"card-img"
                 ),
             ], className='view'),
@@ -166,10 +166,18 @@ def mk(ass: models.Asset, modSim=True):
 
             htm.Div([
 
+
                 dcc.Link(
                     f"Find Similar #{ass.autoId}",
                     href=f"/{ks.pg.similar}/{ass.autoId}",
-                    className="btn btn-primary btn-sm w-100"
+                    className="btn btn-primary btn-sm w-76 me-2"
+                ) if canFnd else None,
+
+
+                dcc.Link(
+                    htm.I(className='bi bi-trash'),
+                    href=f"#{ass.autoId}",
+                    className="btn btn-danger btn-sm w-20"
                 ) if canFnd else None,
 
             ], className='m-2') if not modSim else None,
