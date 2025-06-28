@@ -227,7 +227,7 @@ def getAllNonVector() -> list[models.Asset]:
 #------------------------------------------------------------------------
 # paged
 #------------------------------------------------------------------------
-def countFiltered(usrId="", opts="all", search="", favOnly=False):
+def countFiltered(usrId="", opts="all", search="", favOnly=False, arcOnly=False, liveOnly=False):
     try:
         cds = []
         pms = []
@@ -238,6 +238,12 @@ def countFiltered(usrId="", opts="all", search="", favOnly=False):
 
         if favOnly:
             cds.append("isFavorite = 1")
+
+        if arcOnly:
+            cds.append("isArchived = 1")
+
+        if liveOnly:
+            cds.append("vdoId IS NOT NULL")
 
         if opts == "with_vectors":
             cds.append("isVectored = 1")
@@ -260,7 +266,7 @@ def countFiltered(usrId="", opts="all", search="", favOnly=False):
         return 0
 
 
-def getFiltered( usrId="", opts="all", search="", onlyFav=False, page=1, pageSize=24) -> list[models.Asset]:
+def getFiltered( usrId="", opts="all", search="", onlyFav=False, onlyArc=False, onlyLive=False, page=1, pageSize=24) -> list[models.Asset]:
     try:
         cds = []
         pms = []
@@ -271,6 +277,12 @@ def getFiltered( usrId="", opts="all", search="", onlyFav=False, page=1, pageSiz
 
         if onlyFav:
             cds.append("isFavorite = 1")
+
+        if onlyArc:
+            cds.append("isArchived = 1")
+
+        if onlyLive:
+            cds.append("vdoId IS NOT NULL")
 
         if opts == "with_vectors":
             cds.append("isVectored = 1")
