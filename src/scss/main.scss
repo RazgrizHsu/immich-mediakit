@@ -990,19 +990,6 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 }
 
 
-.pager-info {
-	display:inline-flex;
-
-	padding:2px 10px 4px 10px;
-	margin:0 0 0 10px;
-	font-size:0.8rem;
-
-	border-radius:6px;
-	background:#1F5C92;
-	border:rgba(195, 195, 195, 0.3) 1px solid;
-	box-shadow:0 0 2px rgba(195, 195, 195, 0.5);
-}
-
 .pager {
 	display:inline-flex;
 	list-style:none;
@@ -1070,6 +1057,44 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 		&:focus {
 			box-shadow:0 0 0 0.2rem rgba(102, 126, 234, 0.25);
 		}
+	}
+}
+
+.pager-info {
+	display:inline-flex;
+
+	padding:2px 10px 4px 10px;
+	margin:0 0 0 10px;
+	font-size:0.8rem;
+
+	border-radius:6px;
+	background:#1F5C92;
+	border:rgba(195, 195, 195, 0.3) 1px solid;
+	box-shadow:0 0 2px rgba(195, 195, 195, 0.5);
+}
+
+.pager-size {
+	display:inline-flex;
+
+	font-size:0.8rem;
+	padding:3px 6px 3px 6px;
+	margin: 0 0 0 5px;
+
+	border-radius:6px;
+	background:#1F5C92;
+	border:rgba(195, 195, 195, 0.3) 1px solid;
+	box-shadow:0 0 2px rgba(195, 195, 195, 0.5);
+
+	select {
+		font-size: 13px;
+		padding: 2px 3px 2px 3px;
+		text-align: center;
+	}
+
+	span {
+		text-wrap: nowrap;
+		vertical-align: middle;
+		margin: 3px 0 0 3px;
 	}
 }
 
