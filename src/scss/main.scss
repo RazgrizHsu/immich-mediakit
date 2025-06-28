@@ -1765,6 +1765,27 @@ $notify-colors: (
 	}
 }
 
+.poptip {
+	display: none;
+	z-index: 20;
+
+	> div {
+		padding: 8px 12px;
+		border-radius: 8px;
+		background: #333333cc;
+		box-shadow: 0 0 5px #fff;
+		white-space: nowrap;
+		min-width: fit-content;
+	}
+}
+
+.poptip-arrow {
+	position: absolute;
+	z-index: 21;
+	color: #333333cc;
+	font-size: 16px;
+}
+
 .js-notify {
     position: fixed;
     top: 50%;

@@ -695,6 +695,12 @@ h3 { font-size: 1.68rem; }
 
 .notify .alert { box-shadow: 0 0 3px 3px #FFFFFF66 !important; margin: 20px; text-shadow: 0 0 10px #1A1A1A; }
 
+.poptip { display: none; z-index: 20; }
+
+.poptip > div { padding: 8px 12px; border-radius: 8px; background: #333333cc; box-shadow: 0 0 5px #fff; white-space: nowrap; min-width: fit-content; }
+
+.poptip-arrow { position: absolute; z-index: 21; color: #333333cc; font-size: 16px; }
+
 .js-notify { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 10px; z-index: 9999; align-items: center; width: auto; height: auto; }
 
 .js-notify .jsnfy { border-radius: 6px; opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease-out, transform 0.3s ease-out; flex-grow: 0; flex-shrink: 0; width: fit-content; max-width: 80vw; }

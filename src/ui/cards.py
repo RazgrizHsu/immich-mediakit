@@ -8,7 +8,7 @@ from util import log
 from mod import models
 import db
 
-from ui import gvExif, gvExif
+from ui import gvEx
 
 lg = log.get(__name__)
 
@@ -35,156 +35,176 @@ def mk(ass: models.Asset, modSim=True):
     if isMain: css += " main"
     if isRels: css += " rels"
 
-    tipExif = None
-    if ass.jsonExif is not None:
-        try:
-            tipExif = gvExif.mkTipExif(ass.id, ass.jsonExif.toDict())
-        except Exception as e:
-            lg.error(f"Error processing EXIF data: {e}")
+    tipExif = gvEx.mkTipExif(ass.id, ass.jsonExif)
 
-    return dbc.Card([
-        dbc.CardHeader(
-            htm.Div([
-                dbc.Row([
-                    dbc.Col(
-                        dbc.Checkbox(label=f"#{ass.autoId}", value=False)
-                    ),
-                    dbc.Col(
-                        [
-                            htm.Span(f"Main", className="tag info lg ms-1")
-                        ]
-                        if isMain else
-                        [
-                            htm.Span("score:", className="tag sm info no-border"),
-                            htm.Span(f"{ass.vw.score:.5f}", className="tag lg ms-1")
-                        ]
-                        if isRels else
-                        [
-                            htm.Span("score: ", className="tag sm second no-border"),
-                            htm.Span(f"{ass.vw.score:.5f}", className="tag lg ms-1")
-                        ]
-                    )
-                ])
-            ], id={"type": "card-select", "id": ass.autoId}),
-            className=f"p-2 curP"
-        ) if modSim else None,
+    return htm.Div([
+        #------------------------------------------------------------------------
+        # dynamic
+        #------------------------------------------------------------------------
         htm.Div([
+            htm.Div([
+                htm.Div([
+                    htm.Li(alb.albumName, className="tag album") for alb in (ex.albs if ex and ex.albs else [])
+                ])
+            ], className="poptip", id=f'albs-{ass.autoId}') if ex and ex.albs else None,
 
             htm.Div([
-                htm.Video(
-                    src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
-                    id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
-                    className="livephoto-video",
-                ),
-                htm.Img(
-                    src=imgSrc,
-                    id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
-                    className=f"card-img"
-                ),
-            ], className='view'),
-
+                htm.Div([
+                    htm.Li(tag.value, className="tag") for tag in (ex.tags if ex and ex.tags else [])
+                ])
+            ], className="poptip", id=f'tags-{ass.autoId}') if ex and ex.tags else None,
             htm.Div([
-                htm.Span(f"#{ass.autoId}", className="tag"),
-                htm.Span(f"SimOK!", className="tag info") if ass.simOk else None,
-            ], className="LT"),
+                htm.Div([
+                    htm.Li(fac.name, className="tag") for fac in (ex.facs if ex and ex.facs else [])
+                ])
+            ], className="poptip", id=f'facs-{ass.autoId}') if ex and ex.facs else None,
+        ], style={ 'display':'absolute' }),
+        #------------------------------------------------------------------------
+        dbc.Card([
+            dbc.CardHeader(
+                htm.Div([
+                    dbc.Row([
+                        dbc.Col(
+                            dbc.Checkbox(label=f"#{ass.autoId}", value=False)
+                        ),
+                        dbc.Col(
+                            [
+                                htm.Span(f"Main", className="tag info lg ms-1")
+                            ]
+                            if isMain else
+                            [
+                                htm.Span("score:", className="tag sm info no-border"),
+                                htm.Span(f"{ass.vw.score:.5f}", className="tag lg ms-1")
+                            ]
+                            if isRels else
+                            [
+                                htm.Span("score: ", className="tag sm second no-border"),
+                                htm.Span(f"{ass.vw.score:.5f}", className="tag lg ms-1")
+                            ]
+                        )
+                    ])
+                ], id={"type": "card-select", "id": ass.autoId}),
+                className=f"p-2 curP"
+            ) if modSim else None,
+
+            #------------------------------------------------------------------------
             htm.Div([
-                htm.Span(f"LivePhoto", className="tag blue livePhoto") if isLvPh else None,
-                htm.Span([
-                    htm.I(className='bi bi-images'),
-                    f'{len(ex.albs)}'
-                ], className='tag', **{}) if ex else None,
+                htm.Div([
+                    htm.Video(
+                        src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
+                        id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
+                        className="livephoto-video",
+                    ),
+                    htm.Img(
+                        src=imgSrc,
+                        id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
+                        className=f"card-img"
+                    ),
+                ], className='view'),
 
-                htm.Span([
-                    htm.I(className='bi bi-bookmark-check-fill'),
-                    f'{len(ex.tags)}'
-                ], className='tag') if ex else None,
+                htm.Div([
+                    htm.Span(f"#{ass.autoId}", className="tag"),
+                    htm.Span(f"SimOK!", className="tag info") if ass.simOk else None,
+                ], className="LT"),
+                htm.Div([
+                    htm.Span(f"LivePhoto", className="tag blue livePhoto") if isLvPh else None,
+                    htm.Span([
+                        htm.I(className='bi bi-images'),
+                        f'{len(ex.albs)}',
+                    ], className='tag', **{ 'data-tip-id': f'albs-{ass.autoId}' }) if ex else None, #type: ignore
 
-                htm.Span([
-                    htm.I(className='bi bi-person-bounding-box'),
-                    f'{len(ex.tags)}'
-                ], className='tag') if ex else None,
-            ], className="RT"),
-            htm.Div([
-            ], className="LB"),
-            htm.Div([
+                    htm.Span([
+                        htm.I(className='bi bi-bookmark-check-fill'),
+                        f'{len(ex.tags)}'
+                    ], className='tag', **{ 'data-tip-id': f'tags-{ass.autoId}' }) if ex else None, #type: ignore
 
-                htm.Span(f"{co.fmt.size(ass.jsonExif.fileSizeInByte)}", className="tag")
-                if ass.jsonExif else None,
-                htm.Span(f"{imgW} x {imgH}", className="tag lg"),
-            ], className="RB")
-        ], className="viewer"),
-        dbc.CardBody([
+                    htm.Span([
+                        htm.I(className='bi bi-person-bounding-box'),
+                        f'{len(ex.facs)}'
+                    ], className='tag', **{ 'data-tip-id': f'facs-{ass.autoId}' }) if ex else None, #type: ignore
+                ], className="RT"),
+                htm.Div([
+                ], className="LB"),
+                htm.Div([
 
-            dbc.Row([
-                htm.Span("id"), htm.Span(f"{ass.id}", className="tag"),
-                htm.Span("device"), htm.Span(f"{ass.deviceId}", className="tag second txt-c"),
-                htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="tag second"),
-                htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="tag second"),
+                    htm.Span(f"{co.fmt.size(ass.jsonExif.fileSizeInByte)}", className="tag")
+                    if ass.jsonExif else None,
+                    htm.Span(f"{imgW} x {imgH}", className="tag lg"),
+                ], className="RB")
+            ], className="viewer"),
+            dbc.CardBody([
 
-                *([ htm.Span("livePhoto"), htm.Span(f"{ass.pathVdo}", className="tag blue"), ] if isLvPh else []),
-                *([ htm.Span("live VdoId"), htm.Span(f"{ass.vdoId}", className="tag blue"), ] if isLvPh else []),
+                dbc.Row([
+                    htm.Span("id"), htm.Span(f"{ass.id}", className="tag"),
+                    htm.Span("device"), htm.Span(f"{ass.deviceId}", className="tag second txt-c"),
+                    htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="tag second"),
+                    htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="tag second"),
 
-            ], class_name="grid"
-            ) if db.dto.showGridInfo else None,
-            htm.Div([
-                tipExif,
+                    *([ htm.Span("livePhoto"), htm.Span(f"{ass.pathVdo}", className="tag blue"), ] if isLvPh else []),
+                    *([ htm.Span("live VdoId"), htm.Span(f"{ass.vdoId}", className="tag blue"), ] if isLvPh else []),
 
-                htm.Span('resolved ✅', className='tag') if ass.simOk else None,
-                htm.Span('❤️', className='tag') if ass.isFavorite else None,
-                htm.Span("exif", className='tag blue', id={'type':'exif-badge', 'index': ass.id}) if ass.jsonExif else None,
-                #                dbc.Badge(
-                #     "", color="danger", className="ms-1"
-                # ) if isFav else None,
-                # dbc.Badge(
-                #     f"", color="secondary", className="ms-1"
-                # ) if ass.simOk else None,
-                #
-                # htm.Span([
-                #     htm.I(className='bi bi-images'),
-                #     f'{len(ex.albs)}'
-                # ], className='tag') if ex else None,
-                #
-                # htm.Span([
-                #     htm.I(className='bi bi-bookmark-check-fill'),
-                #     f'{len(ex.tags)}'
-                # ], className='tag') if ex else None,
-                #
-                # htm.Span([
-                #     htm.I(className='bi bi-person-bounding-box'),
-                #     f'{len(ex.tags)}'
-                # ], className='tag') if ex else None,
+                ], class_name="grid"
+                ) if db.dto.showGridInfo else None,
+                htm.Div([
+                    tipExif,
 
-
-                # htm.Span(f'', className=''),
-
-
-            ], className=f'tagbox'),
-
-            # dbc.Row([
-            #     htm.Table( htm.Tbody(gvExif.mkExifRows(ass)) , className="exif"),
-            # ]) if db.dto.showGridInfo else None,
-
-            htm.Div([
-
-
-                dcc.Link(
-                    f"Find Similar #{ass.autoId}",
-                    href=f"/{ks.pg.similar}/{ass.autoId}",
-                    className="btn btn-primary btn-sm w-76 me-2"
-                ) if canFnd else None,
-
-
-                dcc.Link(
-                    htm.I(className='bi bi-trash'),
-                    href=f"#{ass.autoId}",
-                    className="btn btn-danger btn-sm w-20"
-                ) if canFnd else None,
-
-            ], className='m-2') if not modSim else None,
+                    htm.Span('resolved ✅', className='tag') if ass.simOk else None,
+                    htm.Span('❤️', className='tag') if ass.isFavorite else None,
+                    htm.Span("exif", className='tag blue', id={'type':'exif-badge', 'index': ass.id}) if ass.jsonExif else None,
+                    #                dbc.Badge(
+                    #     "", color="danger", className="ms-1"
+                    # ) if isFav else None,
+                    # dbc.Badge(
+                    #     f"", color="secondary", className="ms-1"
+                    # ) if ass.simOk else None,
+                    #
+                    # htm.Span([
+                    #     htm.I(className='bi bi-images'),
+                    #     f'{len(ex.albs)}'
+                    # ], className='tag') if ex else None,
+                    #
+                    # htm.Span([
+                    #     htm.I(className='bi bi-bookmark-check-fill'),
+                    #     f'{len(ex.tags)}'
+                    # ], className='tag') if ex else None,
+                    #
+                    # htm.Span([
+                    #     htm.I(className='bi bi-person-bounding-box'),
+                    #     f'{len(ex.tags)}'
+                    # ], className='tag') if ex else None,
 
 
-        ], className="p-0"),
-    ], className=css)
+                    # htm.Span(f'', className=''),
+
+
+                ], className=f'tagbox'),
+
+                # dbc.Row([
+                #     htm.Table( htm.Tbody(gvEx.mkExifRows(ass)) , className="exif"),
+                # ]) if db.dto.showGridInfo else None,
+
+                htm.Div([
+
+
+                    dcc.Link(
+                        f"Find Similar #{ass.autoId}",
+                        href=f"/{ks.pg.similar}/{ass.autoId}",
+                        className="btn btn-primary btn-sm w-76 me-2"
+                    ) if canFnd else None,
+
+
+                    dcc.Link(
+                        htm.I(className='bi bi-trash'),
+                        href=f"#{ass.autoId}",
+                        className="btn btn-danger btn-sm w-20"
+                    ) if canFnd else None,
+
+                ], className='m-2') if not modSim else None,
+
+
+            ], className="p-0"),
+        ], className=css)
+    ])
 
 
 

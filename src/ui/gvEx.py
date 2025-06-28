@@ -1,7 +1,9 @@
+from typing import Optional
 import dash.html as htm
 import dash_bootstrap_components as dbc
 from util import log
 from conf import ks, co
+from mod import models
 
 lg = log.get(__name__)
 
@@ -56,10 +58,10 @@ def mkExifGrid( dicExif:dict ):
     return table
 
 
-def mkTipExif(assId, dicExif: dict):
+def mkTipExif(assId, dicExif: Optional[models.AssetExif]):
     if not dicExif: return None
 
-    table = mkExifGrid(dicExif)
+    table = mkExifGrid(dicExif.toDict())
 
     if len(table) > 0:
         return dbc.Tooltip(

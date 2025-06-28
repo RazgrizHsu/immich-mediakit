@@ -4,7 +4,7 @@ from dsh import ccbk, cbkFn
 
 from conf import ks
 from mod import models
-from ui import gvExif
+from ui import gvEx
 from util import log
 
 
