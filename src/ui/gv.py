@@ -7,7 +7,7 @@ from mod import models
 
 lg = log.get(__name__)
 
-from ui import gvExif, cards
+from ui import gvEx, cards
 
 
 def mkGrd(assets: list[models.Asset], minW=230, onEmpty=None, maker=cards.mk):
