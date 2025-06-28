@@ -618,17 +618,21 @@ h3 { font-size: 1.68rem; }
 
 .card.sim .viewer img:hover, .card.sim .viewer video:hover { opacity: 1; transform: scale(1.02); transition: all 0.3s ease; cursor: pointer; box-shadow: 0 0 10px white; }
 
+.card.sim .viewer video { z-index: 2; }
+
 .card.sim .viewer i { margin-right: 4px; }
 
 .card.sim .viewer > div { z-index: 2; }
 
-.card.sim .viewer > div.LT { position: absolute; top: 5px; left: 5px; display: flex; justify-content: start; }
+.card.sim .viewer > div span, .card.sim .viewer > div div { pointer-events: auto; }
 
-.card.sim .viewer > div.RT { position: absolute; top: 5px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; }
+.card.sim .viewer > div.LT { position: absolute; top: 5px; left: 5px; display: flex; justify-content: start; pointer-events: none; }
 
-.card.sim .viewer > div.LB { position: absolute; bottom: 5px; left: 5px; display: flex; justify-content: start; }
+.card.sim .viewer > div.RT { position: absolute; top: 5px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
 
-.card.sim .viewer > div.RB { position: absolute; bottom: 5px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; }
+.card.sim .viewer > div.LB { position: absolute; bottom: 5px; left: 5px; display: flex; justify-content: start; pointer-events: none; }
+
+.card.sim .viewer > div.RB { position: absolute; bottom: 5px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
 
 .card.sim .grid { display: grid; grid-template-columns: 20% 80%; gap: 2px 2px; margin: 5px 10px; padding: 0px; }
 
@@ -649,6 +653,12 @@ h3 { font-size: 1.68rem; }
 .txt-sm { font-size: 0.75rem !important; }
 
 .txt-smx { font-size: 0.6rem !important; }
+
+.txt-c { text-align: center; }
+
+.txt-r { text-align: right; }
+
+.txt-l { text-align: left; }
 
 /*======================== DivTip ========================*/
 .divtip { position: relative; }

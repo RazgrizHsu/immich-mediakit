@@ -90,12 +90,17 @@ def mdl_OnClick(nclk_ok, nclk_no, dta_mdl, dta_nfy):
         mdl.ok = True
 
         if mdl.cmd:
-            tsk = mdl.mkTsk()
-            if not tsk:
-                lg.error(f"[modal] Failed to create task from modal")
-                tsk = models.Tsk()
-            else:
-                lg.info(f"[modal] Created task: id[{tsk.id}] cmd[{tsk.cmd}]")
+            try:
+                tsk = mdl.mkTsk()
+                if not tsk:
+                    lg.error(f"[modal] Failed to create task from modal")
+                    tsk = models.Tsk()
+                else:
+                    lg.info(f"[modal] Created task: id[{tsk.id}] cmd[{tsk.cmd}]")
+            except Exception as e:
+                lg.error(f'[mdl] create failed, {str(e)}, mdl[{mdl}]')
+        else:
+            lg.warn(f'[mdl] non cmd: {mdl}')
 
         mdl.reset()
 

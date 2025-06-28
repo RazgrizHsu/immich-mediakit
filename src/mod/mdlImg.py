@@ -225,11 +225,11 @@ def mdlImg_OnImgPopClicked(clks, dta_mdl):
     trigIdx = ctx.triggered_id
     if isinstance(trigIdx, dict) and "aid" in trigIdx:
         aid = trigIdx["aid"]
-        # lg.info(f"[mdlImg] clicked, assId[{assId}]")
+        lg.info(f"[mdlImg] clicked, aid[{aid}]")
 
         if aid:
-            mdl.isMulti = False
             mdl.open = True
+            mdl.isMulti = False
             mdl.imgUrl = f"/api/img/{aid}?q=preview"
 
     return mdl.toDict()
@@ -264,8 +264,8 @@ def mdlImg_OnImgPopMultiClicked(clks, dta_mdl, dta_now):
 
         if aid and now.sim.assCur:
             mdl.open = True
-            mdl.imgUrl = f"/api/img/{aid}?q=preview"
             mdl.isMulti = True
+            mdl.imgUrl = f"/api/img/{aid}?q=preview"
             mdl.curIdx = next((i for i, ass in enumerate(now.sim.assCur) if ass.autoId == aid), 0)
 
     return mdl.toDict()

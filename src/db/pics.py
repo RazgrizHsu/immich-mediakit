@@ -6,7 +6,7 @@ from typing import Optional, List
 
 from conf import envs
 from mod import models
-from mod.bse.baseModel import BaseDictModel
+from mod.models import BaseDictModel
 from util import log
 from util.err import mkErr, tracebk
 from db import psql

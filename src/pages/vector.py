@@ -223,7 +223,7 @@ def vec_RunModal(nclk_proc, nclk_clear, photoQ, dta_now, dta_cnt, dta_mdl, dta_t
 import imgs
 from mod.models import IFnProg
 
-def vec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def vec_ToVec(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     msg = "[vec] Processing successful"
 
@@ -284,7 +284,7 @@ def vec_ToVec(doReport: IFnProg, sto: tskSvc.ITaskStore):
             raise RuntimeError(msg)
 
 
-def vec_Clear(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def vec_Clear(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     msg = "[AssetVec] Clearing successful"
 

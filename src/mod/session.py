@@ -2,6 +2,7 @@ from typing import Any
 from dsh import htm, dcc
 
 from db import dto
+from mod.models.base import BaseDictModel
 from util import log
 from mod import models
 from conf import ks
@@ -13,6 +14,7 @@ def render():
     items: list[Any] = []
 
     def mk(kid, dta):
+        if isinstance(dta, BaseDictModel): dta = dta.toDict()
         sto = dcc.Store(
             id=kid,
             storage_type='session',  # memory, local, session
@@ -42,14 +44,15 @@ def render():
     dto.thMin = co.vad.float(dto.thMin, 0.93, mi=0.50, mx=0.99)
 
 
+    mk(ks.sto.pgSim, models.PgSim())
 
-    mk(ks.sto.now, now.toDict())
-    mk(ks.sto.nfy, nfy.toDict())
-    mk(ks.sto.tsk, tsk.toDict())
-    mk(ks.sto.mdl, mdl.toDict())
-    mk(ks.sto.cnt, cnt.toDict())
-    mk(ks.sto.ste, ste.toDict())
-    mk(ks.sto.sys, sys.toDict())
+    mk(ks.sto.now, now)
+    mk(ks.sto.nfy, nfy)
+    mk(ks.sto.tsk, tsk)
+    mk(ks.sto.mdl, mdl)
+    mk(ks.sto.cnt, cnt)
+    mk(ks.sto.ste, ste)
+    mk(ks.sto.sys, sys)
 
 
     items.append(htm.Div(id=ks.sto.init, children='init'))

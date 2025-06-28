@@ -1406,6 +1406,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			width:100%;
 		}
 
+
 		img, video {
 			position: absolute;
 			object-fit:contain;
@@ -1423,12 +1424,17 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 				box-shadow:0 0 10px rgba(255, 255, 255, 1);
 			}
 		}
+		video {
+			z-index: 2
+		}
 
 		i { margin-right:4px }
 
 		//floating on img
 		> div {
 			z-index:2;
+
+			span, div {pointer-events: auto}
 		}
 		> div.LT {
 			position:absolute;
@@ -1436,6 +1442,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			left:5px;
 			display:flex;
 			justify-content:start;
+			pointer-events: none;
 		}
 		> div.RT {
 			position:absolute;
@@ -1444,6 +1451,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			display:flex;
 			flex-direction:column;
 			align-items:flex-end;
+			pointer-events: none;
 		}
 		> div.LB {
 			position:absolute;
@@ -1451,6 +1459,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			left:5px;
 			display:flex;
 			justify-content:start;
+			pointer-events: none;
 		}
 		> div.RB {
 			position:absolute;
@@ -1459,6 +1468,7 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 			display:flex;
 			flex-direction:column;
 			align-items:flex-end;
+			pointer-events: none;
 		}
 
 	}
@@ -1521,6 +1531,9 @@ $spac:($pad * 2) + ($gx*2) + $sideW + 10px;
 .txt {
 	&-sm { font-size:0.75rem !important }
 	&-smx { font-size:0.6rem !important }
+	&-c { text-align:center }
+	&-r { text-align:right }
+	&-l { text-align:left }
 }
 
 /*======================== DivTip ========================*/

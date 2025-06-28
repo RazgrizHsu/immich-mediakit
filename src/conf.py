@@ -145,6 +145,8 @@ class cmds:
         selRm = co.tit('sim_selRm', desc='Delete selected assets')
         allOk = co.tit('sim_allOk', desc='Reslove All assets')
         allRm = co.tit('sim_allRm', desc='Delete All assets')
+    class view(co.to):
+        assDel = co.tit('view_AssDel',desc='Delete asset')
 
 class ks:
     title = "Immich-MediaKit"
@@ -157,7 +159,7 @@ class ks:
         fetch = co.tit('fetch', 'Fetch', cmds.fetch.dict(), desc='Get photo asset from Immich')
         vector = co.tit('vector', 'Vectors', cmds.vec.dict(), desc='Process to generate vectors for similarity calculations')
         similar = co.tit('similar', 'Similar', cmds.sim.dict(), desc='Find similar photos based on settings')
-        view = co.tit('view', 'View', desc='Use the filters and sorting options to customize your view')
+        view = co.tit('view', 'View', cmds.view.dict(), desc='Use the filters and sorting options to customize your view')
         setting = co.tit('settings', 'Settings', desc='system settings')
 
 
@@ -190,6 +192,8 @@ class ks:
         cnt = 'store-count'
         ste = 'store-state'
         sys = 'store-sys'
+
+        pgSim = 'sto-pg-sim'
 
     class defs:
         exif = {
