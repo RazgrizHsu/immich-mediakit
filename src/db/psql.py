@@ -691,33 +691,13 @@ def fetchExInfos(assetIds: List[str]) -> Dict[str, models.AssetExInfo]:
                     """
                     cursor.execute(albSql, (chunk,))
                     albRows = cursor.fetchall()
-                    lg.info(f"Album query returned {len(albRows)} rows for chunk {chunk}")
+                    # lg.info(f"Album query returned {len(albRows)} rows for chunk {chunk}")
 
                     for row in albRows:
                         assetId = str(row['assetsId']).strip()
                         if assetId in rst:
                             albData = {k: v for k, v in row.items() if k != 'assetsId'}
                             rst[assetId].albs.append(models.Album.fromDic(albData))
-
-                # Fetch faces in chunks
-                for i in range(0, len(assetIds), szChunk):
-                    chunk = assetIds[i:i + szChunk]
-                    facSql = """
-                    Select af."assetId", af.id, af."personId", p.name, p."ownerId",
-                           af."imageWidth", af."imageHeight", af."boundingBoxX1", af."boundingBoxY1",
-                           af."boundingBoxX2", af."boundingBoxY2", af."sourceType"
-                    From asset_faces af
-                    Join person p On af."personId" = p.id
-                    Where af."assetId" = ANY(%s) And af."deletedAt" Is Null
-                    """
-                    cursor.execute(facSql, (chunk,))
-                    facRows = cursor.fetchall()
-
-                    for row in facRows:
-                        assetId = str(row['assetId']).strip()
-                        if assetId in rst:
-                            facData = {k: v for k, v in row.items() if k != 'assetId'}
-                            rst[assetId].facs.append(models.AssetFace.fromDic(facData))
 
                 # Fetch tags in chunks
                 for i in range(0, len(assetIds), szChunk):
@@ -736,6 +716,27 @@ def fetchExInfos(assetIds: List[str]) -> Dict[str, models.AssetExInfo]:
                         if assetId in rst:
                             tagData = {k: v for k, v in row.items() if k != 'assetsId'}
                             rst[assetId].tags.append(models.Tags.fromDic(tagData))
+
+                # Fetch faces in chunks
+                for i in range(0, len(assetIds), szChunk):
+                    chunk = assetIds[i:i + szChunk]
+                    facSql = """
+                    Select af."assetId", af.id, af."personId", p.name, p."ownerId",
+                           af."imageWidth", af."imageHeight", af."boundingBoxX1", af."boundingBoxY1",
+                           af."boundingBoxX2", af."boundingBoxY2", af."sourceType"
+                    From asset_faces af
+                    Join person p On af."personId" = p.id
+                    Where p.name != Null And af."assetId" = ANY(%s) And af."deletedAt" Is Null
+                    """
+                    cursor.execute(facSql, (chunk,))
+                    facRows = cursor.fetchall()
+
+                    for row in facRows:
+                        assetId = str(row['assetId']).strip()
+                        if assetId in rst:
+                            facData = {k: v for k, v in row.items() if k != 'assetId'}
+                            rst[assetId].facs.append(models.AssetFace.fromDic(facData))
+
 
                 return rst
 

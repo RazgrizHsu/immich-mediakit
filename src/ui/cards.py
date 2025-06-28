@@ -94,7 +94,7 @@ def mk(ass: models.Asset, modSim=True):
                         src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
                         id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
                         className="livephoto-video",
-                    ),
+                    ) if ass.vdoId else None,
                     htm.Img(
                         src=imgSrc,
                         id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
@@ -148,20 +148,14 @@ def mk(ass: models.Asset, modSim=True):
                 htm.Div([
                     tipExif,
 
-                    htm.Span('resolved ✅', className='tag') if ass.simOk else None,
+                    htm.Span('✅ resolved', className='tag') if ass.simOk else None,
                     htm.Span('❤️', className='tag') if ass.isFavorite else None,
                     htm.Span("exif", className='tag blue', id={'type':'exif-badge', 'index': ass.id}) if ass.jsonExif else None,
-                    #                dbc.Badge(
-                    #     "", color="danger", className="ms-1"
-                    # ) if isFav else None,
-                    # dbc.Badge(
-                    #     f"", color="secondary", className="ms-1"
-                    # ) if ass.simOk else None,
                     #
-                    # htm.Span([
-                    #     htm.I(className='bi bi-images'),
-                    #     f'{len(ex.albs)}'
-                    # ], className='tag') if ex else None,
+                    htm.Span([
+                        htm.I(className='bi bi-archive-fill'),
+                        f'archived'
+                    ], className='tag info') if ass.isArchived else None,
                     #
                     # htm.Span([
                     #     htm.I(className='bi bi-bookmark-check-fill'),

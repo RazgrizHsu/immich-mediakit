@@ -1,7 +1,7 @@
 from typing import List, Optional, Callable, Any
 import json
 
-from dsh import htm, dbc, dcc, cbk, out, inp, ste, ctx, ALL
+from dsh import htm, dbc, dcc, cbk, out, inp, ste, ctx, ALL, noUpd
 from util import log
 from mod import models
 
@@ -15,6 +15,12 @@ SYM_NEXT = "›"
 SYM_LAST = "››"
 SYM_ELLIPSIS = "…"
 
+optPageSize = [
+    {"label": "15", "value": 15},
+    {"label": "25", "value": 25},
+    {"label": "50", "value": 50},
+    {"label": "100", "value": 100}
+]
 
 class id:
     @staticmethod
@@ -25,7 +31,7 @@ class id:
 def createStore(
     pgId: str,
     page: int = 1,
-    size: int = 20,
+    size: int = 25,
     total: int = 0,
 ) -> List:
     """
@@ -47,7 +53,14 @@ def createStore(
     ]
 
 
-def createPager(pgId: str, idx: int = 0, className: Optional[str] = None, showInfo: bool = True, avFirstLast: bool = True, avPrevNext: bool = True, btnSize: int = 7, page: int = 1, size: int = 20, total: int = 0) -> List:
+def createPager(
+        pgId: str, idx = 0, className: Optional[str] = None,
+        showInfo = True,
+        avFirstLast = True, avPrevNext = True,
+        btnSize = 9,
+        showSizer = True,
+        page = 1, size = 20, total = 0
+) -> List:
     htms = _buildUI(
         pgrId=pgId,
         idx=idx,
@@ -57,7 +70,8 @@ def createPager(pgId: str, idx: int = 0, className: Optional[str] = None, showIn
         showInfo=showInfo,
         avFirstLast=avFirstLast,
         avPrevNext=avPrevNext,
-        btnSize=btnSize
+        btnSize=btnSize,
+        showSizer=showSizer
     )
 
     return [
@@ -67,7 +81,8 @@ def createPager(pgId: str, idx: int = 0, className: Optional[str] = None, showIn
                 "showInfo": showInfo,
                 "avFirstLast": avFirstLast,
                 "avPrevNext": avPrevNext,
-                "btnSize": btnSize
+                "btnSize": btnSize,
+                "showSizer": showSizer
             }
         ),
         htm.Div(
@@ -78,7 +93,7 @@ def createPager(pgId: str, idx: int = 0, className: Optional[str] = None, showIn
     ]
 
 
-def _buildUI(pgrId: str, idx: int, page: int, size: int, total: int, btnSize: int = 5, avFirstLast: bool = True, avPrevNext: bool = True, showInfo: bool = False) -> List:
+def _buildUI(pgrId: str, idx: int, page: int, size: int, total: int, btnSize: int = 5, avFirstLast: bool = True, avPrevNext: bool = True, showInfo: bool = False, showSizer: bool = False) -> List:
 
     totalPages = (total + size - 1) // size if total > 0 else 1
     page = max(1, min(page, totalPages))
@@ -216,15 +231,60 @@ def _buildUI(pgrId: str, idx: int, page: int, size: int, total: int, btnSize: in
             )
         )
 
+    if showSizer:
+        lg.info(f'[buildUI] create sizer value[{size}]')
+        components.append(
+            htm.Div([
+                dbc.Select(
+                    id={ 'type': f"pgr-{pgrId}-sizer", 'idx': idx},
+                    options=optPageSize, value=size), #type:ignore
+                htm.Span(' / page')
+            ], className="pager-size"),
+        )
+
+
     return components
 
 
 def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
     lg.info( f"[pager] registering callbacks for {pgrId}" )
 
-    # Handle page clicks
+    # Handle page size changes
     @cbk(
-        out(id.store(pgrId), "data"),
+        out(id.store(pgrId), "data", allow_duplicate=True),
+        inp({'type': f"pgr-{pgrId}-sizer", 'idx': ALL}, "value"),
+        ste(id.store(pgrId), "data"),
+        prevent_initial_call=True
+    )
+    def pager_onSizeChange(sizeVal, dtaPgr):
+        if sizeVal is None: return noUpd
+        trig = ctx.triggered
+        if not trig: return noUpd
+
+        sizeVal = int(trig[0]['value'])
+
+        pgr = models.Pager.fromDic(dtaPgr)
+        if DEBUG: lg.info(f"[pgr] Size changed old[{pgr.size}] to [{sizeVal}], page adjusted to {pgr.idx}/{pgr.cnt}")
+        oldSize = pgr.size
+        pgr.size = sizeVal
+
+        if oldSize != sizeVal:
+            totalPages = (pgr.cnt + pgr.size - 1) // pgr.size if pgr.cnt > 0 else 1
+            if pgr.idx > totalPages: pgr.idx = totalPages
+
+            if DEBUG: lg.info(f"[pgr] Size changed from {oldSize} to {sizeVal}, page adjusted to {pgr.idx}/{totalPages}")
+
+            if onPageChg:
+                try:
+                    onPageChg(pgr)
+                except Exception as e:
+                    lg.error(f"[pgr] Error in onPageChange callback: {e}")
+
+        return pgr.toDict()
+
+    # Handle page clicks and navigation
+    @cbk(
+        out(id.store(pgrId), "data", allow_duplicate=True),
         [
             inp({"type": f"pgr-{pgrId}-page", "page": ALL, "idx": ALL}, "n_clicks"),
             inp({"type": f"pgr-{pgrId}-nav", "action": ALL, "idx": ALL}, "n_clicks")
@@ -234,14 +294,19 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
     )
     def pager_onClick(clks_pg, clks_nv, dta_pgr):
         if not ctx.triggered:
+            lg.info(f'[pgr] no triggered!!!!!!!')
             return dta_pgr
+
+        if DEBUG: lg.info(f"[pgr] pager_onClick...")
+        triggered = ctx.triggered[0]
+        prop_id = triggered["prop_id"]
 
         # Check if any actual click happened (not just initialization)
         if all(click is None for click in clks_pg + clks_nv):
-            if DEBUG: lg.info(f"[pgr:{pgrId}] Ignoring initial callback with all None clicks")
+            if DEBUG: lg.info(f"[pgr] Ignoring initial callback with all None clicks")
             return dta_pgr
 
-        if DEBUG: lg.info(f"[pgr:{pgrId}] onClick triggered: {ctx.triggered}, page_clicks: {clks_pg}, nav_clicks: {clks_nv}")
+        if DEBUG: lg.info(f"[pgr] onClick triggered: {ctx.triggered}, page_clicks: {clks_pg}, nav_clicks: {clks_nv}")
 
         pgr = models.Pager.fromDic(dta_pgr)
 
@@ -250,10 +315,6 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
             pgr.idx = 1
 
         totalPages = (pgr.cnt + pgr.size - 1) // pgr.size if pgr.cnt > 0 else 1
-
-        triggered = ctx.triggered[0]
-        prop_id = triggered["prop_id"]
-
 
         # Check if it's a page click or nav click
         if f"pgr-{pgrId}-page" in prop_id:
@@ -281,14 +342,14 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
         # Update pgr
         pgr.idx = newPage
 
-        if DEBUG: lg.info(f"[pgr:{pgrId}] Page changed to {newPage}/{totalPages}")
+        if DEBUG: lg.info(f"[pgr] Page changed to {newPage}/{totalPages}")
 
         # Call custom callback if provided
         if onPageChg:
             try:
                 onPageChg(pgr)
             except Exception as e:
-                lg.error(f"[pgr:{pgrId}] Error in onPageChange callback: {e}")
+                lg.error(f"[pgr] Error in onPageChange callback: {e}")
 
         return pgr.toDict()
 
@@ -306,20 +367,20 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
     )
     def pager_updateUI(dta_pgr, dta_bars):
 
-        if DEBUG: lg.info(f"[pgr:{pgrId}] updateUI data[{dta_pgr}] bar count[{len(dta_bars)}]")
+        if DEBUG: lg.info(f"[pgr:uui] data[{dta_pgr}] bar count[{len(dta_bars)}]")
 
         if not dta_pgr:
-            if DEBUG: lg.info(f"[pgr:{pgrId}] NoStore, RetEmpty")
+            if DEBUG: lg.info(f"[pgr] NoStore, RetEmpty")
             return [[] for _ in dta_bars]
 
         pgr = models.Pager.fromDic(dta_pgr)
-        if DEBUG: lg.info(f"[pgr:{pgrId}] pgr: page={pgr.idx}, size={pgr.size}, total={pgr.cnt}")
+        if DEBUG: lg.info(f"[pgr] page[{pgr.idx}] size[{pgr.size}] total[{pgr.cnt}]")
 
         results = []
         for idx, pgr_store in enumerate(dta_bars):
-            if DEBUG: lg.info(f"[pgr:{pgrId}] processing idx={idx}, pgr_store={pgr_store}")
+            if DEBUG: lg.info(f"[pgr] processing idx={idx}, pgr_store={pgr_store}")
             if not pgr_store:
-                if DEBUG: lg.info(f"[pgr:{pgrId}] idx={idx} has no pgr_store, appending empty")
+                if DEBUG: lg.info(f"[pgr] idx[{idx}] has no pgr_store, appending empty")
                 results.append([])
                 continue
 
@@ -332,10 +393,11 @@ def regCallbacks(pgrId: str, onPageChg: Optional[Callable] = None):
                 showInfo=pgr_store.get("showInfo", False),
                 avFirstLast=pgr_store.get("avFirstLast", True),
                 avPrevNext=pgr_store.get("avPrevNext", True),
-                btnSize=pgr_store.get("btnSize", 5)
+                btnSize=pgr_store.get("btnSize", 5),
+                showSizer=pgr_store.get("showSizer", False)
             )
             results.append(ui_components)
 
         return results
 
-    if DEBUG: lg.info(f"[pgr:{pgrId}] Callbacks registered with pattern matching")
+    if DEBUG: lg.info(f"[pgr] Callbacks registered with pattern matching")

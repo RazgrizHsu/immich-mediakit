@@ -35,6 +35,7 @@ const TskWS = {
 	{
 		if ( this.isConnecting || this.isConnected ) return
 
+		this.cleanup()
 		this.isConnecting = true
 
 		console.log( `[wst] Connecting to server...` )
@@ -58,7 +59,7 @@ const TskWS = {
 			}
 			console.log(`[wst] Connecting...`)
 
-			this.socket = io(wsUrl, { transports: ['websocket', 'polling'], upgrade: true, reconnection: true })
+			this.socket = io(wsUrl, { transports: ['websocket', 'polling'], upgrade: true, reconnection: false })
 
 			this.socket.on('connect', this.onConn.bind(this));
 			this.socket.on('task_message', this.onMsg.bind(this));
@@ -69,6 +70,16 @@ const TskWS = {
 		{
 			console.error( '[wst] WebSocket creation failed:', error )
 			this.onError( error.message )
+		}
+	},
+
+	cleanup()
+	{
+		if ( this.socket )
+		{
+			this.socket.removeAllListeners()
+			this.socket.disconnect()
+			this.socket = null
 		}
 	},
 
@@ -169,6 +180,8 @@ const TskWS = {
 	disconnect()
 	{
 		this.clearCnnTimeout()
-		if ( this.socket ) this.socket.disconnect()
+		this.cleanup()
+		this.isConnecting = false
+		this.isConnected = false
 	}
 }
