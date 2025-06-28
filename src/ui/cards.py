@@ -28,7 +28,7 @@ def mk(ass: models.Asset, modSim=True):
 
     isMain = ass.vw.isMain
     isRels = ass.vw.isRelats
-    isLvPh = ass.vdoId
+    isLive = ass.vdoId is not None
     canFnd = ass.simOk is 0
 
     css = f"h-100 sim {cssIds} {'' if modSim else 'view'}"
@@ -36,6 +36,8 @@ def mk(ass: models.Asset, modSim=True):
     if isRels: css += " rels"
 
     tipExif = gvEx.mkTipExif(ass.id, ass.jsonExif)
+
+    imgPopId = {"type": "img-pop-multi", "aid": ass.autoId} if modSim else {"type": "img-pop", "aid": ass.autoId}
 
     return htm.Div([
         #------------------------------------------------------------------------
@@ -92,12 +94,12 @@ def mk(ass: models.Asset, modSim=True):
                 htm.Div([
                     htm.Video(
                         src=f"/api/livephoto/{ass.autoId}", loop=True, muted=True, autoPlay=True,
-                        id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
-                        className="livephoto-video",
-                    ) if ass.vdoId else None,
+                        id=imgPopId,
+                        className="livephoto",
+                    ) if isLive else None,
                     htm.Img(
                         src=imgSrc,
-                        id={"type": "img-pop", "aid": ass.autoId}, n_clicks=0,
+                        id=imgPopId,
                         className=f"card-img"
                     ),
                 ], className='view'),
@@ -107,7 +109,7 @@ def mk(ass: models.Asset, modSim=True):
                     htm.Span(f"SimOK!", className="tag info") if ass.simOk else None,
                 ], className="LT"),
                 htm.Div([
-                    htm.Span(f"LivePhoto", className="tag blue livePhoto") if isLvPh else None,
+                    htm.Span(f"LivePhoto", className="tag blue livePhoto") if isLive else None,
                     htm.Span([
                         htm.I(className='bi bi-images'),
                         f'{len(ex.albs)}',
@@ -140,8 +142,8 @@ def mk(ass: models.Asset, modSim=True):
                     htm.Span("FileName"), htm.Span(f"{ass.originalFileName}", className="tag second"),
                     htm.Span("CreateAt"), htm.Span(f"{ass.fileCreatedAt}", className="tag second"),
 
-                    *([ htm.Span("livePhoto"), htm.Span(f"{ass.pathVdo}", className="tag blue"), ] if isLvPh else []),
-                    *([ htm.Span("live VdoId"), htm.Span(f"{ass.vdoId}", className="tag blue"), ] if isLvPh else []),
+                    *([ htm.Span("livePhoto"), htm.Span(f"{ass.pathVdo}", className="tag blue"), ] if isLive else []),
+                    *([ htm.Span("live VdoId"), htm.Span(f"{ass.vdoId}", className="tag blue"), ] if isLive else []),
 
                 ], class_name="grid"
                 ) if db.dto.showGridInfo else None,
@@ -167,6 +169,9 @@ def mk(ass: models.Asset, modSim=True):
                     #     f'{len(ex.tags)}'
                     # ], className='tag') if ex else None,
 
+                    htm.Span([ 'GIDs: ',
+                        *[htm.Span(i) for i in ass.simGIDs],
+                    ], className='tag info') if ass.simGIDs else None,
 
                     # htm.Span(f'', className=''),
 
@@ -179,21 +184,19 @@ def mk(ass: models.Asset, modSim=True):
 
                 htm.Div([
 
-
                     dcc.Link(
                         f"Find Similar #{ass.autoId}",
                         href=f"/{ks.pg.similar}/{ass.autoId}",
                         className="btn btn-primary btn-sm w-76 me-2"
                     ) if canFnd else None,
 
-
-                    dcc.Link(
+                    htm.Button(
                         htm.I(className='bi bi-trash'),
-                        href=f"#{ass.autoId}",
+                        id={'type': 'asset-del', 'aid':ass.autoId}, n_clicks=0,
                         className="btn btn-danger btn-sm w-20"
-                    ) if canFnd else None,
+                    ),
 
-                ], className='m-2') if not modSim else None,
+                ], className='m-2 txt-r') if not modSim else None,
 
 
             ], className="p-0"),

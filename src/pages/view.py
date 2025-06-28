@@ -1,6 +1,7 @@
 import db
+import json
 from conf import ks
-from dsh import dash, htm, dcc, cbk, dbc, inp, out, ste, getTrgId, noUpd
+from dsh import dash, htm, dcc, cbk, dbc, inp, out, ste, getTrgId, noUpd, ALL
 from mod import models
 from mod.models import Pager
 from ui import pager, gv
@@ -183,8 +184,8 @@ def vw_OnOptChg( usrId, opts, cbxFav, schKey, dta_pgr):
         inp(k.selFilter, "value"),
         inp(k.schKeyword, "value"),
         inp(k.cbxFav, "value"),
+        inp(ks.sto.cnt, "data"),
     ],
-    ste(ks.sto.cnt, "data"),
     prevent_initial_call="initial_duplicate"
 )
 def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
@@ -207,3 +208,75 @@ def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
     grid = gv.mkGrd(photos, maker=lambda a: gv.cards.mk(a, False) )
 
     return grid
+
+#========================================================================
+# Click Delete
+#========================================================================
+@cbk(
+    out(ks.sto.mdl, 'data', allow_duplicate=True),
+    inp({"type": "asset-del", "aid":ALL}, "n_clicks"),
+    ste(ks.sto.tsk, 'data'),
+    prevent_initial_call=True
+)
+def vw_OnDel( clks, dta_tsk ):
+
+    if not clks or not any(clks): return noUpd
+
+    tsk = models.Tsk.fromDic(dta_tsk)
+
+    if tsk.id: return noUpd
+    src = json.loads(getTrgId())
+    aid = src.get('aid')
+
+    lg.info(f'aid: {aid}')
+
+    mdl = models.Mdl()
+    mdl.id = ks.pg.view
+    mdl.cmd = ks.cmd.view.assDel
+    mdl.args = {'aid': aid}
+    mdl.msg = f"Are you sure delete Asset #{aid} ?"
+
+    return mdl.toDict()
+
+#------------------------------------------------------------------------
+#------------------------------------------------------------------------
+
+
+#========================================================================
+# task acts
+#========================================================================
+from mod import mapFns
+from mod.models import IFnProg
+
+#------------------------------------------------------------------------
+def onAssetDel(doReport: IFnProg, sto: models.ITaskStore):
+    nfy, cnt, tsk = sto.nfy, sto.cnt, sto.tsk
+
+    import db
+    import immich
+
+    try:
+
+        aid = tsk.args.get('aid')
+        msg = f"[Assets] Success delete #{aid}"
+        if not aid: raise RuntimeError(f'No AutoId to delete')
+
+        ass = db.pics.getByAutoId(aid)
+        db.pics.deleteBy([ass])
+        db.vecs.deleteBy([aid])
+        immich.trashByAssets([ass])
+
+        cnt.refreshFromDB()
+
+        return sto, msg
+    except Exception as e:
+        msg = f"Failed to clear user data: {str(e)}"
+        nfy.error(msg)
+        raise RuntimeError(msg)
+
+
+#========================================================================
+# Set up global functions
+#========================================================================
+mapFns[ks.cmd.view.assDel] = onAssetDel
+

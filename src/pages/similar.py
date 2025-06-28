@@ -9,7 +9,7 @@ from dsh import dash, htm, dcc, dbc, inp, out, ste, getTrgId, noUpd, ctx, ALL
 from dsh import cbk, ccbk, cbkFn
 from util import log
 from mod import mapFns, models, tskSvc
-from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk, Ste
+from mod.models import Mdl, Now, Cnt, Nfy, Pager, Tsk, Ste, PgSim
 
 from ui import pager, cardSets, gv
 
@@ -826,7 +826,7 @@ def sim_RunModal(
 from mod.models import IFnProg
 
 
-def queueAutoNext(sto: tskSvc.ITaskStore):
+def queueAutoNext(sto: models.ITaskStore):
     tsk = sto.tsk
 
     ass = db.pics.getAnyNonSim()
@@ -847,7 +847,7 @@ def queueAutoNext(sto: tskSvc.ITaskStore):
         # nfy.success([f"Auto-Find next: #{ass.autoId}"])
 
 
-def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_FindSimilar(doReport: IFnProg, sto: models.ITaskStore):
     from db import sim
 
     nfy, now, tsk = sto.nfy, sto.now, sto.tsk
@@ -947,7 +947,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 
-def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_ClearSims(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, tsk = sto.nfy, sto.now, sto.tsk
 
     try:
@@ -1001,7 +1001,7 @@ def sim_ClearSims(doReport: IFnProg, sto: tskSvc.ITaskStore):
 
 
 
-def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_SelectedDelete(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, ste = sto.nfy, sto.now, sto.ste
     try:
         assAlls = now.sim.assCur
@@ -1036,7 +1036,7 @@ def sim_SelectedDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
-def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_SelectedReslove(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, ste = sto.nfy, sto.now, sto.ste
     try:
         assAlls = now.sim.assCur
@@ -1073,7 +1073,7 @@ def sim_SelectedReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
-def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_AllReslove(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
     try:
         assets = now.sim.assCur
@@ -1102,7 +1102,7 @@ def sim_AllReslove(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 
-def sim_AllDelete(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def sim_AllDelete(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now = sto.nfy, sto.now
     try:
         assets = now.sim.assCur

@@ -2,6 +2,8 @@
 //------------------------------------------------------------------------
 // LivePhoto Management
 //------------------------------------------------------------------------
+const key = 'livephoto'
+const keyc = `.${key}`
 const LivePhoto = window.LivePhoto = {
 	hoveredVideo: null,
 	modalVideo: null,
@@ -9,24 +11,31 @@ const LivePhoto = window.LivePhoto = {
 	init()
 	{
 		this.setupVideoErrorHandling()
-		this.setupHover()
 		this.setupModalControls()
 	},
 
 	setupVideoErrorHandling()
 	{
-		const handleVideo = (video) => {
+		const handleVdoList = (video) => {
 
 			if (video.dataset.livephotoHandled) return
 			video.dataset.livephotoHandled = 'true'
 			video.addEventListener('error', () => {
-				// console.warn('[LivePhoto] load failed, hidden:', video.src)
+				console.warn('[LivePhoto] load failed, hidden:', video.src)
 
 				video.style.display = 'none'
-				const span = video.closest('.viewer').querySelector('.livePhoto')
+				const span = video.closest('.viewer').querySelector(`span.livePhoto`)
+				if(!span) {
+					console.warn(`not found ${keyc} in viewer`)
+					return
+				}
 				if(span) {
 					span.innerText = `LivePhoto (can't play)`
 					span.classList.add('red')
+				}
+				else {
+					span.innerText = `LivePhoto`
+					span.classList.remove('red')
 				}
 			})
 
@@ -36,15 +45,41 @@ const LivePhoto = window.LivePhoto = {
 			})
 		}
 
-		document.querySelectorAll('.livephoto-video').forEach(handleVideo)
+		const handleModalVideo = (video) => {
+			if (video.dataset.modalHandled) return
+			video.dataset.modalHandled = 'true'
 
-		const observer = new MutationObserver((mutations) => {
-			mutations.forEach(mutation => {
-				mutation.addedNodes.forEach(node => {
-					if (node.nodeType === 1) {
-						if (node.classList?.contains('livephoto-video')) handleVideo(node)
+			const modal = video.closest('#img-modal')
+			if (!modal) return
+
+			const img = modal.querySelector('img')
+			if (!img) return
+
+			video.style.display = 'none'
+			img.style.display = 'none'
+
+			video.addEventListener('canplay', () => {
+				video.style.display = 'block'
+				img.style.display = 'none'
+			}, { once: true })
+
+			video.addEventListener('error', () => {
+				video.style.display = 'none'
+				img.style.display = 'block'
+			}, { once: true })
+		}
+
+		document.querySelectorAll(keyc).forEach(handleVdoList)
+		document.querySelectorAll('#img-modal .livephoto video').forEach(handleModalVideo)
+
+		const observer = new MutationObserver((mus) => {
+			mus.forEach(mu => {
+				mu.addedNodes.forEach(node => {
+					if (node.nodeType == 1) {
+						if (node.classList?.contains(key)) handleVdoList(node)
 						if (node.querySelectorAll) {
-							node.querySelectorAll('.livephoto-video').forEach(handleVideo)
+							node.querySelectorAll(keyc).forEach(handleVdoList)
+							node.querySelectorAll('#img-modal .livephoto video').forEach(handleModalVideo)
 						}
 					}
 				})
@@ -52,38 +87,6 @@ const LivePhoto = window.LivePhoto = {
 		})
 
 		observer.observe(document.body, { childList: true, subtree: true })
-	},
-
-	setupHover()
-	{
-		document.addEventListener( 'mouseenter', ( e ) => {
-			const card = e.target.closest( '.card' )
-			if ( !card ) return
-
-			const livePhotoOverlay = card.querySelector( '.livephoto-overlay' )
-			if ( !livePhotoOverlay || livePhotoOverlay.style.display == 'none' ) return
-
-			const video = livePhotoOverlay.querySelector( '.livephoto-video' )
-			if ( video )
-			{
-				this.hoveredVideo = video
-				video.style.display = 'block'
-				video.play().catch( e => console.warn( 'Video play failed:', e ) )
-			}
-		}, true )
-
-		document.addEventListener( 'mouseleave', ( e ) => {
-			const card = e.target.closest( '.card' )
-			if ( !card ) return
-
-			if ( this.hoveredVideo )
-			{
-				this.hoveredVideo.pause()
-				this.hoveredVideo.currentTime = 0
-				this.hoveredVideo.style.display = 'none'
-				this.hoveredVideo = null
-			}
-		}, true )
 	},
 
 	setupModalControls()

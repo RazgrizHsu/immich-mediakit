@@ -285,7 +285,7 @@ from mod import mapFns
 from mod.models import IFnProg
 
 #------------------------------------------------------------------------
-def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def onFetchAssets(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
 
     try:
@@ -373,7 +373,7 @@ def onFetchAssets(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 #------------------------------------------------------------------------
-def onFetchClear(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def onFetchClear(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
 
     msg = "[Assets:Clear] Successfully cleared all assets"
@@ -418,7 +418,7 @@ def onFetchClear(doReport: IFnProg, sto: tskSvc.ITaskStore):
         raise RuntimeError(msg)
 
 #------------------------------------------------------------------------
-def onFetchReset(doReport: IFnProg, sto: tskSvc.ITaskStore):
+def onFetchReset(doReport: IFnProg, sto: models.ITaskStore):
     nfy, now, cnt = sto.nfy, sto.now, sto.cnt
 
     msg = "[Assets:Reset] Successfully"

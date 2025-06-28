@@ -15,7 +15,7 @@ const MdlImg = window.MdlImg = {
 		this.state.now = nowData
 		this.state.ste = steData
 
-		console.info( `[mdlImg] init ste, cntTotal[ ${ steData.cntTotal } ] selected( ${ steData.selectedIds.length } )[ ${ steData.selectedIds } ]` )
+		if (steData) console.info( `[mdlImg] init ste, cntTotal[ ${ steData.cntTotal } ] selected( ${ steData.selectedIds.length } )[ ${ steData.selectedIds } ]` )
 		return this
 	},
 
@@ -79,7 +79,7 @@ const MdlImg = window.MdlImg = {
 					)
 				)
 			}
-			else if ( mdl.imgUrl ) htms.push( R.mk( 'img', { src: mdl.imgUrl } ) )
+			if ( mdl.imgUrl ) htms.push( R.mk( 'img', { src: mdl.imgUrl } ) )
 
 			if ( ass )
 			{

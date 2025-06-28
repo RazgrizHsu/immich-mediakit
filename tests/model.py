@@ -7,8 +7,8 @@ from datetime import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
+from mod.models import Json, BaseDictModel
 from mod.models import Now, Usr, Nfy, Tsk, Mdl, Asset, AssetExif, SimInfo, Gws, TskStatus
-from mod.bse.baseModel import Json, BaseDictModel
 import db.pics as pics
 from util import log
 
@@ -528,39 +528,39 @@ class TestBaseDictModel(unittest.TestCase):
 
     def test_uuid_to_usr_conversion(self):
         import uuid
-        
+
         # Test 1: Create UUID and convert to string for Usr
         test_uuid = uuid.uuid4()
         usr = Usr(id=str(test_uuid), name="TestUser", email="test@example.com")
-        
+
         self.assertIsInstance(usr.id, str)
         self.assertEqual(usr.id, str(test_uuid))
-        
+
         # Test 2: Convert to dict and back
         usr_dict = usr.toDict()
         self.assertIsInstance(usr_dict["id"], str)
-        
+
         usr_restored = Usr.fromDic(usr_dict)
         self.assertIsInstance(usr_restored.id, str)
         self.assertEqual(usr_restored.id, str(test_uuid))
-        
+
         # Test 3: JSON serialization
         json_str = usr.toJson()
         usr_from_json = Usr.fromStr(json_str)
         self.assertIsInstance(usr_from_json.id, str)
         self.assertEqual(usr_from_json.id, str(test_uuid))
-        
+
         # Test 4: Multiple UUIDs
         uuid_list = [uuid.uuid4() for _ in range(5)]
         for test_uuid in uuid_list:
             usr = Usr(id=str(test_uuid), name=f"User-{test_uuid}", email=f"{test_uuid}@test.com")
             self.assertIsInstance(usr.id, str)
             self.assertEqual(usr.id, str(test_uuid))
-            
+
             # Verify round-trip conversion
             restored = Usr.fromStr(usr.toJson())
             self.assertEqual(restored.id, str(test_uuid))
-        
+
         # Test 5: UUID object in dict should be converted to str
         test_uuid = uuid.uuid4()
         dict_with_uuid = {
@@ -568,11 +568,11 @@ class TestBaseDictModel(unittest.TestCase):
             "name": "TestUser",
             "email": "test@example.com"
         }
-        
+
         usr_from_uuid_dict = Usr.fromDic(dict_with_uuid)
         self.assertIsInstance(usr_from_uuid_dict.id, str)
         self.assertEqual(usr_from_uuid_dict.id, str(test_uuid))
-        
+
         # Test 6: Verify it's actually converted, not just equal
         self.assertNotEqual(type(usr_from_uuid_dict.id), type(test_uuid))
         self.assertEqual(type(usr_from_uuid_dict.id), str)
@@ -582,7 +582,7 @@ class TestBaseDictModel(unittest.TestCase):
         asset_dict = {
             "autoId": "123",  # string to int
             "id": "test-asset",
-            "isVectored": "1",  # string to int  
+            "isVectored": "1",  # string to int
             "simOk": "0",     # string to int
             "jsonExif": {
                 "fNumber": "2.8",        # string to float
@@ -592,9 +592,9 @@ class TestBaseDictModel(unittest.TestCase):
                 "rating": "5"            # string to int
             }
         }
-        
+
         asset = Asset.fromDic(asset_dict)
-        
+
         # Verify numeric conversions
         self.assertIsInstance(asset.autoId, int)
         self.assertEqual(asset.autoId, 123)
@@ -602,7 +602,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset.isVectored, 1)
         self.assertIsInstance(asset.simOk, int)
         self.assertEqual(asset.simOk, 0)
-        
+
         # Verify nested object numeric conversions
         self.assertIsInstance(asset.jsonExif.fNumber, float)
         self.assertEqual(asset.jsonExif.fNumber, 2.8)
@@ -624,7 +624,7 @@ class TestBaseDictModel(unittest.TestCase):
             "assets": [
                 {
                     "autoId": "100",
-                    "id": "asset-1", 
+                    "id": "asset-1",
                     "originalFileName": "photo1.jpg",
                     "isVectored": "1",
                     "simInfos": [
@@ -639,7 +639,7 @@ class TestBaseDictModel(unittest.TestCase):
                     "simGIDs": ["10", "20", "30"]
                 },
                 {
-                    "autoId": "200", 
+                    "autoId": "200",
                     "id": "asset-2",
                     "originalFileName": "photo2.jpg",
                     "isVectored": "0",
@@ -650,14 +650,14 @@ class TestBaseDictModel(unittest.TestCase):
                 }
             ]
         }
-        
+
         mdl = Mdl.fromDic(mdl_dict)
-        
+
         # Verify basic fields
         self.assertEqual(mdl.id, "test-modal")
         self.assertFalse(mdl.ok)
         self.assertEqual(len(mdl.assets), 2)
-        
+
         # Verify first asset
         asset1 = mdl.assets[0]
         self.assertIsInstance(asset1, Asset)
@@ -666,7 +666,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset1.id, "asset-1")
         self.assertIsInstance(asset1.isVectored, int)
         self.assertEqual(asset1.isVectored, 1)
-        
+
         # Verify nested simInfos
         self.assertEqual(len(asset1.simInfos), 2)
         self.assertIsInstance(asset1.simInfos[0], SimInfo)
@@ -675,7 +675,7 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertIsInstance(asset1.simInfos[0].score, float)
         self.assertEqual(asset1.simInfos[0].score, 0.95)
         self.assertFalse(asset1.simInfos[0].isSelf)
-        
+
         # Verify nested jsonExif
         self.assertIsInstance(asset1.jsonExif, AssetExif)
         self.assertEqual(asset1.jsonExif.make, "Canon")
@@ -683,12 +683,12 @@ class TestBaseDictModel(unittest.TestCase):
         self.assertEqual(asset1.jsonExif.fNumber, 1.8)
         self.assertIsInstance(asset1.jsonExif.iso, int)
         self.assertEqual(asset1.jsonExif.iso, 200)
-        
+
         # Verify simGIDs list conversion
         self.assertEqual(len(asset1.simGIDs), 3)
         self.assertIsInstance(asset1.simGIDs[0], int)
         self.assertEqual(asset1.simGIDs, [10, 20, 30])
-        
+
         # Verify second asset
         asset2 = mdl.assets[1]
         self.assertIsInstance(asset2.autoId, int)

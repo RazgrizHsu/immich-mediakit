@@ -114,7 +114,7 @@ class NoUpdList(list):
         if not isinstance(vals, list): vals = [vals]
         for i, v in enumerate(vals):
             # Auto-convert BaseDictModel to dict
-            from mod.bse.baseModel import BaseDictModel
+            from mod.models import BaseDictModel
             if isinstance(v, BaseDictModel): v = v.toDict()
             if idx + i < len(result): result[idx + i] = v
         return result
