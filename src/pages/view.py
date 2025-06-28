@@ -21,6 +21,7 @@ class k:
     schKeyword = "inp-grid-search"
     cbxFav = "inp-favorites"
     cbxArc = "inp-archived"
+    cbxLive = "inp-livePhoto"
 
     grid = "div-photo-grid"
     pagerMain = "vg-pager-main"
@@ -77,6 +78,7 @@ def layout():
                     dbc.Col([
                         dbc.Checkbox(id=k.cbxFav, label="Favorites", value=False, className="mt-2"),
                         dbc.Checkbox(id=k.cbxArc, label="Archived", value=False, className="mt-2"),
+                        dbc.Checkbox(id=k.cbxLive, label="LivePhoto", value=False, className="mt-2"),
                     ], width=8),
                 ]),
 
@@ -149,11 +151,13 @@ def vw_Init(dta_init):
         inp(k.selFilter, "value"),
         inp(k.cbxFav, "value"),
         inp(k.schKeyword, "value"),
+        inp(k.cbxArc, "value"),
+        inp(k.cbxLive, "value"),
     ],
     ste(pager.id.store(k.pagerMain), "data"),
     prevent_initial_call=True
 )
-def vw_OnOptChg( usrId, opts, cbxFav, schKey, dta_pgr):
+def vw_OnOptChg( usrId, opts, cbxFav, schKey, cbxArc, cbxLive, dta_pgr):
     pgr = Pager.fromDic(dta_pgr)
 
     # Update total count based on filters
@@ -161,7 +165,9 @@ def vw_OnOptChg( usrId, opts, cbxFav, schKey, dta_pgr):
         usrId=usrId,
         opts=opts,
         search=schKey,
-        favOnly=cbxFav
+        favOnly=cbxFav,
+        arcOnly=cbxArc,
+        liveOnly=cbxLive
     )
 
     # Reset to page 1 when filter changes
@@ -184,11 +190,13 @@ def vw_OnOptChg( usrId, opts, cbxFav, schKey, dta_pgr):
         inp(k.selFilter, "value"),
         inp(k.schKeyword, "value"),
         inp(k.cbxFav, "value"),
+        inp(k.cbxArc, "value"),
+        inp(k.cbxLive, "value"),
         inp(ks.sto.cnt, "data"),
     ],
     prevent_initial_call="initial_duplicate"
 )
-def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
+def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, onlyArc, onlyLive, dta_cnt):
     if not dta_pgr: return noUpd
 
     cnt = models.Cnt.fromDic(dta_cnt)
@@ -197,7 +205,7 @@ def vw_Load(dta_pgr, usrId, filOpt, shKey, onlyFav, dta_cnt):
     if cnt.ass <= 0:
         return dbc.Alert("No photos available", color="secondary", className="text-center")
 
-    photos = db.pics.getFiltered(usrId, filOpt, shKey, onlyFav, pgr.idx, pgr.size)
+    photos = db.pics.getFiltered(usrId, filOpt, shKey, onlyFav, onlyArc, onlyLive, pgr.idx, pgr.size)
 
     if photos and len(photos) > 0:
         lg.info(f"[vg:load] Loaded {len(photos)} photos for page {pgr.idx}")
