@@ -77,6 +77,7 @@ const Ste = window.Ste = {
 		const cntSel = this.selectedIds.size
 		const cntAll = this.cntTotal
 		const cntDiff = cntAll - cntSel
+		if ( cntDiff <= 0 ) cntDiff = 0
 
 		const btnRm = document.getElementById( 'sim-btn-RmSel' )
 		const btnRS = document.getElementById( 'sim-btn-OkSel' )

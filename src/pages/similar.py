@@ -577,6 +577,7 @@ def sim_OnSwitchViewGroup(clks, dta_now):
         out(ks.sto.now, "data", allow_duplicate=True),
         out(ks.sto.mdl, "data", allow_duplicate=True),
         out(ks.sto.tsk, "data", allow_duplicate=True),
+        out(ks.sto.ste, "data", allow_duplicate=True),
     ],
     [
         inp(k.btnFind, "n_clicks"),
@@ -608,7 +609,7 @@ def sim_RunModal(
 ):
     if not clk_fnd and not clk_clr and not clk_rst and not clk_rm and not clk_rs and not clk_ok and not clk_ra:
         lg.info( f"[sim:RunModal] fnd[{clk_fnd}] clr[{clk_clr}] rst[{clk_rst}] rm[{clk_rm}] rs[{clk_rs}] ok[{clk_ok}] ra[{clk_ra}]" )
-        return noUpd.by(4)
+        return noUpd.by(5)
 
     trgId = getTrgId()
 
@@ -619,7 +620,7 @@ def sim_RunModal(
     nfy = Nfy.fromDic(dta_nfy)
     ste = Ste.fromDic(dta_ste)
 
-    retNow, retTsk = noUpd, noUpd
+    retNow, retTsk, retSte = noUpd, noUpd, noUpd
 
 
 
@@ -629,14 +630,14 @@ def sim_RunModal(
         for _, info in mgr.list().items():
             if info.status.value in ['pending', 'running']:
                 nfy.warn(f"Task already running, please wait for it to complete")
-                return noUpd.by(4).upd(0, nfy)
+                return noUpd.by(5).upd(0, nfy)
 
     if tsk.id:
         if mgr and mgr.getInfo(tsk.id):
             ti = mgr.getInfo(tsk.id)
             if ti and ti.status in ['pending', 'running']:
                 nfy.warn(f"[similar] Task already running: {tsk.id}")
-                return noUpd.by(4).upd(0, nfy)
+                return noUpd.by(5).upd(0, nfy)
             # lg.info(f"[similar] Clearing completed task: {tsk.id}")
             tsk.id = None
             tsk.cmd = None
@@ -648,7 +649,7 @@ def sim_RunModal(
         cntRs = db.pics.countHasSimIds(isOk=0)
         if cntRs <= 0:
             nfy.warn(f"[similar] No search records to clear")
-            return noUpd.by(4).upd(0, nfy)
+            return noUpd.by(5).upd(0, nfy)
 
         mdl.reset()
         mdl.id = ks.pg.similar
@@ -665,7 +666,7 @@ def sim_RunModal(
         cntRs = db.pics.countHasSimIds()
         if cntOk <= 0 and cntRs <= 0:
             nfy.warn(f"[similar] DB does not contain any similarity records")
-            return noUpd.by(4).upd(0, nfy)
+            return noUpd.by(5).upd(0, nfy)
 
         mdl.reset()
         mdl.id = ks.pg.similar
@@ -758,10 +759,12 @@ def sim_RunModal(
 
     #------------------------------------------------------------------------
     elif trgId == k.btnFind:
+
+        retSte = ste.clear()
         if cnt.vec <= 0:
             nfy.error("No vector data to process")
             now.sim.clearAll()
-            return noUpd.by(4).upd( 0, [nfy, now] )
+            return noUpd.by(5).upd( 0, [nfy, now] )
 
         thMin = db.dto.thMin
 
@@ -781,11 +784,11 @@ def sim_RunModal(
                 else:
                     nfy.info(f"[sim] the asset #{assSel.autoId} already resolved")
                     now.sim.assFromUrl = None
-                    return noUpd.by(4).upd( 0, [nfy, now] )
+                    return noUpd.by(5).upd( 0, [nfy, now] )
             else:
                 nfy.warn(f"[sim] not found dst assetId[{now.sim.assFromUrl}]")
                 now.sim.assFromUrl = None
-                return noUpd.by(4).upd( 0, [nfy, now] )
+                return noUpd.by(5).upd( 0, [nfy, now] )
 
         # find from db
         if not asset:
@@ -817,7 +820,7 @@ def sim_RunModal(
 
     lg.info(f"[similar] modal[{mdl.id}] cmd[{mdl.cmd}]")
 
-    return noUpd.by( 4 ).upd( 0, [nfy, retNow, mdl, retTsk] )
+    return noUpd.by( 5 ).upd( 0, [nfy, retNow, mdl, retTsk, retSte] )
 
 
 #========================================================================
@@ -926,6 +929,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: models.ITaskStore):
 
         # Auto-select assets if enabled
         lg.info(f"[sim:fs] Starting auto-selection check, enable={db.dto.ausl}")
+        sto.ste.clear()
         autoSelectedIds = sim.getAutoSelectAuids(now.sim.assCur) if now.sim.assCur else []
         if autoSelectedIds:
             lg.info(f"[sim:fs] Auto-selected {len(autoSelectedIds)} assets: {autoSelectedIds}")
@@ -943,6 +947,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: models.ITaskStore):
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.sim.clearAll()
+        sto.ste.clear()
         raise RuntimeError(msg)
 
 
@@ -979,6 +984,7 @@ def sim_ClearSims(doReport: IFnProg, sto: models.ITaskStore):
 
         now.sim.assFromUrl = None
         now.sim.clearAll()
+        sto.ste.clear()
 
         doReport(100, "Clear completed")
 
@@ -1018,6 +1024,7 @@ def sim_SelectedDelete(doReport: IFnProg, sto: models.ITaskStore):
         immich.trashByAssets(assSels)
 
         now.sim.clearAll()
+        sto.ste.clear()
 
         if not db.dto.autoNext:
             now.sim.activeTab = k.tabPnd
@@ -1032,6 +1039,7 @@ def sim_SelectedDelete(doReport: IFnProg, sto: models.ITaskStore):
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.sim.clearAll()
+        sto.ste.clear()
 
         raise RuntimeError(msg)
 
@@ -1057,6 +1065,7 @@ def sim_SelectedReslove(doReport: IFnProg, sto: models.ITaskStore):
         if assOthers: immich.trashByAssets(assOthers)
 
         now.sim.clearAll()
+        sto.ste.clear()
 
         if not db.dto.autoNext:
             now.sim.activeTab = k.tabPnd
@@ -1069,6 +1078,7 @@ def sim_SelectedReslove(doReport: IFnProg, sto: models.ITaskStore):
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.sim.clearAll()
+        sto.ste.clear()
 
         raise RuntimeError(msg)
 
@@ -1086,6 +1096,7 @@ def sim_AllReslove(doReport: IFnProg, sto: models.ITaskStore):
         db.pics.setResloveBy(assets)
 
         now.sim.clearAll()
+        sto.ste.clear()
 
         if not db.dto.autoNext:
             now.sim.activeTab = k.tabPnd
@@ -1098,6 +1109,7 @@ def sim_AllReslove(doReport: IFnProg, sto: models.ITaskStore):
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.sim.clearAll()
+        sto.ste.clear()
 
         raise RuntimeError(msg)
 
@@ -1117,6 +1129,7 @@ def sim_AllDelete(doReport: IFnProg, sto: models.ITaskStore):
         immich.trashByAssets(assets)
 
         now.sim.clearAll()
+        sto.ste.clear()
 
         if not db.dto.autoNext:
             now.sim.activeTab = k.tabPnd
@@ -1129,6 +1142,7 @@ def sim_AllDelete(doReport: IFnProg, sto: models.ITaskStore):
         nfy.error(msg)
         lg.error(traceback.format_exc())
         now.sim.clearAll()
+        sto.ste.clear()
 
         raise RuntimeError(msg)
 
