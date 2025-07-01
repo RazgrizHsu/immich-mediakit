@@ -55,6 +55,7 @@ class Ste(BaseDictModel):
     def clear(self):
         self.selectedIds.clear()
         self.cntTotal = 0
+        return self
 
     def getSelected(self, allAssets: List[Asset]) -> List[Asset]:
         return [a for a in allAssets if a.autoId in self.selectedIds]
