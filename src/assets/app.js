@@ -7,6 +7,17 @@ const R = {
 	},
 }
 
+const fmtDate = ( timestamp ) => {
+	const dt = new Date( timestamp )
+	const yr = dt.getFullYear()
+	const mo = String( dt.getMonth() + 1 ).padStart( 2, '0' )
+	const dy = String( dt.getDate() ).padStart( 2, '0' )
+	const hr = String( dt.getHours() ).padStart( 2, '0' )
+	const mn = String( dt.getMinutes() ).padStart( 2, '0' )
+	const sc = String( dt.getSeconds() ).padStart( 2, '0' )
+	return `${yr}${mo}${dy} ${hr}:${mn}:${sc}`
+}
+
 
 
 
@@ -135,7 +146,7 @@ function onFetchedChk( loading, data ){
 
 			loading.close()
 			notify.erro(`system check failed`)
-			Nfy.error( `[system] check ${errK} failed, please check your environment - ${Date.now()}` )
+			Nfy.error( `[system] check ${errK} failed, please check your environment - ${fmtDate(Date.now())}` )
 
 		},
 		( msg )=>{

@@ -14,6 +14,86 @@ from util.err import mkErr
 
 lg = log.get(__name__)
 
+_cachedAssetTableName = None
+
+def checkGetAssetTableName():
+    global _cachedAssetTableName
+
+    if _cachedAssetTableName is not None:
+        return _cachedAssetTableName
+
+    try:
+        with mkConn() as cnn:
+            with cnn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                    AND table_name IN ('assets', 'asset')
+                """)
+                rst = cursor.fetchone()
+
+                if not rst:
+                    raise RuntimeError("Neither 'assets' nor 'asset' table found in database")
+
+                tableName = rst[0]
+
+                cursor.execute("""
+                    SELECT column_name, data_type, udt_name
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    AND table_name = %s
+                    AND column_name = 'deletedAt'
+                """, (tableName,))
+                col = cursor.fetchone()
+
+                if not col:
+                    raise RuntimeError(f"Column 'deletedAt' not found in table '{tableName}'")
+
+                if col[2] != 'timestamptz':
+                    raise RuntimeError(f"Column 'deletedAt' in table '{tableName}' is not timestamptz type, found: {col[2]}")
+
+                cursor.execute("""
+                    SELECT column_name, data_type, udt_name
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    AND table_name = %s
+                    AND column_name = 'status'
+                """, (tableName,))
+                statusCol = cursor.fetchone()
+
+                if not statusCol:
+                    raise RuntimeError(f"Column 'status' not found in table '{tableName}'")
+
+                if statusCol[1] != 'USER-DEFINED':
+                    raise RuntimeError(f"Column 'status' in table '{tableName}' is not an enum type, found: {statusCol[1]}")
+
+                enumTypeName = statusCol[2]
+                cursor.execute("""
+                    SELECT enumlabel
+                    FROM pg_enum
+                    WHERE enumtypid = (
+                        SELECT oid
+                        FROM pg_type
+                        WHERE typname = %s
+                    )
+                """, (enumTypeName,))
+                enumValues = [row[0] for row in cursor.fetchall()]
+
+                requiredStatuses = [ks.db.status.active, ks.db.status.trashed, ks.db.status.deleted]
+                missingStatuses = [s for s in requiredStatuses if s not in enumValues]
+
+                if missingStatuses:
+                    raise RuntimeError(f"Required status values {missingStatuses} not found in '{enumTypeName}'. Found values: {enumValues}")
+
+                _cachedAssetTableName = tableName
+                lg.info(f"Detected asset table name: {tableName}")
+
+                return tableName
+
+    except Exception as e:
+        raise mkErr(f"Failed to check asset table name: {str(e)}", e)
+
 
 def init():
     try:
@@ -118,12 +198,13 @@ def fetchUsers() -> List[models.Usr]:
 
 def count(usrId=None, assetType="IMAGE"):
     try:
+        tableName = checkGetAssetTableName()
         with mkConn() as conn:
             with conn.cursor() as cursor:
                 #lg.info( f"[psql] count userId[{usrId}]" )
 
                 # noinspection SqlConstantExpression
-                sql = "Select Count(*) From assets Where 1=1"
+                sql = f"Select Count(*) From {tableName} Where 1=1"
                 params = []
 
                 if assetType:
@@ -205,7 +286,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
         with mkConn() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
                 # count all
-                cntSql = "Select Count( * ) From assets Where status = 'active' And type = %s"
+                cntSql = f"Select Count( * ) From {checkGetAssetTableName()} Where status = 'active' And type = %s"
                 cntArs = [asType]
 
                 if usrId:
@@ -226,7 +307,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 #----------------------------------------------------------------
                 # query assets
                 #----------------------------------------------------------------
-                sql = "Select * From assets Where status = 'active' And type = %s"
+                sql = f"Select * From {checkGetAssetTableName()} Where status = 'active' And type = %s"
 
                 params = [asType]
 
@@ -338,15 +419,16 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 #----------------------------------------------------------------
                 onUpdate(42, "query livephoto videos...")
 
-                livePhotoSql = """
+                tableName = checkGetAssetTableName()
+                livePhotoSql = f"""
                     -- Method 1: Direct livePhotoVideoId
                     SELECT
                         a.id AS photo_id,
                         a."livePhotoVideoId" AS video_id,
                         v."encodedVideoPath" AS video_path,
                         v."originalPath" AS video_original_path
-                    FROM assets a
-                    JOIN assets v ON v.id = a."livePhotoVideoId" AND v.type = 'VIDEO'
+                    FROM {tableName} a
+                    JOIN {tableName} v ON v.id = a."livePhotoVideoId" AND v.type = 'VIDEO'
                     WHERE a."livePhotoVideoId" IS NOT NULL
                     AND a.type = 'IMAGE'
                     AND a.id = ANY(%s)
@@ -359,10 +441,10 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                         v.id AS video_id,
                         v."encodedVideoPath" AS video_path,
                         v."originalPath" AS video_original_path
-                    FROM assets a
+                    FROM {tableName} a
                     JOIN exif ae ON a.id = ae."assetId"
                     JOIN exif ve ON ae."livePhotoCID" = ve."livePhotoCID"
-                    JOIN assets v ON ve."assetId" = v.id
+                    JOIN {tableName} v ON ve."assetId" = v.id
                     WHERE ae."livePhotoCID" IS NOT NULL
                     AND a."livePhotoVideoId" IS NULL
                     AND a.type = 'IMAGE'
@@ -566,8 +648,8 @@ def delFromAlbumBy(albumId: str, assetIds: List[str]) -> int:
 def getFavoriteIds(usrId: str) -> List[str]:
     try:
         with mkConn() as conn:
-            sql = """
-            Select id From assets
+            sql = f"""
+            Select id From {checkGetAssetTableName()}
             Where "ownerId" = %s And "isFavorite" = true And status = 'active'
             Order By "updatedAt" Desc
             """
@@ -582,7 +664,7 @@ def getFavoriteIds(usrId: str) -> List[str]:
 def isFavorite(assetId: str) -> bool:
     try:
         with mkConn() as conn:
-            sql = "Select \"isFavorite\" From assets Where id = %s"
+            sql = f"Select \"isFavorite\" From {checkGetAssetTableName()} Where id = %s"
             with conn.cursor() as cursor:
                 cursor.execute(sql, (assetId,))
                 row = cursor.fetchone()
@@ -596,8 +678,8 @@ def updFavoriteBy(assetIds: List[str], isFav: bool) -> int:
 
     try:
         with mkConn() as conn:
-            sql = """
-            Update assets Set "isFavorite" = %s, "updatedAt" = Now()
+            sql = f"""
+            Update {checkGetAssetTableName()} Set "isFavorite" = %s, "updatedAt" = Now()
             Where id = ANY(%s) And status = 'active'
             """
             with conn.cursor() as cursor:
@@ -615,8 +697,8 @@ def updFavoriteBy(assetIds: List[str], isFav: bool) -> int:
 def getArchivedIds(usrId: str) -> List[str]:
     try:
         with mkConn() as conn:
-            sql = """
-            Select id From assets
+            sql = f"""
+            Select id From {checkGetAssetTableName()}
             Where "ownerId" = %s And visibility = 'archive' And status = 'active'
             Order By "updatedAt" Desc
             """
@@ -631,7 +713,7 @@ def getArchivedIds(usrId: str) -> List[str]:
 def isArchived(assetId: str) -> bool:
     try:
         with mkConn() as conn:
-            sql = "Select visibility From assets Where id = %s"
+            sql = f"Select visibility From {checkGetAssetTableName()} Where id = %s"
             with conn.cursor() as cursor:
                 cursor.execute(sql, (assetId,))
                 row = cursor.fetchone()
@@ -646,8 +728,8 @@ def updArchiveBy(assetIds: List[str], isArchived: bool) -> int:
     try:
         with mkConn() as conn:
             visibility = 'archive' if isArchived else 'timeline'
-            sql = """
-            Update assets Set visibility = %s, "updatedAt" = Now()
+            sql = f"""
+            Update {checkGetAssetTableName()} Set visibility = %s, "updatedAt" = Now()
             Where id = ANY(%s) And status = 'active'
             """
             with conn.cursor() as cursor:

@@ -44,7 +44,17 @@ code_deleteAll = """
 """
 
 url_restore = "https://github.com/immich-app/immich/blob/main/server/src/repositories/trash.repository.ts"
-code_Restore = """
+code_Restore1 = """
+  async restore(userId: string): Promise<number> {
+    const { numUpdatedRows } = await this.db
+      .updateTable('asset')
+      .where('ownerId', '=', userId)
+      .where('status', '=', AssetStatus.TRASHED)
+      .set({ status: AssetStatus.ACTIVE, deletedAt: null })
+      .executeTakeFirst();
+"""
+
+code_Restore2 = """
   async restore(userId: string): Promise<number> {
     const { numUpdatedRows } = await this.db
       .updateTable('assets')
@@ -53,7 +63,6 @@ code_Restore = """
       .set({ status: AssetStatus.ACTIVE, deletedAt: null })
       .executeTakeFirst();
 """
-
 
 def checkBy(url, code):
     src = getGithubRaw(url)
@@ -67,7 +76,12 @@ def checkLogicDelete():
     return checkBy(url_delete, code_deleteAll)
 
 def checkLogicRestore():
-    return checkBy(url_restore, code_Restore)
+    c1 = checkBy(url_restore, code_Restore1)
+    c2 = checkBy(url_restore, code_Restore2)
+
+    if not c1 and not c2: return False
+
+    return True
 
 
 
@@ -85,10 +99,12 @@ def trashBy(assetIds: List[str]):
     try:
         if not assetIds or len(assetIds) <= 0: raise RuntimeError(f"can't delete assetIds empty {assetIds}")
 
+        tableName = psql.checkGetAssetTableName()
+
         with psql.mkConn() as cnn:
             with cnn.cursor() as cursor:
-                sql = """
-                Update assets
+                sql = f"""
+                Update {tableName}
                 Set "deletedAt" = Now(), status = %s
                 Where id = ANY(%s)
                 """
@@ -107,141 +123,3 @@ def trashByAssets(assets: List[models.Asset]):
     if not assets: return 0
     assetIds = [ass.id for ass in assets]
     return trashBy(assetIds)
-
-#------------------------------------------------------------------------
-# This function restores multiple assets from trash by updating their status back to 'active' and clearing deletedAt
-# Note: This implementation follows Immich's API flow which may change in future versions
-# restore flow
-# https://github.com/immich-app/immich/blob/main/server/src/repositories/trash.repository.ts#L15
-#------------------------------------------------------------------------
-def restoreBy(assetIds: List[str]):
-    try:
-        if not assetIds or len(assetIds) <= 0: raise RuntimeError(f"can't restore assetIds empty {assetIds}")
-
-        with psql.mkConn() as cnn:
-            with cnn.cursor() as cursor:
-                sql = """
-                Update assets
-                Set "deletedAt" = Null, status = %s
-                Where id = ANY(%s) And status = %s
-                """
-                cursor.execute(sql, (ks.db.status.active, assetIds, ks.db.status.trashed))
-                affectedRows = cursor.rowcount
-                cnn.commit()
-
-                return affectedRows
-    except Exception as e:
-        raise err.mkErr(f"Failed to restore assets: {str(e)}", e)
-
-
-
-
-
-
-
-
-
-
-#------------------------------------------------------
-# Album Repository Verification
-#------------------------------------------------------
-urlAlbumRepo = "https://github.com/immich-app/immich/blob/main/server/src/repositories/album.repository.ts"
-
-codeAlbumAssAdd = """
-async addAssets(db: Kysely<DB>, albumId: string, assetIds: string[]): Promise<void> {
-  if (assetIds.length === 0) {
-    return;
-  }
-
-  await db
-    .insertInto('albums_assets_assets')
-    .values(assetIds.map((assetId) => ({ albumsId: albumId, assetsId: assetId })))
-    .execute();
-}
-"""
-
-codeAlbumAssDel = """
-async removeAssetIds(albumId: string, assetIds: string[]): Promise<void> {
-  if (assetIds.length === 0) {
-    return;
-  }
-
-  await this.db
-    .deleteFrom('albums_assets_assets')
-    .where('albums_assets_assets.albumsId', '=', albumId)
-    .where('albums_assets_assets.assetsId', 'in', assetIds)
-    .execute();
-}
-"""
-
-
-def checkAlbAssAdd():
-    return checkBy(urlAlbumRepo, codeAlbumAssAdd)
-
-def checkAlbumAssDel():
-    return checkBy(urlAlbumRepo, codeAlbumAssDel)
-
-
-#------------------------------------------------------
-# Asset Service/Repository Verification
-#------------------------------------------------------
-urlAssetService = "https://github.com/immich-app/immich/blob/main/server/src/services/asset.service.ts"
-urlAssetRepo = "https://github.com/immich-app/immich/blob/main/server/src/repositories/asset.repository.ts"
-
-codeAssetUpdateAll = """
-  async updateAll(auth: AuthDto, dto: AssetBulkUpdateDto): Promise<void> {
-    const { ids, description, dateTimeOriginal, latitude, longitude, ...options } = dto;
-    await this.requireAccess({ auth, permission: Permission.ASSET_UPDATE, ids });
-
-    if (
-      description !== undefined ||
-      dateTimeOriginal !== undefined ||
-      latitude !== undefined ||
-      longitude !== undefined
-    ) {
-      await this.assetRepository.updateAllExif(ids, { description, dateTimeOriginal, latitude, longitude });
-      await this.jobRepository.queueAll(
-        ids.map((id) => ({
-          name: JobName.SIDECAR_WRITE,
-          data: { id, description, dateTimeOriginal, latitude, longitude },
-        })),
-      );
-    }
-
-    if (
-      options.visibility !== undefined ||
-      options.isFavorite !== undefined ||
-      options.duplicateId !== undefined ||
-      options.rating !== undefined
-    ) {
-      await this.assetRepository.updateAll(ids, options);
-
-      if (options.visibility === AssetVisibility.LOCKED) {
-        await this.albumRepository.removeAssetsFromAll(ids);
-      }
-    }
-  }
-"""
-
-codeAssetRepoUpdate = """
-  async updateAll(ids: string[], options: Updateable<Assets>): Promise<void> {
-    if (ids.length === 0) {
-      return;
-    }
-
-    await this.db
-      .updateTable('assets')
-      .set(options)
-      .where('id', '=', anyUuid(ids))
-      .execute();
-  }
-"""
-
-
-def checkAssetUpdateLogic():
-    return checkBy(urlAssetService, codeAssetUpdateAll)
-
-
-def checkAssetRepositoryUpdate():
-    return checkBy(urlAssetRepo, codeAssetRepoUpdate)
-
