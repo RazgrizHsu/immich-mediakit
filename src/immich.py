@@ -25,8 +25,8 @@ def getGithubRaw(url):
 def checkCodeBy(src, target_code):
     if not src: ValueError( f"src[{src}]" )
 
-    clean_src = re.sub(r'\s+', '', src)
-    clean_code = re.sub(r'\s+', '', target_code)
+    clean_src = re.sub(r'\s+', '', src).lower()
+    clean_code = re.sub(r'\s+', '', target_code).lower()
 
     ok = clean_code in clean_src
 
@@ -40,7 +40,7 @@ code_deleteAll = """
     await this.assetRepository.updateAll(ids, {
       deletedAt: new Date(),
       status: force ? AssetStatus.DELETED : AssetStatus.TRASHED,
-    });
+    })
 """
 
 url_restore = "https://github.com/immich-app/immich/blob/main/server/src/repositories/trash.repository.ts"
@@ -61,7 +61,7 @@ code_Restore2 = """
       .where('ownerId', '=', userId)
       .where('status', '=', AssetStatus.TRASHED)
       .set({ status: AssetStatus.ACTIVE, deletedAt: null })
-      .executeTakeFirst();
+      .executeTakeFirst()
 """
 
 def checkBy(url, code):
