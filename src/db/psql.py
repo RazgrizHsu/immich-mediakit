@@ -14,85 +14,6 @@ from util.err import mkErr
 
 lg = log.get(__name__)
 
-_cachedAssetTableName = None
-
-def checkGetAssetTableName():
-    global _cachedAssetTableName
-
-    if _cachedAssetTableName is not None:
-        return _cachedAssetTableName
-
-    try:
-        with mkConn() as cnn:
-            with cnn.cursor() as cursor:
-                cursor.execute("""
-                    SELECT table_name
-                    FROM information_schema.tables
-                    WHERE table_schema = 'public'
-                    AND table_name IN ('assets', 'asset')
-                """)
-                rst = cursor.fetchone()
-
-                if not rst:
-                    raise RuntimeError("Neither 'assets' nor 'asset' table found in database")
-
-                tableName = rst[0]
-
-                cursor.execute("""
-                    SELECT column_name, data_type, udt_name
-                    FROM information_schema.columns
-                    WHERE table_schema = 'public'
-                    AND table_name = %s
-                    AND column_name = 'deletedAt'
-                """, (tableName,))
-                col = cursor.fetchone()
-
-                if not col:
-                    raise RuntimeError(f"Column 'deletedAt' not found in table '{tableName}'")
-
-                if col[2] != 'timestamptz':
-                    raise RuntimeError(f"Column 'deletedAt' in table '{tableName}' is not timestamptz type, found: {col[2]}")
-
-                cursor.execute("""
-                    SELECT column_name, data_type, udt_name
-                    FROM information_schema.columns
-                    WHERE table_schema = 'public'
-                    AND table_name = %s
-                    AND column_name = 'status'
-                """, (tableName,))
-                statusCol = cursor.fetchone()
-
-                if not statusCol:
-                    raise RuntimeError(f"Column 'status' not found in table '{tableName}'")
-
-                if statusCol[1] != 'USER-DEFINED':
-                    raise RuntimeError(f"Column 'status' in table '{tableName}' is not an enum type, found: {statusCol[1]}")
-
-                enumTypeName = statusCol[2]
-                cursor.execute("""
-                    SELECT enumlabel
-                    FROM pg_enum
-                    WHERE enumtypid = (
-                        SELECT oid
-                        FROM pg_type
-                        WHERE typname = %s
-                    )
-                """, (enumTypeName,))
-                enumValues = [row[0] for row in cursor.fetchall()]
-
-                requiredStatuses = [ks.db.status.active, ks.db.status.trashed, ks.db.status.deleted]
-                missingStatuses = [s for s in requiredStatuses if s not in enumValues]
-
-                if missingStatuses:
-                    raise RuntimeError(f"Required status values {missingStatuses} not found in '{enumTypeName}'. Found values: {enumValues}")
-
-                _cachedAssetTableName = tableName
-                lg.info(f"Detected asset table name: {tableName}")
-
-                return tableName
-
-    except Exception as e:
-        raise mkErr(f"Failed to check asset table name: {str(e)}", e)
 
 
 def init():
@@ -150,7 +71,7 @@ def chk():
                 c.execute("SELECT 1")
         return True
     except Exception as e:
-        raise mkErr(f"Failed to connect to PostgreSQL", e)
+        raise mkErr("Failed to connect to PostgreSQL", e)
 
 
 def fetchUser(usrId: str) -> Optional[models.Usr]:
@@ -158,11 +79,9 @@ def fetchUser(usrId: str) -> Optional[models.Usr]:
         with mkConn() as conn:
             sql = """
             Select
-                u.id,
-                u.name,
-                u.email
-            From users u
-            Where u.id = %s
+                id, name, email
+            From "user"
+            Where id = %s
             """
             with conn.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(sql, (usrId,))
@@ -179,7 +98,7 @@ def fetchUsers() -> List[models.Usr]:
     try:
         with mkConn() as conn:
             sql = """
-            Select id, name, email From users
+            Select id, name, email From "user"
             """
             with conn.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(sql)
@@ -193,18 +112,17 @@ def fetchUsers() -> List[models.Usr]:
 
                 return usrs
     except Exception as e:
-        raise mkErr(f"Failed to fetch users", e)
+        raise mkErr("Failed to fetch users", e)
 
 
 def count(usrId=None, assetType="IMAGE"):
     try:
-        tableName = checkGetAssetTableName()
         with mkConn() as conn:
             with conn.cursor() as cursor:
                 #lg.info( f"[psql] count userId[{usrId}]" )
 
                 # noinspection SqlConstantExpression
-                sql = f"Select Count(*) From {tableName} Where 1=1"
+                sql = "Select Count(*) From asset Where 1=1"
                 params = []
 
                 if assetType:
@@ -225,7 +143,7 @@ def count(usrId=None, assetType="IMAGE"):
 
                 return count
     except Exception as e:
-        raise mkErr(f"Failed to count assets", e)
+        raise mkErr("Failed to count assets", e)
 
 
 
@@ -233,7 +151,7 @@ def count(usrId=None, assetType="IMAGE"):
 def testAssetsPath():
     try:
         with mkConn() as conn:
-            sql = "Select path From asset_files Limit 5"
+            sql = "Select path From asset_file Limit 5"
             with conn.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(sql)
                 rows = cursor.fetchall()
@@ -257,8 +175,8 @@ def testAssetsPath():
                                 "Asset file not found at expected path:",
                                 f"  {pathFi}",
                                 "",
-                                f"This path was constructed from:",
-                                f"  IMMICH_PATH + DB Path",
+                                "This path was constructed from:",
+                                "  IMMICH_PATH + DB Path",
                                 f"  DB Path: '{original_path}'",
                                 "",
                                 "Please verify IMMICH_PATH environment variable matches your Immich installation path."
@@ -286,7 +204,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
         with mkConn() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
                 # count all
-                cntSql = f"Select Count( * ) From {checkGetAssetTableName()} Where status = 'active' And type = %s"
+                cntSql = "Select Count( * ) From asset Where status = 'active' And type = %s"
                 cntArs = [asType]
 
                 if usrId:
@@ -307,7 +225,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 #----------------------------------------------------------------
                 # query assets
                 #----------------------------------------------------------------
-                sql = f"Select * From {checkGetAssetTableName()} Where status = 'active' And type = %s"
+                sql = "Select * From asset Where status = 'active' And type = %s"
 
                 params = [asType]
 
@@ -324,7 +242,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 assets = []
                 cntFetched = 0
 
-                tStart = time.time()
+                # tStart = time.time()
 
                 while True:
                     batch = cursor.fetchmany(szBatch)
@@ -354,7 +272,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 #----------------------------------------------------------------
                 flsSql = """
                    Select "assetId", type, path
-                   From asset_files
+                   From asset_file
                    Where "assetId" = ANY(%s)
                 """
 
@@ -384,7 +302,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 #----------------------------------------------------------------
                 exifSql = """
                     Select *
-                    From exif
+                    From asset_exif
                     Where "assetId" = ANY(%s)
                 """
 
@@ -419,7 +337,7 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                 #----------------------------------------------------------------
                 onUpdate(42, "query livephoto videos...")
 
-                tableName = checkGetAssetTableName()
+                tableName = 'asset'
                 livePhotoSql = f"""
                     -- Method 1: Direct livePhotoVideoId
                     SELECT
@@ -442,8 +360,8 @@ def fetchAssets(usr: models.Usr, onUpdate: models.IFnProg):
                         v."encodedVideoPath" AS video_path,
                         v."originalPath" AS video_original_path
                     FROM {tableName} a
-                    JOIN exif ae ON a.id = ae."assetId"
-                    JOIN exif ve ON ae."livePhotoCID" = ve."livePhotoCID"
+                    JOIN asset_exif ae ON a.id = ae."assetId"
+                    JOIN asset_exif ve ON ae."livePhotoCID" = ve."livePhotoCID"
                     JOIN {tableName} v ON ve."assetId" = v.id
                     WHERE ae."livePhotoCID" IS NOT NULL
                     AND a."livePhotoVideoId" IS NULL
@@ -535,7 +453,7 @@ def getUsrAlbumsBy(usrId: str) -> List[models.Album]:
                 a."albumThumbnailAssetId",
                 a."isActivityEnabled",
                 a."order"
-            From albums a
+            From album a
             Where a."ownerId" = %s And a."deletedAt" Is Null
             Order By a."createdAt" Desc
             """
@@ -552,8 +470,8 @@ def getAlbumAssetIds(albumId: str) -> List[str]:
         with mkConn() as conn:
             sql = """
             Select aa."assetsId"
-            From albums_assets_assets aa
-            Join albums a On a.id = aa."albumsId"
+            From album_asset aa
+            Join album a On a.id = aa."albumsId"
             Where aa."albumsId" = %s And a."deletedAt" Is Null
             Order By aa."createdAt" Desc
             """
@@ -579,8 +497,8 @@ def getAssetAlbums(assetId: str) -> List[models.Album]:
                 a."albumThumbnailAssetId",
                 a."isActivityEnabled",
                 a."order"
-            From albums a
-            Join albums_assets_assets aa On a.id = aa."albumsId"
+            From album a
+            Join album_asset aa On a.id = aa."albumsId"
             Where aa."assetsId" = %s And a."deletedAt" Is Null
             Order By a."createdAt" Desc
             """
@@ -598,12 +516,12 @@ def addToAlbum(albumId: str, assetIds: List[str]) -> int:
     try:
         with mkConn() as conn:
             with conn.cursor() as cursor:
-                checkSql = "Select 1 From albums Where id = %s And \"deletedAt\" Is Null"
+                checkSql = "Select 1 From album Where id = %s And \"deletedAt\" Is Null"
                 cursor.execute(checkSql, (albumId,))
                 if not cursor.fetchone(): raise RuntimeError(f"Album not found: {albumId}")
 
                 existingSql = """
-                Select "assetsId" From albums_assets_assets Where "albumsId" = %s And "assetsId" = ANY(%s)
+                Select "assetsId" From album_asset Where "albumsId" = %s And "assetsId" = ANY(%s)
                 """
                 cursor.execute(existingSql, (albumId, assetIds))
                 existing = {row[0] for row in cursor.fetchall()}
@@ -613,7 +531,7 @@ def addToAlbum(albumId: str, assetIds: List[str]) -> int:
 
                 values = [(albumId, aid) for aid in newAssetIds]
                 insertSql = """
-                Insert Into albums_assets_assets ("albumsId", "assetsId", "createdAt")
+                Insert Into album_asset ("albumsId", "assetsId", "createdAt")
                 Values (%s, %s, Now())
                 """
                 cursor.executemany(insertSql, values)
@@ -630,7 +548,7 @@ def delFromAlbumBy(albumId: str, assetIds: List[str]) -> int:
     try:
         with mkConn() as conn:
             sql = """
-            Delete From albums_assets_assets
+            Delete From album_asset
             Where "albumsId" = %s And "assetsId" = ANY(%s)
             """
             with conn.cursor() as cursor:
@@ -648,8 +566,8 @@ def delFromAlbumBy(albumId: str, assetIds: List[str]) -> int:
 def getFavoriteIds(usrId: str) -> List[str]:
     try:
         with mkConn() as conn:
-            sql = f"""
-            Select id From {checkGetAssetTableName()}
+            sql = """
+            Select id From asset
             Where "ownerId" = %s And "isFavorite" = true And status = 'active'
             Order By "updatedAt" Desc
             """
@@ -664,7 +582,7 @@ def getFavoriteIds(usrId: str) -> List[str]:
 def isFavorite(assetId: str) -> bool:
     try:
         with mkConn() as conn:
-            sql = f"Select \"isFavorite\" From {checkGetAssetTableName()} Where id = %s"
+            sql = "Select \"isFavorite\" From asset Where id = %s"
             with conn.cursor() as cursor:
                 cursor.execute(sql, (assetId,))
                 row = cursor.fetchone()
@@ -678,8 +596,8 @@ def updFavoriteBy(assetIds: List[str], isFav: bool) -> int:
 
     try:
         with mkConn() as conn:
-            sql = f"""
-            Update {checkGetAssetTableName()} Set "isFavorite" = %s, "updatedAt" = Now()
+            sql = """
+            Update asset Set "isFavorite" = %s, "updatedAt" = Now()
             Where id = ANY(%s) And status = 'active'
             """
             with conn.cursor() as cursor:
@@ -697,8 +615,8 @@ def updFavoriteBy(assetIds: List[str], isFav: bool) -> int:
 def getArchivedIds(usrId: str) -> List[str]:
     try:
         with mkConn() as conn:
-            sql = f"""
-            Select id From {checkGetAssetTableName()}
+            sql = """
+            Select id From asset
             Where "ownerId" = %s And visibility = 'archive' And status = 'active'
             Order By "updatedAt" Desc
             """
@@ -713,7 +631,7 @@ def getArchivedIds(usrId: str) -> List[str]:
 def isArchived(assetId: str) -> bool:
     try:
         with mkConn() as conn:
-            sql = f"Select visibility From {checkGetAssetTableName()} Where id = %s"
+            sql = "Select visibility From asset Where id = %s"
             with conn.cursor() as cursor:
                 cursor.execute(sql, (assetId,))
                 row = cursor.fetchone()
@@ -728,8 +646,8 @@ def updArchiveBy(assetIds: List[str], isArchived: bool) -> int:
     try:
         with mkConn() as conn:
             visibility = 'archive' if isArchived else 'timeline'
-            sql = f"""
-            Update {checkGetAssetTableName()} Set visibility = %s, "updatedAt" = Now()
+            sql = """
+            Update asset Set visibility = %s, "updatedAt" = Now()
             Where id = ANY(%s) And status = 'active'
             """
             with conn.cursor() as cursor:
@@ -766,8 +684,8 @@ def fetchExInfos(assetIds: List[str]) -> Dict[str, models.AssetExInfo]:
                     albSql = """
                     Select aaa."assetsId", a.id, a."ownerId", a."albumName", a.description,
                            a."createdAt", a."updatedAt", a."albumThumbnailAssetId", a."isActivityEnabled", a."order"
-                    From albums a
-                    Join albums_assets_assets aaa On a.id = aaa."albumsId"
+                    From album a
+                    Join album_asset aaa On a.id = aaa."albumsId"
                     Where aaa."assetsId" = ANY(%s) And a."deletedAt" Is Null
                     Order By a."createdAt" Desc
                     """
@@ -786,7 +704,7 @@ def fetchExInfos(assetIds: List[str]) -> Dict[str, models.AssetExInfo]:
                     chunk = assetIds[i:i + szChunk]
                     tagSql = """
                     Select ta."assetsId", t.id, t.value, t."userId"
-                    From tags t
+                    From tag t
                     Join tag_asset ta On t.id = ta."tagsId"
                     Where ta."assetsId" = ANY(%s)
                     """
@@ -806,7 +724,7 @@ def fetchExInfos(assetIds: List[str]) -> Dict[str, models.AssetExInfo]:
                     Select af."assetId", af.id, af."personId", p.name, p."ownerId",
                            af."imageWidth", af."imageHeight", af."boundingBoxX1", af."boundingBoxY1",
                            af."boundingBoxX2", af."boundingBoxY2", af."sourceType"
-                    From asset_faces af
+                    From asset_face af
                     Join person p On af."personId" = p.id
                     Where p.name != Null And af."assetId" = ANY(%s) And af."deletedAt" Is Null
                     """
