@@ -98,27 +98,7 @@ def psql() -> ChkInfo:
 
         if not db.psql.init(): return ChkInfo(False, ['Cannot connect to PostgreSQL', 'Connection test failed'])
 
-        try:
-            tableName = db.psql.checkGetAssetTableName()
-            lg.info(f"Asset table check passed: {tableName}")
-        except Exception as e:
-            errMsg = str(e)
-            if "Neither 'assets' nor 'asset' table found" in errMsg:
-                return ChkInfo(False, ['Asset table not found in database', errMsg])
-            elif "'deletedAt' not found" in errMsg:
-                return ChkInfo(False, ['Asset table missing deletedAt column', errMsg])
-            elif "not timestamptz type" in errMsg:
-                return ChkInfo(False, ['Asset table deletedAt column has wrong type', errMsg])
-            elif "'status' not found" in errMsg:
-                return ChkInfo(False, ['Asset table missing status column', errMsg])
-            elif "not an enum type" in errMsg:
-                return ChkInfo(False, ['Asset table status column is not enum type', errMsg])
-            elif "Required status values" in errMsg:
-                return ChkInfo(False, ['Asset table status enum missing required values', errMsg])
-            else:
-                return ChkInfo(False, ['Asset table check failed', errMsg])
-
-        return ChkInfo(True, ['PostgreSQL connection successful', f'Host: {envs.psqlHost}:{envs.psqlPort}', f'Asset table: {tableName}'])
+        return ChkInfo(True, ['PostgreSQL connection successful', f'Host: {envs.psqlHost}:{envs.psqlPort}'])
     except Exception as e:
         return ChkInfo(False, ['PostgreSQL check failed', str(e)])
 

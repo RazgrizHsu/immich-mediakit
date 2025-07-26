@@ -49,6 +49,10 @@ def layout():
                     htm.Li("Assets that already exist locally will be skipped"),
                     htm.Li("Assets without generated thumbnails in Immich will also be skipped"),
                     htm.Li("Updates may sync: paths, EXIF data, favorite/archive status. Re-fetch if these change in remote"),
+                    htm.Li([
+                        htm.Strong("Sync deletion: "),
+                        "Local assets that are no longer in 'active' status in Immich (e.g., moved to trash) will be automatically removed along with their vectors"
+                    ]),
                 ]),
             ])
         ], className="mb-4"),
@@ -358,16 +362,48 @@ def onFetchAssets(doReport: IFnProg, sto: models.ITaskStore):
 
             conn.commit()
 
-        # clear update vecs
-        # if len( updateIds ) > 0:
-        #     db.vecs.deleteBy( updateIds )
+        # Sync deletion: Remove local assets that no longer exist in remote (status != 'active')
+        doReport(90, f"Syncing with remote: checking for deleted assets")
+
+        # Get all local asset IDs for this user
+        localAssets = db.pics.getAllByUsrId(usr.id)
+        if localAssets and len(localAssets) > 0:
+            localIds = {str(asset.id) for asset in localAssets}
+            remoteIds = {str(asset['id']) for asset in assets}
+
+            # Find assets that exist locally but not in remote active assets
+            toDeleteIds = list(localIds - remoteIds)
+
+            if toDeleteIds:
+                doReport(92, f"Found {len(toDeleteIds)} assets to remove (no longer active in Immich)")
+
+                # Delete from local database
+                with db.pics.mkConn() as conn:
+                    c = conn.cursor()
+                    for assetId in toDeleteIds:
+                        c.execute("DELETE FROM assets WHERE id = ?", (assetId,))
+                    conn.commit()
+
+                # Delete vectors
+                try:
+                    db.vecs.deleteBy(toDeleteIds)
+                    doReport(95, f"Removed {len(toDeleteIds)} assets and their vectors")
+                except Exception as e:
+                    lg.error(f"Failed to delete vectors for removed assets: {str(e)}")
+
+                cntDeleted = len(toDeleteIds)
+            else:
+                cntDeleted = 0
+                doReport(95, "No assets need to be removed")
+        else:
+            cntDeleted = 0
 
         cnt.ass = db.pics.count()
 
-        doReport(100, f"Completed: {cntNew} new, {cntUpd} updated, {cntSkip} unchanged")
+        doReport(100, f"Completed: {cntNew} new, {cntUpd} updated, {cntSkip} unchanged, {cntDeleted} removed")
 
         cntSkipped = cntAll - cntFetch
-        msg = f"success, user[ {usr.name} ] total[ {cntAll} ] fetched[ {cntFetch} ] skipped[ {cntSkipped} ] - new[ {cntNew} ] updated[ {cntUpd} ] unchanged[ {cntSkip} ]"
+        msg = f"success, user[ {usr.name} ] total[ {cntAll} ] fetched[ {cntFetch} ] skipped[ {cntSkipped} ] - new[ {cntNew} ] updated[ {cntUpd} ] unchanged[ {cntSkip} ] removed[ {cntDeleted} ]"
         nfy.info(msg)
 
         return sto, msg

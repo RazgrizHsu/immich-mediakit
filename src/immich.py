@@ -44,24 +44,14 @@ code_deleteAll = """
 """
 
 url_restore = "https://github.com/immich-app/immich/blob/main/server/src/repositories/trash.repository.ts"
-code_Restore1 = """
+code_Restore = """
   async restore(userId: string): Promise<number> {
     const { numUpdatedRows } = await this.db
       .updateTable('asset')
       .where('ownerId', '=', userId)
-      .where('status', '=', AssetStatus.TRASHED)
-      .set({ status: AssetStatus.ACTIVE, deletedAt: null })
+      .where('status', '=', assetstatus.trashed)
+      .set({ status: assetstatus.active, deletedAt: null })
       .executeTakeFirst();
-"""
-
-code_Restore2 = """
-  async restore(userId: string): Promise<number> {
-    const { numUpdatedRows } = await this.db
-      .updateTable('assets')
-      .where('ownerId', '=', userId)
-      .where('status', '=', AssetStatus.TRASHED)
-      .set({ status: AssetStatus.ACTIVE, deletedAt: null })
-      .executeTakeFirst()
 """
 
 def checkBy(url, code):
@@ -76,12 +66,7 @@ def checkLogicDelete():
     return checkBy(url_delete, code_deleteAll)
 
 def checkLogicRestore():
-    c1 = checkBy(url_restore, code_Restore1)
-    c2 = checkBy(url_restore, code_Restore2)
-
-    if not c1 and not c2: return False
-
-    return True
+    return checkBy(url_restore, code_Restore)
 
 
 
@@ -99,12 +84,10 @@ def trashBy(assetIds: List[str]):
     try:
         if not assetIds or len(assetIds) <= 0: raise RuntimeError(f"can't delete assetIds empty {assetIds}")
 
-        tableName = psql.checkGetAssetTableName()
-
         with psql.mkConn() as cnn:
             with cnn.cursor() as cursor:
-                sql = f"""
-                Update {tableName}
+                sql = """
+                Update "asset"
                 Set "deletedAt" = Now(), status = %s
                 Where id = ANY(%s)
                 """
