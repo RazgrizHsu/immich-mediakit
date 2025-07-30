@@ -436,10 +436,13 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg,
                                 updAssets.append(asset)
                             cntDone += 1
 
-                        if firstError and pi.erro == 1:
-                            lg.error(f"[imgs] Stopping processing on first error: {firstError}")
-                            pi.erro += len(assets) - cntDone
-                            break
+                        # Allow processing to continue even when errors occur
+                        # Original logic would stop on first error, preventing full batch processing
+                        # Commenting out allows all images to be processed with complete success/failure stats
+                        # if firstError and pi.erro == 1:
+                        #     lg.error(f"[imgs] Stopping processing on first error: {firstError}")
+                        #     pi.erro += len(assets) - cntDone
+                        #     break
 
                         # 批次提交資料庫更新
                         if len(updAssets) >= commitBatch:
@@ -523,16 +526,20 @@ def processVectors(assets: List[models.Asset], photoQ, onUpdate: models.IFnProg,
                             if error:
                                 lg.error(error)
                                 pi.erro += 1
-                                if pi.erro == 1:
-                                    lg.error(f"[imgs] Stopping processing on first error: {error}")
-                                    executor.shutdown(wait=False, cancel_futures=True)
-                                    pi.erro += len(assets) - cntDone
-                                    break
                             else:
                                 pi.done += 1
                                 updAssets.append(asset)
 
                             cntDone += 1
+
+                            # Allow processing to continue even when errors occur
+                            # Original logic would stop on first error, preventing full batch processing
+                            # Commenting out allows all images to be processed with complete success/failure stats
+                            # if pi.erro == 1:
+                            #     lg.error(f"[imgs] Stopping processing on first error: {error}")
+                            #     executor.shutdown(wait=False, cancel_futures=True)
+                            #     pi.erro += len(assets) - cntDone
+                            #     break
 
                             if len(updAssets) >= commitBatch:
                                 assetsBatch = updAssets[:]
