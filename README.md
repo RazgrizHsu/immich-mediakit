@@ -213,7 +213,7 @@ To create the network execute the following command (on the host, not in the doc
 docker network create immich-mediakit
 ```
 
-Then add the netowrk to your immich database container and to the docker compose:
+Then add the network to your immich database container and to the docker compose:
 ```yaml
 services:
   database:
