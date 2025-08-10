@@ -250,7 +250,7 @@ document.addEventListener( 'DOMContentLoaded', function(){
 			event.preventDefault()
 			if ( ste ) ste.clearAll()
 		}
-		if ( event.target.id == 'sim-btn-ExportIds' )
+		if ( event.target.id == 'sim-btn-ExportIds' || event.target.id == 'view-btn-ExportIds' )
 		{
 			event.preventDefault()
 			if (typeof exportIdsToCSV === 'function') {
