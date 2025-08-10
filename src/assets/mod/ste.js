@@ -250,6 +250,15 @@ document.addEventListener( 'DOMContentLoaded', function(){
 			event.preventDefault()
 			if ( ste ) ste.clearAll()
 		}
+		if ( event.target.id == 'sim-btn-ExportIds' )
+		{
+			event.preventDefault()
+			if (typeof exportIdsToCSV === 'function') {
+				exportIdsToCSV()
+			} else {
+				console.error('[Export] exportIdsToCSV function not found!')
+			}
+		}
 
 		//------------------------------------------------------
 		// group selection
