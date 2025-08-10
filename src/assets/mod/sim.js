@@ -118,6 +118,129 @@ window.dash_clientside.similar = {
 
 
 //------------------------------------------------------------------------
+// Export IDs to CSV
+//------------------------------------------------------------------------
+window.exportIdsToCSV = function exportIdsToCSV()
+{
+	console.log('[Export] exportIdsToCSV called - extracting from DOM')
+
+	try {
+		// Get all cards
+		const cards = document.querySelectorAll('.card')
+		console.log('[Export] Found cards:', cards.length)
+
+		if (cards.length === 0) {
+			console.warn('[Export] No cards found to export')
+			alert('No images found to export')
+			return
+		}
+
+		// Extract data from each card
+		const data = []
+		cards.forEach(card => {
+			try {
+				// Find the card-select element to get autoId
+				const cardSelect = card.querySelector('[id*="card-select"]')
+				let autoId = ''
+				if (cardSelect) {
+					const idStr = cardSelect.getAttribute('id')
+					const match = idStr.match(/"id":(\d+)/)
+					if (match && match[1]) {
+						autoId = match[1]
+					}
+				}
+
+				// Find the asset ID from the grid row
+				const gridRow = card.querySelector('.grid')
+				let assetId = ''
+				let filename = ''
+				let path = ''
+
+				if (gridRow) {
+					const spans = gridRow.querySelectorAll('span.tag')
+					// The first tag after "id" label contains the asset ID
+					const idLabel = Array.from(gridRow.querySelectorAll('span')).find(s => s.textContent === 'id')
+					if (idLabel && idLabel.nextElementSibling) {
+						assetId = idLabel.nextElementSibling.textContent
+					}
+
+					// Find filename
+					const fileLabel = Array.from(gridRow.querySelectorAll('span')).find(s => s.textContent === 'File')
+					if (fileLabel && fileLabel.nextElementSibling) {
+						filename = fileLabel.nextElementSibling.textContent
+					}
+
+					// Find path
+					const pathLabel = Array.from(gridRow.querySelectorAll('span')).find(s => s.textContent === 'Path')
+					if (pathLabel && pathLabel.nextElementSibling) {
+						path = pathLabel.nextElementSibling.textContent
+					}
+				}
+
+				if (assetId || autoId) {
+					data.push({
+						assetId: assetId,
+						autoId: autoId,
+						filename: filename,
+						path: path
+					})
+				}
+			} catch (e) {
+				console.error('[Export] Error extracting data from card:', e)
+			}
+		})
+
+		console.log('[Export] Extracted data for', data.length, 'assets')
+
+		if (data.length === 0) {
+			console.warn('[Export] No data extracted')
+			alert('No data could be extracted')
+			return
+		}
+
+		// Create CSV content
+		let csvContent = 'Asset ID,Auto ID,Filename,Path\n'
+		data.forEach(item => {
+			// Escape fields that might contain commas or quotes
+			const escapeField = (field) => {
+				if (!field) return ''
+				field = String(field)
+				if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+					return `"${field.replace(/"/g, '""')}"`
+				}
+				return field
+			}
+
+			csvContent += `${escapeField(item.assetId)},${escapeField(item.autoId)},${escapeField(item.filename)},${escapeField(item.path)}\n`
+		})
+
+		// Create download link
+		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+		const link = document.createElement('a')
+		const url = URL.createObjectURL(blob)
+
+		// Generate filename with timestamp
+		const now = new Date()
+		const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5)
+		link.setAttribute('href', url)
+		link.setAttribute('download', `immich_ids_${timestamp}.csv`)
+		link.style.visibility = 'hidden'
+
+		document.body.appendChild(link)
+		link.click()
+		document.body.removeChild(link)
+
+		console.log(`[Export] Successfully exported ${data.length} assets to CSV`)
+		alert(`Exported ${data.length} assets to CSV file`)
+	} catch (e) {
+		console.error('[Export] Error exporting IDs:', e)
+		alert('Error exporting IDs: ' + e.message)
+	}
+}
+
+
+
+//------------------------------------------------------------------------
 // Tab Acts Floating Bar
 //------------------------------------------------------------------------
 function initTabActsFloating()

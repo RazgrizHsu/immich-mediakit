@@ -36,6 +36,7 @@ class k:
 
     btnAllSelect = 'sim-btn-AllSelect'
     btnAllCancel = 'sim-btn-AllCancel'
+    btnExportIds = 'sim-btn-ExportIds'
 
     btnFind = "sim-btn-fnd"
     btnClear = "sim-btn-clear"
@@ -145,6 +146,7 @@ def layout(autoId=None):
 
                                     dbc.Button( [ htm.Span( className="fake-checkbox checked" ), "select All"], id=k.btnAllSelect, size="sm", color="secondary", disabled=True ),
                                     dbc.Button( [ htm.Span( className="fake-checkbox" ),"Deselect All"], id=k.btnAllCancel, size="sm", color="secondary", disabled=True ),
+                                    dbc.Button("Export IDs", id=k.btnExportIds, size="sm", color="info", disabled=True ),
 
                                 ], className="left"),
 
@@ -483,6 +485,7 @@ ccbk(
         out(k.btnRmAll, "disabled"),
         out(k.btnRmSel, "disabled"),
         out(k.btnOkSel, "disabled"),
+        out(k.btnExportIds, "disabled"),
     ],
     [
         inp(ks.sto.now, "data"),
@@ -521,10 +524,12 @@ def sim_UpdateButtons(dta_now, dta_ste, dta_cnt):
     cntSel = len(ste.selectedIds) if ste.selectedIds else 0
     disRm = cntSel == 0
     disRS = cntSel == 0
+    
+    disExport = cntAssets <= 0
 
     # lg.info(f"[sim:UpdBtns] disFind[{disFind}]")
 
-    return disFind, disClear, disReset, disOk, disDel, disRm, disRS
+    return disFind, disClear, disReset, disOk, disDel, disRm, disRS, disExport
 
 
 #------------------------------------------------------------------------
