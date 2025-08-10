@@ -23,6 +23,8 @@ class k:
     cbxArc = "inp-archived"
     cbxLive = "inp-livePhoto"
 
+    btnExportIds = "view-btn-ExportIds"
+
     grid = "div-photo-grid"
     pagerMain = "vg-pager-main"
 
@@ -65,6 +67,10 @@ def layout():
                         dbc.Label("Filter"),
                         dbc.Select(id=k.selFilter, options=optFileters, value="all", className="mb-2"), #type:ignore
                     ], width=4),
+                    dbc.Col([
+                        dbc.Label("Export"),
+                        dbc.Button("Export Current IDs", id=k.btnExportIds, color="info", className="w-100"),
+                    ])
                 ]),
 
                 dbc.Row([
@@ -84,8 +90,8 @@ def layout():
 
                 dbc.Row([
                     dbc.Col([
-                    ], width=12),
-                ]),
+                    ], width=2, className="ms-auto"),
+                ], className="mt-2"),
             ])
         ], className="mb-4"),
         #====== top end =========================================================
