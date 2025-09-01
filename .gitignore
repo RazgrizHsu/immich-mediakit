@@ -19,3 +19,6 @@ cache/
 *.db-journal
 docker/test
 docs/w
+
+# Environment files
+.env
