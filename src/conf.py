@@ -324,6 +324,27 @@ class envs:
                 return envs.pth.full(pathPreview)
             return ""
 
+    @staticmethod
+    def showVars():
+        def maskSensitive(value: str, keepStart: int = 2, keepEnd: int = 1) -> str:
+            if not value or len(value) <= keepStart + keepEnd:
+                return '*' * len(value) if value else ''
+            return value[:keepStart] + '*' * (len(value) - keepStart - keepEnd) + value[-keepEnd:]
+
+        lg.info("Environment variables loaded:")
+        lg.info(f"  PSQL_HOST: {envs.psqlHost}")
+        lg.info(f"  PSQL_PORT: {envs.psqlPort}")
+        lg.info(f"  PSQL_DB: {envs.psqlDb}")
+        lg.info(f"  PSQL_USER: {envs.psqlUser}")
+        lg.info(f"  PSQL_PASS: {maskSensitive(envs.psqlPass)}")
+        lg.info(f"  IMMICH_PATH: {envs.immichPath}")
+        lg.info(f"  IMMICH_THUMB: {envs.immichThumb}")
+        lg.info(f"  QDRANT_URL: {envs.qdrantUrl}")
+        lg.info(f"  MKIT_PORT: {envs.mkitPort}")
+        lg.info(f"  MKIT_DATA: {envs.mkitData}")
+        lg.info(f"  IS_DOCKER: {envs.isDock}")
+        lg.info(f"  IS_DEV: {envs.isDev}")
+
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
 def getHostName():

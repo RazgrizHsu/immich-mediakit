@@ -79,6 +79,8 @@ if __name__ == "__main__":
         lg.info(f"[MediaKit] Start ... ver[{ envs.version }] {'DEBUG Mode' if conf.envs.isDev else ''}")
         lg.info("========================================================================")
 
+        envs.showVars()
+
         if log.EnableLogFile: lg.info(f"Log recording: {log.log_file}")
 
         if conf.envs.isDev:
