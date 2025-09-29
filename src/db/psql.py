@@ -2,6 +2,7 @@ import os
 import time
 from typing import Optional, List, Dict
 from contextlib import contextmanager
+from datetime import datetime, timezone
 
 import psycopg
 from psycopg.rows import dict_row
@@ -15,6 +16,53 @@ from util.err import mkErr
 lg = log.get(__name__)
 
 
+def setup_safe_timestamp_loader():
+    """
+    Setup custom timestamp loader to handle BC dates and out-of-range timestamps
+    """
+    try:
+        from psycopg.types.datetime import TimestamptzLoader, TimestampLoader
+        import psycopg
+
+        class SafeTimestamptzLoader(TimestamptzLoader):
+            def load(self, data):
+                try:
+                    return super().load(data)
+                except (ValueError, OverflowError, psycopg.DataError) as e:
+                    if "year" in str(e) and ("out of range" in str(e) or "before year 1" in str(e)):
+                        try:
+                            data_str = bytes(data).decode('utf-8')
+                        except (UnicodeDecodeError, TypeError):
+                            data_str = repr(data)[:50]  # Limit length
+                        lg.warning(f"Replaced invalid timestamptz with default: {data_str} - {e}")
+                        # Return year 2000 as marker for problematic data
+                        return datetime(2000, 1, 1, tzinfo=timezone.utc)
+                    raise
+
+        class SafeTimestampLoader(TimestampLoader):
+            def load(self, data):
+                try:
+                    return super().load(data)
+                except (ValueError, OverflowError, psycopg.DataError) as e:
+                    if "year" in str(e) and ("out of range" in str(e) or "before year 1" in str(e)):
+                        try:
+                            data_str = bytes(data).decode('utf-8')
+                        except (UnicodeDecodeError, TypeError):
+                            data_str = repr(data)[:50]  # Limit length
+                        lg.warning(f"Replaced invalid timestamp with default: {data_str} - {e}")
+                        # Return year 2000 as marker for problematic data
+                        return datetime(2000, 1, 1)
+                    raise
+
+        # Register globally using official psycopg method
+        psycopg.adapters.register_loader("timestamptz", SafeTimestamptzLoader)
+        psycopg.adapters.register_loader("timestamp", SafeTimestampLoader)
+
+        lg.info("Custom timestamp loaders registered successfully")
+    except Exception as e:
+        lg.warning(f"Failed to register custom timestamp loaders: {e}")
+
+
 
 def init():
     try:
@@ -23,6 +71,9 @@ def init():
     except ImportError:
         register_heif_opener = None
         lg.info("pillow-heif not available, skipping HEIC/HEIF support")
+
+    # Setup custom timestamp loaders to handle BC dates
+    setup_safe_timestamp_loader()
 
     host = envs.psqlHost
     port = envs.psqlPort
