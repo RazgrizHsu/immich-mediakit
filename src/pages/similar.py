@@ -912,6 +912,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: models.ITaskStore):
         now.sim.activeTab = k.tabCur
 
         lg.info(f"[sim:fs] done, found {len(grps)} group(s) with {len(assets)} assets")
+        lg.info(f"[sim:fs] assets autoIds: {[a.autoId for a in assets]}")
 
         if not now.sim.assCur: raise RuntimeError(f"No groups found")
 
@@ -924,9 +925,13 @@ def sim_FindSimilar(doReport: IFnProg, sto: models.ITaskStore):
             msg = [f"Found {len(grps)} similar photo group(s) with {len(assets)} total photos"]
             if len(grps) >= mxGrp: msg.append(f"Reached maximum group limit ({mxGrp} groups).")
         else:
+            root = grps[0].asset
             cntInfos = len(grps[0].bseInfos)
-            msg = [f"Found {len(grps[0].bseInfos)} similar photos for #{asset.autoId}"]
             cntAll = len(assets)
+            hasRoot = any(a.autoId == root.autoId for a in assets)
+            msg = [f"Found {cntInfos} similar, displaying {cntAll} for #{root.autoId} ({root.id})"]
+            if not hasRoot:
+                msg.append(f"⚠️ Root #{root.autoId} missing from display!")
             if cntAll > cntInfos:
                 msg.append(f"include ({cntAll - cntInfos}) asset extra tree in similar tree.")
             if cntAll >= maxItems:

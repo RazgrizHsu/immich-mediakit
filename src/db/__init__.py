@@ -119,6 +119,8 @@ class DtoSets:
     ausl_TypJpg:int = AutoDbField('ausl_TypJpg', int, 0 ) #type:ignore
     ausl_TypPng:int = AutoDbField('ausl_TypPng', int, 0 ) #type:ignore
     ausl_TypHeic:int = AutoDbField('ausl_TypHeic', int, 0 ) #type:ignore
+    ausl_Fav:int = AutoDbField('ausl_Fav', int, 0 ) #type:ignore
+    ausl_InAlb:int = AutoDbField('ausl_InAlb', int, 0 ) #type:ignore
 
     excl:bool = AutoDbField('excl', bool, True ) #type:ignore
     excl_FndLes:int = AutoDbField('excl_FndLes', int, 0) #type:ignore

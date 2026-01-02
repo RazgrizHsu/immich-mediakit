@@ -23,3 +23,4 @@ docs/w
 # Environment files
 .env
 .env.*
+trace.*

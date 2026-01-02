@@ -12,12 +12,27 @@ indent_style = tab
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-ij_javascript_use_semicolon_after_statement = false
-ij_javascript_force_semicolon_style = true
-# ij_javascript_force_quote_style = false
-ij_javascript_keep_simple_blocks_in_one_line = true
-ij_javascript_keep_simple_methods_in_one_line = true
 
+space_in_parens = false
+space_in_brackets = true
+space_in_braces = true
+space_in_call = false
+space_before_blocks = false
+space_around_operators = true
+space_after_type_colon = keep
+
+blank_lines_root = 3
+blank_lines_block = 2
+blank_lines_keep = false
+
+brace_style = same_line
+quote_style = keep
+trailing_comma = true
+reduce_semicolon = true
+compact_mode = true
+align_imports = true
+align_comments = true
+align_enum = true
 
 
 [*.py]
@@ -26,5 +41,5 @@ indent_style = space
 [*.md]
 trim_trailing_whitespace = false
 
-[*.yml]
+[*.{py,yml}]
 indent_style = space

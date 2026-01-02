@@ -47,6 +47,8 @@ class k:
     auSelTypeJpg = "autoSelTypeJpg"
     auSelTypePng = "autoSelTypePng"
     auSelTypeHeic = "autoSelTypeHeic"
+    auSelFav = "autoSelFav"
+    auSelInAlb = "autoSelInAlb"
 
     gpuAutoMode = "gpuAutoMode"
     gpuBatchSize = "gpuBatchSize"
@@ -172,6 +174,14 @@ def renderAutoSelect():
                     dbc.Select(id=k.id(k.auSelTypePng), options=optWeights, value=db.dto.ausl_TypPng, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
                     htm.Label("Heic", className="me-2"),
                     dbc.Select(id=k.id(k.auSelTypeHeic), options=optWeights, value=db.dto.ausl_TypHeic, disabled=not db.dto.ausl, size="sm"), #type:ignore
+                ], className="icriteria"),
+
+                htm.Div([
+                    htm.Span(htm.Span("Immich", className="tag txt-smx me-1")),
+                    htm.Label("Favorited", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelFav), options=optWeights, value=db.dto.ausl_Fav, disabled=not db.dto.ausl, size="sm", className="me-1"), #type:ignore
+                    htm.Label("In Album", className="me-2"),
+                    dbc.Select(id=k.id(k.auSelInAlb), options=optWeights, value=db.dto.ausl_InAlb, disabled=not db.dto.ausl, size="sm"), #type:ignore
                 ], className="icriteria"),
 
                 htm.Hr(),
@@ -375,6 +385,8 @@ def settings_OnUpd(th, auNxt, shGdInfo, rtree,  maxItems, muodEnable, muodDate, 
         out(k.id(k.auSelTypeJpg), "disabled"),
         out(k.id(k.auSelTypePng), "disabled"),
         out(k.id(k.auSelTypeHeic), "disabled"),
+        out(k.id(k.auSelFav), "disabled"),
+        out(k.id(k.auSelInAlb), "disabled"),
     ],
     inp(k.id(k.auSelEnable), "value"),
     inp(k.id(k.auSelSkipLowSim), "value"),
@@ -392,9 +404,11 @@ def settings_OnUpd(th, auNxt, shGdInfo, rtree,  maxItems, muodEnable, muodDate, 
     inp(k.id(k.auSelTypeJpg), "value"),
     inp(k.id(k.auSelTypePng), "value"),
     inp(k.id(k.auSelTypeHeic), "value"),
+    inp(k.id(k.auSelFav), "value"),
+    inp(k.id(k.auSelInAlb), "value"),
     prevent_initial_call=True
 )
-def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig, szSml, dimBig, dimSml, namLn, namSt, tJpg, tPng, tHeic):
+def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig, szSml, dimBig, dimSml, namLn, namSt, tJpg, tPng, tHeic, fav, inAlb):
     db.dto.ausl = enable
     db.dto.ausl_SkipLow = skipLo
     db.dto.ausl_AllLive = onlyLive
@@ -411,13 +425,15 @@ def autoSelect_OnUpd(enable, skipLo, onlyLive, earl, late, exRich, exPoor, szBig
     db.dto.ausl_TypJpg = tJpg
     db.dto.ausl_TypPng = tPng
     db.dto.ausl_TypHeic = tHeic
+    db.dto.ausl_Fav = fav
+    db.dto.ausl_InAlb = inAlb
 
-    lg.info(f"[autoSel:OnUpd] Enable[{enable}] HighSim[{skipLo}] AlwaysPickLivePhoto[{onlyLive}] Earlier[{earl}] Later[{late}] ExifRich[{exRich}] ExifPoor[{exPoor}] BigSize[{szBig}] SmallSize[{szSml}] BigDim[{dimBig}] SmallDim[{dimSml}] namLn[{namLn}] namSt[{namSt}] jpg[{tJpg}] png[{tPng}] heic[{tHeic}]")
+    lg.info(f"[autoSel:OnUpd] Enable[{enable}] HighSim[{skipLo}] AlwaysPickLivePhoto[{onlyLive}] Earlier[{earl}] Later[{late}] ExifRich[{exRich}] ExifPoor[{exPoor}] BigSize[{szBig}] SmallSize[{szSml}] BigDim[{dimBig}] SmallDim[{dimSml}] namLn[{namLn}] namSt[{namSt}] jpg[{tJpg}] png[{tPng}] heic[{tHeic}] fav[{fav}] inAlb[{inAlb}]")
 
     # Control enable/disable states
     dis = not enable
 
-    return [dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis, dis]
+    return [dis] * 17
 
 
 @cbk(

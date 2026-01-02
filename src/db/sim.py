@@ -292,7 +292,7 @@ def processChildren( asset: models.Asset, bseInfos: List[models.SimInfo], simAid
 
 def getAutoSelectAuids(src: List[models.Asset]) -> List[int]:
     lg.info(f"[ausl] Starting auto-selection, auSelEnable[{db.dto.ausl}], assets count={len(src) if src else 0}")
-    lg.info(f"[ausl] Weights: Earlier[{db.dto.ausl_Earlier}] Later[{db.dto.ausl_Later}] ExifRich[{db.dto.ausl_ExRich}] ExifPoor[{db.dto.ausl_ExPoor}] BigSize[{db.dto.ausl_OfsBig}] SmallSize[{db.dto.ausl_OfsSml}] BigDim[{db.dto.ausl_DimBig}] SmallDim[{db.dto.ausl_DimSml}] HighSim[{db.dto.ausl_SkipLow}] AlwaysPickLivePhoto[{db.dto.ausl_AllLive}] jpg[{db.dto.ausl_TypJpg}] png[{db.dto.ausl_TypPng}] heic[{db.dto.ausl_TypHeic}]")
+    lg.info(f"[ausl] Weights: Earlier[{db.dto.ausl_Earlier}] Later[{db.dto.ausl_Later}] ExifRich[{db.dto.ausl_ExRich}] ExifPoor[{db.dto.ausl_ExPoor}] BigSize[{db.dto.ausl_OfsBig}] SmallSize[{db.dto.ausl_OfsSml}] BigDim[{db.dto.ausl_DimBig}] SmallDim[{db.dto.ausl_DimSml}] HighSim[{db.dto.ausl_SkipLow}] AlwaysPickLivePhoto[{db.dto.ausl_AllLive}] jpg[{db.dto.ausl_TypJpg}] png[{db.dto.ausl_TypPng}] heic[{db.dto.ausl_TypHeic}] fav[{db.dto.ausl_Fav}] inAlb[{db.dto.ausl_InAlb}]")
 
     if not db.dto.ausl or not src: return []
 
@@ -303,6 +303,7 @@ def getAutoSelectAuids(src: List[models.Asset]) -> List[int]:
         db.dto.ausl_DimBig > 0, db.dto.ausl_DimSml > 0,
         db.dto.ausl_NamLon > 0, db.dto.ausl_NamSht > 0,
         db.dto.ausl_TypJpg > 0, db.dto.ausl_TypPng > 0, db.dto.ausl_TypHeic > 0,
+        db.dto.ausl_Fav > 0, db.dto.ausl_InAlb > 0,
     ])
 
     if not active: return []
@@ -392,6 +393,8 @@ class IMetrics:
     dim: int
     nameLen: int
     fileType: str
+    isFav: bool
+    hasAlb: bool
 
 
 def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
@@ -433,7 +436,9 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
                 fileType = ass.originalFileName.lower().split('.')[-1] if '.' in ass.originalFileName else ''
 
             ndt = normalizeDate(dt)
-            metrics.append(IMetrics( aid=ass.autoId, dt=ndt, exfCnt=exfCnt, fileSz=fileSz, dim=dim, nameLen=nameLen, fileType=fileType))
+            isFav = bool(ass.isFavorite)
+            hasAlb = bool(ass.ex and ass.ex.albs)
+            metrics.append(IMetrics( aid=ass.autoId, dt=ndt, exfCnt=exfCnt, fileSz=fileSz, dim=dim, nameLen=nameLen, fileType=fileType, isFav=isFav, hasAlb=hasAlb))
         return metrics
 
     def calcScore(idx: int, met: List[IMetrics]) -> Tuple[int, List[str]]:
@@ -484,13 +489,22 @@ def _selectBestAsset(grpAssets: List[models.Asset]) -> int:
             score += pts
             details.append(f"HEIC+{pts}")
 
+        if db.dto.ausl_Fav > 0 and met[idx].isFav:
+            pts = db.dto.ausl_Fav * 10
+            score += pts
+            details.append(f"Fav+{pts}")
+        if db.dto.ausl_InAlb > 0 and met[idx].hasAlb:
+            pts = db.dto.ausl_InAlb * 10
+            score += pts
+            details.append(f"InAlb+{pts}")
+
         return score, details
 
     met = collectMetrics(grpAssets)
 
     lg.info(f"[ausl] Group comparison:")
     for m in met:
-        lg.info(f"[ausl]   #{m.aid}: date[{m.dt}] exif[{m.exfCnt}] fsize[{m.fileSz}] dimensions[{m.dim}] nameLen[{m.nameLen}]")
+        lg.info(f"[ausl]   #{m.aid}: date[{m.dt}] exif[{m.exfCnt}] fsize[{m.fileSz}] dim[{m.dim}] name[{m.nameLen}] fav[{m.isFav}] alb[{m.hasAlb}]")
 
     bestAss = None
     bestScr = -1

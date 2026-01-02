@@ -565,6 +565,36 @@ def deleteBy(assets: List[models.Asset]):
                                     (assId,)
                                 )
 
+            # 3. Update simInfos of other assets that reference deleted assets
+            deletedAids = [ass.autoId for ass in assets]
+            for delAid in deletedAids:
+                c.execute("""
+                    SELECT autoId, simInfos FROM assets
+                    WHERE EXISTS (
+                        SELECT 1 FROM json_each(simInfos)
+                        WHERE json_extract(value, '$.aid') = ?
+                    ) AND simOk = 0
+                """, (delAid,))
+
+                for row in c.fetchall():
+                    aId, jsonInfos = row['autoId'], row['simInfos']
+                    infos = json.loads(jsonInfos) if jsonInfos else []
+
+                    # Remove deleted aid from simInfos
+                    infos = [i for i in infos if i.get('aid') != delAid]
+
+                    # If only self remains, mark as resolved
+                    if len(infos) <= 1:
+                        c.execute(
+                            "UPDATE assets SET simOk = 1, simInfos = '[]', simGIDs = '[]' WHERE autoId = ?",
+                            (aId,)
+                        )
+                    else:
+                        c.execute(
+                            "UPDATE assets SET simInfos = ? WHERE autoId = ?",
+                            (json.dumps(infos), aId)
+                        )
+
             conn.commit()
             lg.info(f"[pics] delete by assIds[{cntAll}] rst[{count}] mainGIDs[{mainGIDs}]")
 
