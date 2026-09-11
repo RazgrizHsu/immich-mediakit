@@ -41,7 +41,10 @@ class SchemaInfo:
 	hasEncVidPath: bool = True
 	hasAssetDeviceId: bool = True
 	# album table features
-	hasAlbumOwnerId: bool = True
+	hasAlbumOwnerId:bool=True
+	# asset_face features (personId renamed to personGroupId in Immich v3.2+)
+	hasFacePersonId:bool=True
+	hasFaceVisible:bool=False
 	# Junction table column names
 	albumAssetAlbumId: str = 'albumId'
 	albumAssetAssetId: str = 'assetId'
@@ -130,6 +133,17 @@ def detectSchema():
 					AND column_name = 'ownerId'
 				"""))
 				schema.hasAlbumOwnerId=c.fetchone() is not None
+
+				# Detect asset_face columns (personId renamed to personGroupId in v3.2+, isVisible added in v3.1+)
+				c.execute(Q(f"""
+					SELECT column_name FROM information_schema.columns
+					WHERE table_schema = 'public'
+					AND table_name = '{schema.assetFace}'
+					AND column_name IN ('personId', 'isVisible')
+				"""))
+				facCols = {row[0] for row in c.fetchall()}
+				schema.hasFacePersonId='personId' in facCols
+				schema.hasFaceVisible='isVisible' in facCols
 
 				# Detect junction table names (new: album_asset, old: albums_assets_assets)
 				c.execute("""
@@ -820,15 +834,22 @@ def fetchExInfos(assetIds: List[str]) -> Dict[str, models.AssetExInfo]:
 							rst[assetId].tags.append(models.Tags.fromDic(tagData))
 
 				# faces
-				for i in range(0, len(assetIds), szChunk):
-					chunk = assetIds[i:i + szChunk]
-					facSql = Q(f"""
-					Select af."assetId", af.id, af."personId", p.name, p."ownerId",
+				if sch.hasFacePersonId:
+					perSel='af."personId"'
+					perJoin='Join person p On af."personId" = p.id'
+				else:
+					perSel='af."personGroupId" As "personId"'
+					perJoin=f'Join {sch.asset} a On a.id = af."assetId" Join person p On p."personGroupId" = af."personGroupId" And p."ownerId" = a."ownerId"'
+				visAnd=' And af."isVisible" Is True' if sch.hasFaceVisible else ''
+				for i in range(0,len(assetIds),szChunk):
+					chunk=assetIds[i:i+szChunk]
+					facSql=Q(f"""
+					Select af."assetId", af.id, {perSel}, p.name, p."ownerId",
 							af."imageWidth", af."imageHeight", af."boundingBoxX1", af."boundingBoxY1",
 							af."boundingBoxX2", af."boundingBoxY2", af."sourceType"
 					From {sch.assetFace} af
-					Join person p On af."personId" = p.id
-					Where af."assetId" = ANY(%s) And af."deletedAt" Is Null
+					{perJoin}
+					Where af."assetId" = ANY(%s) And af."deletedAt" Is Null{visAnd}
 					""")
 					cursor.execute(facSql, (chunk,))
 					facRows = cursor.fetchall()
