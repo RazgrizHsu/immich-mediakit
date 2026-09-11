@@ -70,7 +70,7 @@ def regBy(app):
 	pathNoImg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets/noimg.png")
 
 	cache = Cache(app.server, config={
-		'CACHE_TYPE': 'filesystem',
+		'CACHE_TYPE':'FileSystemCache',
 		'CACHE_DIR': dirCache,
 		'CACHE_DEFAULT_TIMEOUT': TIMEOUT,
 		'CACHE_THRESHOLD': 300,
