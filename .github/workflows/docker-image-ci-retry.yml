@@ -1,0 +1,45 @@
+name: Docker Image Build Retry
+
+on:
+  workflow_run:
+    workflows:
+      - Docker Image Build
+    types:
+      - completed
+
+permissions:
+  actions: write
+  checks: read
+
+jobs:
+  retry:
+    name: Retry once
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.event.workflow_run.run_attempt == 1 &&
+      contains(fromJSON('["failure", "cancelled", "timed_out"]'), github.event.workflow_run.conclusion)
+    steps:
+      - name: Rerun failed or timed-out run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          if [ "$CONCLUSION" = "cancelled" ]; then
+            timedout=false
+            for jid in $(gh api "repos/$GH_REPO/actions/runs/$RUN_ID/attempts/1/jobs" --jq '.jobs[] | select(.conclusion == "cancelled") | .id'); do
+              hit="$(gh api "repos/$GH_REPO/check-runs/$jid/annotations" --jq 'any(.[]; .message | contains("exceeded the maximum execution time"))')"
+              if [ "$hit" = "true" ]; then
+                timedout=true
+              fi
+            done
+            if [ "$timedout" != "true" ]; then
+              echo "Run $RUN_ID was cancelled without timeout; skip retry."
+              exit 0
+            fi
+          fi
+          echo "Rerunning run $RUN_ID (conclusion=$CONCLUSION)."
+          gh run rerun "$RUN_ID"

@@ -34,7 +34,7 @@ jobs:
   build-and-verify:
     name: Build + Verify (${{ matrix.device }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
@@ -45,10 +45,31 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        id: buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Cache pip downloads (${{ matrix.device }})
+        id: pipcache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/pip-cache
+          key: pip-${{ matrix.device }}-${{ hashFiles('requirements*.txt') }}
+          restore-keys: |
+            pip-${{ matrix.device }}-
+
+      - name: Inject pip cache mount (${{ matrix.device }})
+        uses: reproducible-containers/buildkit-cache-dance@5422eac04292c961a382e0f584ea0f03ad9da723 # v3.4.0
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          cache-map: |
+            {
+              "${{ runner.temp }}/pip-cache": "/root/.cache"
+            }
+          scratch-dir: ${{ runner.temp }}/dance-scratch
+          skip-extraction: ${{ steps.pipcache.outputs.cache-hit }}
 
       - name: Build image (${{ matrix.device }})
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: ./Dockerfile
@@ -100,7 +121,7 @@ jobs:
 
       - name: Refresh main cache scope
         if: github.ref == 'refs/heads/main'
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: ./Dockerfile
