@@ -718,6 +718,11 @@
 		border: 3px solid var(--info-bs);
 	}
 
+	&.locked {
+		border: 3px dashed #888888;
+		opacity: 0.6;
+	}
+
 	// non-sim-mod (view.py grid)
 	&.view {
 		img,

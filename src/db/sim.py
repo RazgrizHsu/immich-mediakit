@@ -88,7 +88,23 @@ def checkGroupConds(assets: List[models.Asset]) -> Tuple[bool, str]:
 	return True, ""
 
 
-def findCandidate(autoId: int, taskArgs: dict) -> models.Asset:
+def isOverlap(grps:List[List[models.Asset]],assets:List[models.Asset])->bool:
+	used = {a.autoId for g in grps for a in g if not a.isKep}
+	return any(a.autoId in used for a in assets if not a.isKep)
+
+
+def loadGrps(rootAids:List[int],incGroup:bool,mx:int)->List[List[models.Asset]]:
+	grps:List[List[models.Asset]]=[]
+	for aid in rootAids:
+		if len(grps)>=mx:break
+		assets=db.pics.getSimAssets(aid,incGroup)
+		if isOverlap(grps,assets):continue
+		for ass in assets:ass.vw.muodId=len(grps)+1
+		grps.append(assets)
+	return grps
+
+
+def findCandidate(autoId:int,taskArgs:dict)->models.Asset:
 	asset = None
 
 	if not autoId and taskArgs.get('assetId'):
@@ -169,9 +185,7 @@ def searchBy(src:models.Asset, doRep:IFnProg, isCancel:IFnCancel, fromUrl=False,
 					stats.add(ass.autoId, gi.result or "noFound")
 					continue
 
-				existingIds = {a.autoId for grp in gis for a in grp.assets}
-				hasDup = any(a.autoId in existingIds for a in gi.assets)
-				if hasDup:
+				if isOverlap([g.assets for g in gis],gi.assets):
 					stats.add(ass.autoId, "dupSkip")
 					skipAids.append(ass.autoId)
 					continue
@@ -198,7 +212,7 @@ def searchBy(src:models.Asset, doRep:IFnProg, isCancel:IFnCancel, fromUrl=False,
 	return SearchResult(groups=gis, corrupted=corrupted)
 
 
-def findGroupBy(ast: models.Asset, sinfo: List[models.SimInfo], doReport: IFnProg, grpId: int, fromUrl=False, corrupted: list[int]=None) -> SearchInfo:
+def findGroupBy(ast: models.Asset, sinfo: List[models.SimInfo], doReport: IFnProg, grpId:int,fromUrl:bool,corrupted:list[int])->SearchInfo:
 	rst = SearchInfo()
 	rst.asset = ast
 	rst.bseInfos = sinfo
@@ -262,7 +276,7 @@ def findGroupBy(ast: models.Asset, sinfo: List[models.SimInfo], doReport: IFnPro
 	return rst
 
 
-def processChildren(ast: models.Asset, infos: List[models.SimInfo], simAids: List[int], doReport: IFnProg, corrupted: list[int]=None) -> Set[int]:
+def processChildren(ast: models.Asset, infos: List[models.SimInfo], simAids: List[int], doReport:IFnProg,corrupted:list[int])->Set[int]:
 	thMin = db.dto.thMin
 	maxItems = db.dto.rtreeMax
 
@@ -304,7 +318,7 @@ def processChildren(ast: models.Asset, infos: List[models.SimInfo], simAids: Lis
 				db.pics.setVectoredBy([ass], done=0)
 				try: db.vecs.deleteBy([aid])
 				except Exception as ce: lg.warn(f"[sim:children] qdrant clean failed aid[{aid}]: {ce}")
-				if corrupted is not None: corrupted.append(aid)
+				corrupted.append(aid)
 				lg.warn(f"[sim:children] aid[{aid}] idx corrupted, cleared")
 				continue
 

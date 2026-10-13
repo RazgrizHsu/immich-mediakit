@@ -330,11 +330,11 @@ def renderCard():
 
 					htm.Div([
 						htm.Label("Max Groups: "),
-						dbc.Select(id=k.id(k.muodMx), options=toOpts(optMaxGroups), value=db.dto.muod.sz, className="", disabled=True)
+						dbc.Select(id=k.id(k.muodMx),options=toOpts(optMaxGroups),value=db.dto.muod.sz,className="")
 					]),
 				], className="icbxs"),
 				htm.Ul([
-					htm.Li([htm.B("Max Groups: "), "Maximum number of groups to return when grouping is enabled"]),
+					htm.Li([htm.B("Max Groups: "),"Maximum number of groups per search in Multi Mode, and per Load to current in the pending tab"]),
 				])
 			], className="irow"),
 
@@ -431,9 +431,8 @@ def renderCard():
 
 @cbk(
 	[
-		out(ks.sto.now, "data", allow_duplicate=True),
-		out(k.id(k.muodMx), "disabled", allow_duplicate=True),
-		out(k.id(k.muodOn), "value", allow_duplicate=True),
+		out(ks.sto.now,"data",allow_duplicate=True),
+		out(k.id(k.muodOn),"value",allow_duplicate=True),
 		out(k.id(k.simRtree), "value", allow_duplicate=True),
 	],
 	inp(k.id(k.threshold), "value"),
@@ -482,8 +481,6 @@ def settings_OnUpd(th, auNxt, shGdInfo, rtree,  maxItems, pathFilter, muodOn, mu
 	# db.dto.muod = Muod(muodOn or True, muodMxGs or 10)
 	# db.dto.gpsk = Gpsk(gDt,gW,gH,gFsz)
 
-	disMuodMx = not muodOn
-
 	if db.dto.showGridInfo != shGdInfo: db.dto.showGridInfo = shGdInfo
 
 	if db.dto.rtree != rtree:
@@ -491,10 +488,14 @@ def settings_OnUpd(th, auNxt, shGdInfo, rtree,  maxItems, pathFilter, muodOn, mu
 
 		if retNow == noUpd and now.sim.assAid > 0:
 			lg.info(f"[sets:OnUpd] reload, now.assAid[{now.sim.assAid}] rtree[{db.dto.rtree}] muodMode[{db.dto.muod.on}]")
-			now.sim.assCur = db.pics.getSimAssets(now.sim.assAid, db.dto.rtree if not db.dto.muod.on else False)
+			from db import sim
+			cur=now.sim.assCur
+			roots=[a.autoId for i,a in enumerate(cur) if i==0 or a.vw.muodId != cur[i-1].vw.muodId] if cur else [now.sim.assAid]
+			grps=sim.loadGrps(roots,db.dto.rtree if not db.dto.muod.on else False,len(roots))
+			now.sim.assCur=[a for g in grps for a in g]
 			retNow = now
 
-	return [retNow, disMuodMx, muodOn, rtree]
+	return [retNow,muodOn,rtree]
 
 
 @cbk(

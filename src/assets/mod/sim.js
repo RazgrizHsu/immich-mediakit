@@ -582,8 +582,8 @@ window.dash_clientside.similar = {
 			}
 		}
 
-		const assets = now_data?.sim?.assCur
-		const ausl = sets_data?.ausl
+		const assets=now_data?.sim?.assCur?.filter(a=>!a.isKep)
+		const ausl=sets_data?.ausl
 		const curSig = getAutoSelSig(assets, ausl)
 		if (curSig === _lastAutoSelSig) {
 			console.log('[ausl] Skip: assets & ausl unchanged')

@@ -20,6 +20,8 @@ Find and remove similar/duplicate images using deep learning.
 - **Visual Similarity Detection**: Find duplicates by how photos look
 - **Search from Photo**: Find similar photos starting from any specific image
 - **Multi Mode**: Process up to 50 duplicate groups at once
+- **Load Pending**: Load multiple pending groups into the current tab for batch actions
+- **Kept Lock**: Photos you keep are protected from deletion when they appear in later groups
 - **Cross-User Detection**: Find duplicates across multiple Immich users
 - **Flexible Threshold**: Adjust from exact duplicates (0.97+) to similar shots (0.60+)
 - **Auto-Selection**: Pick best photo by date, size, EXIF, and more
@@ -80,6 +82,15 @@ Re-running Fetch reconciles the local database with Immich's current state. Newl
   - `Auto Find Next`: When enabled, resolving or deleting the current group automatically triggers a search for the next unprocessed photo. When disabled, the system switches to the `pending` tab after each action, letting you work through all found groups before searching again
   - You can always manually switch to the `pending` tab to review and process previously found groups
 
+- `Load to current` (in the `pending` tab)
+  - Loads pending groups into the `current` tab, up to the `Max Groups` setting, so all batch actions apply to them at once
+  - Groups that share photos with an already loaded group stay pending; press the button again after processing to load them
+
+- `Kept` photos
+  - Photos kept by any action are marked `Kept`
+  - When a `Kept` photo appears in a later group, it is shown as a reference only: it cannot be selected, and Auto Selection and all actions skip it
+  - `Clear records & Keep resolved` keeps the mark; `Reset records` clears it
+
 - `Workflow`
   - Press `Find Similar` to search a batch of groups
   - Process groups in both `current` and `pending` tabs
@@ -117,6 +128,8 @@ Re-running Fetch reconciles the local database with Immich's current state. Newl
 - `Multi Mode` search feature
   - By default (when `Multi Mode` is off), it only searches for one group of photos at a time
   - Turn this on and set the `Max Group` number when you've got tons of photos to filter through - super handy for big cleanups
+  - `Max Group` also caps `Load to current` in the `pending` tab, and stays adjustable when `Multi Mode` is off
+  - With several groups shown, `Keep Select, Delete others` only affects groups that have a selected photo; groups without a selection stay pending
   - **Note: Multi Mode and Related Tree are mutually exclusive**
 
 - `Related Tree`

@@ -599,6 +599,8 @@ button { text-decoration: none; }
 
 .card.sim.checked { border: 3px solid var(--info-bs); }
 
+.card.sim.locked { border: 3px dashed #888888; opacity: 0.6; }
+
 .card.sim.view img, .card.sim.view video { object-fit: cover !important; }
 
 .card.sim .viewer { position: relative; }

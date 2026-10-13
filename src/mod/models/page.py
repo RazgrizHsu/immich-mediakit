@@ -30,6 +30,9 @@ class PgSim(BaseDictModel):
     fspW: bool = False
     fspH: bool = False
 
+    def assAct(self)->List[Asset]:
+        return [a for a in self.assCur if not a.isKep]
+
     def clearNow(self):
         self.assAid = 0
         self.assCur.clear()

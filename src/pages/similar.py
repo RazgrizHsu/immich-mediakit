@@ -1,5 +1,7 @@
 from enum import auto
 import traceback
+import json
+import hashlib
 from typing import Optional
 import time
 
@@ -87,13 +89,19 @@ class k:
 	tabs = 'sim-tabs'
 	tabCur = "tab-current"
 	tabPnd = "tab-pend"
-	pagerPnd = "sim-pager-pnd"
+	pagerPnd="sim-pager-pnd"
+	btnLoadPnd="sim-btn-LoadPnd"
+	txtLoadPnd="sim-txt-LoadPnd"
 
-	gvSim = "sim-gvSim"
-	gvPnd = 'sim-gvPnd'
+	gvSim="sim-gvSim"
+	gvSig="sim-gvSig"
+	gvPnd='sim-gvPnd'
 
 	@staticmethod
 	def id(k): return {"type": "sim", "id": f"{k}"}
+
+
+def mkLoadPndTxt(sz):return f"up to {sz} groups, groups sharing photos stay pending"
 
 
 #========================================================================
@@ -105,7 +113,8 @@ def layout(autoId=None):
 	import ui
 	return ui.renderBody([
 		#====== top start =======================================================
-		dcc.Store(id=k.assUrl, data=autoId),
+		dcc.Store(id=k.assUrl,data=autoId),
+		dcc.Store(id=k.gvSig),
 
 		# 客戶端選擇狀態管理的 dummy 元素
 		htm.Div(id={"type": "dummy-output", "id": "selection"}, style={"display": "none"}),
@@ -238,8 +247,14 @@ def layout(autoId=None):
 						disabled=True,
 						children=[
 							htm.Div([
+								dbc.Button([
+									htm.Span("Load to current"),
+									htm.Br(),
+									htm.Small(mkLoadPndTxt(db.dto.muod.sz),id=k.txtLoadPnd),
+								],id=k.btnLoadPnd,color="primary",size="sm",className="mb-2"),
+
 								# top pager
-								*pager.createPager(pgId=k.pagerPnd, idx=0, btnSize=9, className="mb-3"),
+								*pager.createPager(pgId=k.pagerPnd,idx=0,btnSize=9,className="mb-3"),
 
 								dbc.Spinner(
 									htm.Div(id=k.gvPnd),
@@ -415,15 +430,17 @@ def sim_SyncUrlAssetToNow(autoId, dta_now, dta_nfy):
 		out(pager.id.store(k.pagerPnd), "data", allow_duplicate=True),
 		out(k.tabPnd, "disabled"),
 		out(k.tabPnd, "label"),
-		out(k.tabs, "active_tab", allow_duplicate=True),
+		out(k.tabs,"active_tab",allow_duplicate=True),
+		out(k.gvSig,"data"),
 	],
-	inp(ks.sto.now, "data"),
+	inp(ks.sto.now,"data"),
 	[
-		ste(ks.sto.cnt, "data"),
+		ste(ks.sto.cnt,"data"),
+		ste(k.gvSig,"data"),
 	],
 	prevent_initial_call="initial_duplicate"
 )
-def sim_Load(dta_now, dta_cnt):
+def sim_Load(dta_now,dta_cnt,gvSigOld):
 	now = Now.fromDic(dta_now)
 	cnt = Cnt.fromDic(dta_cnt)
 
@@ -432,16 +449,19 @@ def sim_Load(dta_now, dta_cnt):
 
 	cntNo, cntOk, cntPn = cnt.simNo, cnt.simOk, cnt.simPnd
 
-	gview = []
+	gvSig=hashlib.md5(json.dumps([db.dto.muod.on,[a.toDict() for a in now.sim.assCur]],sort_keys=True,default=str).encode()).hexdigest()
+
+	gview=noUpd
 
 	# Check multi mode from dto settings
-	if db.dto.muod.on:
-		gview = gv.mkGrdGrps(now.sim.assCur, onEmpty=[
-			dbc.Alert("No grouped results found..", color="secondary", className="text-center m-5"),
+	if gvSig==gvSigOld:pass
+	elif db.dto.muod.on or len({a.vw.muodId for a in now.sim.assCur})>1:
+		gview=gv.mkGrdGrps(now.sim.assCur,onEmpty=[
+			dbc.Alert("No grouped results found..",color="secondary",className="text-center m-5"),
 		])
 	else:
-		gview = gv.mkGrd(now.sim.assCur, onEmpty=[
-			dbc.Alert("Please find the similar images..", color="secondary", className="text-center m-5"),
+		gview=gv.mkGrd(now.sim.assCur,onEmpty=[
+			dbc.Alert("Please find the similar images..",color="secondary",className="text-center m-5"),
 		])
 
 	# Initialize or get pager
@@ -501,7 +521,8 @@ def sim_Load(dta_now, dta_cnt):
 		gview, gvPnd,
 		nowDict,
 		pagerData.toDict() if pagerData else noUpd,
-		tabDisabled, tabLabel, activeTab
+		tabDisabled,tabLabel,activeTab,
+		gvSig
 	]
 
 
@@ -576,15 +597,15 @@ def sim_UpdateButtons(dta_now, dta_ste, dta_cnt, dta_tsk):
 	cntOk = cnt.simOk if cnt else 0
 	disReset = cntOk <= 0 and cntPn <= 0 or isTaskRunning
 
-	cntAssets = len(now.sim.assCur) if now.sim.assCur else 0
-	disOk = cntAssets <= 0
-	disDel = cntAssets <= 0
+	cntAct=len(now.sim.assAct())
+	disOk=cntAct<=0
+	disDel=cntAct<=0
 
-	cntSel = len(ste.selectedIds) if ste.selectedIds else 0
-	disRm = cntSel == 0
-	disRS = cntSel == 0
+	cntSel=len(ste.selectedIds) if ste.selectedIds else 0
+	disRm=cntSel==0
+	disRS=cntSel==0
 
-	disExport = cntAssets <= 0
+	disExport=len(now.sim.assCur)<=0
 
 	# lg.info(f"[sim:UpdBtns] disFind[{disFind}]")
 
@@ -629,7 +650,51 @@ def sim_OnSwitchViewGroup(clks, dta_now):
 
 	if DEBUG: lg.info(f"[sim:vgrp] Loaded {len(now.sim.assCur)} assets for group")
 
-	return now.toDict(), k.tabCur  # Switch to current tab
+	return now.toDict(),k.tabCur  # Switch to current tab
+
+
+@cbk(
+	[
+		out(ks.sto.now,"data",allow_duplicate=True),
+		out(k.tabs,"active_tab",allow_duplicate=True),
+		out(ks.sto.nfy,"data",allow_duplicate=True),
+	],
+	inp(k.btnLoadPnd,"n_clicks"),
+	[
+		ste(ks.sto.now,"data"),
+		ste(ks.sto.nfy,"data"),
+	],
+	prevent_initial_call=True
+)
+def sim_OnLoadPending(clk,dtaNow,dtaNfy):
+	if not clk:return noUpd.by(3)
+
+	from db import sim
+
+	now=Now.fromDic(dtaNow)
+	nfy=Nfy.fromDic(dtaNfy)
+
+	pndAids=db.pics.getPendAids()
+	grps=sim.loadGrps(pndAids,db.dto.rtree,db.dto.muod.sz)
+	if not grps:
+		nfy.warn("[sim] No pending groups to load")
+		return noUpd,noUpd,nfy.toDict()
+
+	now.sim.assAid=grps[0][0].autoId
+	now.sim.assCur=[a for g in grps for a in g]
+
+	lg.info(f"[sim:ldPnd] loaded groups[{len(grps)}] assets[{len(now.sim.assCur)}] pending[{len(pndAids)}]")
+	nfy.info(f"Loaded {len(grps)} pending group(s), {len(pndAids) - len(grps)} remain pending")
+
+	return now.toDict(),k.tabCur,nfy.toDict()
+
+
+@cbk(
+	out(k.txtLoadPnd,"children"),
+	inp(cardSets.k.id(cardSets.k.muodMx),"value"),
+	prevent_initial_call=True
+)
+def sim_OnMuodMx(sz):return mkLoadPndTxt(sz or db.dto.muod.sz)
 
 
 #========================================================================
@@ -741,9 +806,9 @@ def sim_RunModal(
 			"You may need to perform all similarity searches again."
 		]
 	#------------------------------------------------------------------------
-	elif trgId == k.btnRmSel:
-		ass = ste.getSelected(now.sim.assCur)
-		assAll = now.sim.assCur
+	elif trgId==k.btnRmSel:
+		assAll=now.sim.assAct()
+		ass=ste.getSelected(assAll)
 		assKeep = [a for a in assAll if a.autoId not in {s.autoId for s in ass}]
 		cnt = len(ass)
 
@@ -770,10 +835,12 @@ def sim_RunModal(
 				retTsk = mdl.mkTsk()
 				mdl.reset()
 	#------------------------------------------------------------------------
-	elif trgId == k.btnOkSel:
-		ass = ste.getSelected(now.sim.assCur)
-		assAll = now.sim.assCur
-		assOthers = [a for a in assAll if a.autoId not in {s.autoId for s in ass}]
+	elif trgId==k.btnOkSel:
+		assAll=now.sim.assAct()
+		ass=ste.getSelected(assAll)
+		assGrps=selGrps(assAll,ass)
+		cntSkip=len({a.vw.muodId for a in assAll})-len({a.vw.muodId for a in assGrps})
+		assOthers=[a for a in assGrps if a.autoId not in {s.autoId for s in ass}]
 		cnt = len(ass)
 
 		lg.info(f"[sim:resolveSels] {cnt} assets selected")
@@ -789,9 +856,10 @@ def sim_RunModal(
 			mdl.id = ks.pg.similar
 			mdl.cmd = ks.cmd.sim.selOk
 			mdl.msg = [
-				f"Are you sure you want to Resolve selected images( {cnt} ) and Delete others( {len(assOthers)} )?", htm.Br(),
+				f"Are you sure you want to Resolve selected images( {cnt} ) and Delete others( {len(assOthers)} )?",htm.Br(),
 				htm.B("This operation cannot be undone"),
 			]
+			if cntSkip:mdl.msg.extend([htm.Br(),f"Groups without selection( {cntSkip} ) stay pending"])
 
 			if db.dto.mrg.on: mdl.msg.extend(_mkMrgMsg(ass))
 
@@ -799,8 +867,8 @@ def sim_RunModal(
 				retTsk = mdl.mkTsk()
 				mdl.reset()
 	#------------------------------------------------------------------------
-	elif trgId == k.btnRmAll:
-		ass = now.sim.assCur
+	elif trgId==k.btnRmAll:
+		ass=now.sim.assAct()
 		cnt = len(ass)
 
 		lg.info(f"[sim:delAll] {cnt} assets to delete")
@@ -818,8 +886,8 @@ def sim_RunModal(
 				retTsk = mdl.mkTsk()
 				mdl.reset()
 	#------------------------------------------------------------------------
-	elif trgId == k.btnOkAll:
-		ass = now.sim.assCur
+	elif trgId==k.btnOkAll:
+		ass=now.sim.assAct()
 		cnt = len(ass)
 
 		lg.info(f"[sim:resolve] {cnt} assets")
@@ -991,7 +1059,7 @@ def sim_FindSimilar(doReport: IFnProg, sto: models.ITaskStore):
 
 		# Clear selection state, auto-select is now calculated on client side
 		sto.ste.clear()
-		sto.ste.cntTotal = len(now.sim.assCur) if now.sim.assCur else 0
+		sto.ste.cntTotal=len(now.sim.assAct())
 
 		elapsed = time.time() - t0
 		msg.append(f"Elapsed: {elapsed:.1f}s")
@@ -1059,11 +1127,34 @@ def sim_ClearSims(doReport: IFnProg, sto: models.ITaskStore):
 
 
 
-def sim_SelectedDelete(doReport: IFnProg, sto: models.ITaskStore):
-	nfy, now, ste = sto.nfy, sto.now, sto.ste
-	xmpInfos = []
+def selGrps(assets:list[models.Asset],sels:list[models.Asset])->list[models.Asset]:
+	gids = {a.vw.muodId for a in sels}
+	return [a for a in assets if a.vw.muodId in gids]
+
+
+def mrgByGrp(keeps:list[models.Asset],trashes:list[models.Asset],cur,xmpInfos:list):
+	m=db.dto.mrg
+	opts=immich.MergeOpts(
+		albums=m.albums,
+		favorites=m.favs,
+		tags=m.tags,
+		rating=m.rating,
+		description=m.desc,
+		location=m.loc,
+		visibility=m.vis
+	)
+	for gid in dict.fromkeys(a.vw.muodId for a in keeps+trashes):
+		grpKeeps=[a for a in keeps if a.vw.muodId==gid]
+		grpTrashes=[a for a in trashes if a.vw.muodId==gid]
+		result=immich.mergeMetadata(grpKeeps,grpTrashes,opts,cur)
+		xmpInfos.extend(result.get('xmpInfos',[]))
+
+
+def sim_SelectedDelete(doReport:IFnProg,sto:models.ITaskStore):
+	nfy,now,ste=sto.nfy,sto.now,sto.ste
+	xmpInfos=[]
 	try:
-		assAlls = now.sim.assCur
+		assAlls=now.sim.assAct()
 		assSels = ste.getSelected(assAlls) if ste else []
 		assLefts = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
 
@@ -1076,20 +1167,9 @@ def sim_SelectedDelete(doReport: IFnProg, sto: models.ITaskStore):
 
 		with psql.mkConn() as conn:
 			with conn.cursor() as cur:
-				if db.dto.mrg.on:
-					opts = immich.MergeOpts(
-						albums=db.dto.mrg.albums,
-						favorites=db.dto.mrg.favs,
-						tags=db.dto.mrg.tags,
-						rating=db.dto.mrg.rating,
-						description=db.dto.mrg.desc,
-						location=db.dto.mrg.loc,
-						visibility=db.dto.mrg.vis
-					)
-					result = immich.mergeMetadata(assLefts, assSels, opts, cur)
-					xmpInfos = result.get('xmpInfos', [])
+				if db.dto.mrg.on:mrgByGrp(assLefts,assSels,cur,xmpInfos)
 
-				immich.trashByAssets(assSels, cur)
+				immich.trashByAssets(assSels,cur)
 				conn.commit()
 
 		db.pics.deleteBy(assSels)
@@ -1118,12 +1198,12 @@ def sim_SelectedDelete(doReport: IFnProg, sto: models.ITaskStore):
 
 
 def sim_SelectedResolve(doReport: IFnProg, sto: models.ITaskStore):
-	nfy, now, ste = sto.nfy, sto.now, sto.ste
-	xmpInfos = []
+	nfy,now,ste=sto.nfy,sto.now,sto.ste
+	xmpInfos=[]
 	try:
-		assAlls = now.sim.assCur
-		assSels = ste.getSelected(assAlls) if ste else []
-		assOthers = [a for a in assAlls if a.autoId not in {s.autoId for s in assSels}]
+		assAlls=now.sim.assAct()
+		assSels=ste.getSelected(assAlls) if ste else []
+		assOthers=[a for a in selGrps(assAlls,assSels) if a.autoId not in {s.autoId for s in assSels}]
 
 		cntSelect = len(assSels)
 		cntOthers = len(assOthers)
@@ -1135,20 +1215,9 @@ def sim_SelectedResolve(doReport: IFnProg, sto: models.ITaskStore):
 
 		with psql.mkConn() as conn:
 			with conn.cursor() as cur:
-				if db.dto.mrg.on:
-					opts = immich.MergeOpts(
-						albums=db.dto.mrg.albums,
-						favorites=db.dto.mrg.favs,
-						tags=db.dto.mrg.tags,
-						rating=db.dto.mrg.rating,
-						description=db.dto.mrg.desc,
-						location=db.dto.mrg.loc,
-						visibility=db.dto.mrg.vis
-					)
-					result = immich.mergeMetadata(assSels, assOthers, opts, cur)
-					xmpInfos = result.get('xmpInfos', [])
+				if db.dto.mrg.on:mrgByGrp(assSels,assOthers,cur,xmpInfos)
 
-				if assOthers: immich.trashByAssets(assOthers, cur)
+				if assOthers:immich.trashByAssets(assOthers,cur)
 				conn.commit()
 
 		if assOthers: db.pics.deleteBy(assOthers)
@@ -1175,13 +1244,13 @@ def sim_SelectedResolve(doReport: IFnProg, sto: models.ITaskStore):
 
 
 def sim_AllResolve(doReport: IFnProg, sto: models.ITaskStore):
-	nfy, now, cnt = sto.nfy, sto.now, sto.cnt
+	nfy,now=sto.nfy,sto.now
 	try:
-		assets = now.sim.assCur
-		cntAll = len(assets)
-		msg = f"[sim] set Resolved Assets( {cntAll} ) Success!"
+		assets=now.sim.assAct()
+		cntAll=len(assets)
+		msg=f"[sim] set Resolved Assets( {cntAll} ) Success!"
 
-		if not assets or cnt == 0: raise RuntimeError("Current Assets not found")
+		if not assets:raise RuntimeError("Current Assets not found")
 		lg.info(f"[sim:allResolve] resolve assets[{cntAll}] ")
 
 		db.pics.setResolveBy(assets)
@@ -1204,13 +1273,13 @@ def sim_AllResolve(doReport: IFnProg, sto: models.ITaskStore):
 
 
 def sim_AllDelete(doReport: IFnProg, sto: models.ITaskStore):
-	nfy, now = sto.nfy, sto.now
+	nfy,now=sto.nfy,sto.now
 	try:
-		assets = now.sim.assCur
-		cntAll = len(assets)
-		msg = f"[sim] Delete All Assets( {cntAll} ) Success!"
+		assets=now.sim.assAct()
+		cntAll=len(assets)
+		msg=f"[sim] Delete All Assets( {cntAll} ) Success!"
 
-		if not assets or cntAll == 0: raise RuntimeError("Current Assets not found")
+		if not assets:raise RuntimeError("Current Assets not found")
 
 		lg.info(f"[sim:allDel] delete assets[{cntAll}] ")
 

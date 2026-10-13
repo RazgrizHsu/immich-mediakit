@@ -56,7 +56,8 @@ _SCHEMAS = {
 		pathVdo          TEXT,
 		jsonExif         TEXT Default '{}',
 		isVectored       INTEGER Default 0,
-		simOk            INTEGER Default 0
+		simOk            INTEGER Default 0,
+		isKep            INTEGER Default 0
 	''',
 	'assetsGrps': '''
 		autoId   INTEGER NOT NULL REFERENCES assets(autoId) ON DELETE CASCADE,
@@ -765,7 +766,7 @@ def setResolveBy(assets: List[models.Asset]):
 			c.execute(f"DELETE FROM assetsSims WHERE autoId IN ({qargs})", autoIds)
 
 			# update simOk
-			c.execute(f"UPDATE assets SET simOk = 1 WHERE autoId IN ({qargs})", autoIds)
+			c.execute(f"UPDATE assets SET simOk = 1, isKep = 1 WHERE autoId IN ({qargs})",autoIds)
 			count = c.rowcount
 			if count != cnt: raise RuntimeError(f"effect[{count}] not match assets[{cnt}] ids[{qargs}]")
 			conn.commit()
@@ -793,7 +794,7 @@ def clearAllSimIds(keepSimOk=False):
 			else:
 				c.execute("DELETE FROM assetsGrps")
 				c.execute("DELETE FROM assetsSims")
-				c.execute("UPDATE assets SET simOk = 0")
+				c.execute("UPDATE assets SET simOk = 0, isKep = 0")
 				lg.info(f"Cleared all similarity results")
 			conn.commit()
 			count = c.rowcount
@@ -1026,13 +1027,31 @@ def countSimPending():
 	except Exception as e: raise mkErr(f"Failed to count assets pending", e)
 
 
-def getPagedPending(page=1, size=20) -> list[models.Asset]:
+sqlPnd="""
+	FROM assets a
+	INNER JOIN assetsGrps ag ON a.autoId = ag.autoId AND ag.isMain = 1
+	WHERE a.simOk = 0
+		AND (SELECT COUNT(*) FROM assetsSims si WHERE si.autoId = a.autoId) > 1
+	ORDER BY (SELECT COUNT(*) FROM assetsSims si WHERE si.autoId = a.autoId) DESC, a.autoId
+"""
+
+
+def getPendAids()->list[int]:
 	try:
 		with mkConn() as conn:
-			cursor = conn.cursor()
-			offset = (page - 1) * size
+			c=conn.cursor()
+			c.execute(f"SELECT a.autoId {sqlPnd}")
+			return [row[0] for row in c.fetchall()]
+	except Exception as e:raise mkErr("Failed to get pending autoIds",e)
 
-			cursor.execute("""
+
+def getPagedPending(page=1,size=20)->list[models.Asset]:
+	try:
+		with mkConn() as conn:
+			cursor=conn.cursor()
+			offset = (page-1) * size
+
+			cursor.execute(f"""
 				SELECT a.*,
 						(SELECT json_group_array(json_object('aid', simAid, 'score', score, 'isSelf', isSelf))
 						FROM (SELECT simAid, score, isSelf FROM assetsSims WHERE autoId = a.autoId ORDER BY score DESC)
@@ -1040,13 +1059,9 @@ def getPagedPending(page=1, size=20) -> list[models.Asset]:
 						(SELECT COUNT(*) FROM assetsGrps ag2
 						WHERE ag2.groupId IN (SELECT groupId FROM assetsGrps WHERE autoId = a.autoId)
 							AND ag2.autoId != a.autoId) as cntRelats
-				FROM assets a
-				INNER JOIN assetsGrps ag ON a.autoId = ag.autoId AND ag.isMain = 1
-				WHERE a.simOk = 0
-					AND (SELECT COUNT(*) FROM assetsSims si WHERE si.autoId = a.autoId) > 1
-				ORDER BY (SELECT COUNT(*) FROM assetsSims si WHERE si.autoId = a.autoId) DESC, a.autoId
+				{sqlPnd}
 				LIMIT ? OFFSET ?
-			""", (size, offset))
+			""", (size,offset))
 
 			leaders = []
 			for row in cursor.fetchall():

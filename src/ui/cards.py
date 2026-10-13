@@ -1,5 +1,5 @@
 from os import wait, path
-from typing import List
+from typing import List,Any
 
 from dash_bootstrap_components import ListGroup
 from dsh import htm, dbc, dcc
@@ -28,12 +28,16 @@ def mk(ass: models.Asset, modSim=True):
 	isMain = ass.vw.isMain
 	isRels = ass.vw.isRelats
 	isLive = ass.vdoId is not None
-	canFnd = ass.simOk == 0
-	hasVec = ass.isVectored == 1
+	canFnd=ass.simOk==0
+	hasVec=ass.isVectored==1
+	isKep=ass.isKep==1
 
-	css = f"h-100 sim {cssIds} {'' if modSim else 'view'}"
-	if isMain: css += " main"
-	if isRels: css += " rels"
+	css=f"h-100 sim {cssIds} {'' if modSim else 'view'}"
+	if isMain:css += " main"
+	if isRels:css += " rels"
+	if isKep:css += " locked"
+
+	selId:dict[str,Any] = {} if isKep else {"id": {"type":"card-select","id":ass.autoId}}
 
 	tipExif = gvEx.mkTipExif(ass.autoId, ass.jsonExif)
 
@@ -101,7 +105,7 @@ def mk(ass: models.Asset, modSim=True):
 				htm.Div([
 					dbc.Row([
 						dbc.Col(
-							dbc.Checkbox(label=f"#{ass.autoId}", value=False)
+							htm.Span([f"#{ass.autoId}",htm.Span("Kept",className="tag info ms-1")]) if isKep else dbc.Checkbox(label=f"#{ass.autoId}",value=False)
 						),
 						dbc.Col(
 							[
@@ -115,8 +119,8 @@ def mk(ass: models.Asset, modSim=True):
 							]
 						)
 					])
-				], id={"type": "card-select", "id": ass.autoId}),
-				className=f"p-2 curP"
+				],**selId),
+				className="p-2" if isKep else "p-2 curP"
 			) if modSim else None,
 
 			#------------------------------------------------------------------------
